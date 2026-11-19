@@ -23,10 +23,11 @@ const VARIANT_COLORS: Record<VoiceOrbVariant, [number, number, number][]> = {
     [0.4, 0.7, 1.0],
     [0.1, 0.3, 0.8],
   ],
+  // tuned to Sirion plum, deeper than the stock violet
   violet: [
-    [0.6, 0.3, 1.0],
-    [0.8, 0.5, 1.0],
-    [0.4, 0.15, 0.8],
+    [0.46, 0.2, 0.6],
+    [0.62, 0.32, 0.7],
+    [0.28, 0.1, 0.44],
   ],
   emerald: [
     [0.15, 0.75, 0.55],

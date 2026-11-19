@@ -71,7 +71,7 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" onClick={toggleSidebar} aria-label={state === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
-              className="relative grid size-8 shrink-0 place-items-center rounded-md text-sidebar-foreground/70 outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:mx-auto">
+              className="relative grid size-8 group-data-[collapsible=icon]:size-10 shrink-0 place-items-center rounded-md text-sidebar-foreground/70 outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:mx-auto">
               <SirionMark className="hidden h-4 w-[22px] text-sidebar-accent-foreground group-data-[collapsible=icon]:block group-data-[collapsible=icon]:group-hover/hdr:hidden" />
               <PanelLeftClose className="size-4 group-data-[collapsible=icon]:hidden" />
               <PanelLeftOpen className="hidden size-4 group-data-[collapsible=icon]:group-hover/hdr:block" />
