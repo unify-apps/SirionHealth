@@ -343,8 +343,8 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
           <Tooltip>
             <TooltipTrigger asChild>
               <button type="button" onClick={() => onOpenChange(!open)} aria-label={open ? 'Close Ask' : 'Ask about an account'} aria-expanded={open}
-                className="grid size-20 place-items-center rounded-full outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
-                <VoiceOrb state={orb} variant="violet" className="-m-4 size-28" />
+                className="grid size-16 place-items-center rounded-full outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
+                <VoiceOrb state={orb} variant="violet" className="-m-2 size-20" />
               </button>
             </TooltipTrigger>
             {!open && <TooltipContent side="left">Ask about an account</TooltipContent>}
