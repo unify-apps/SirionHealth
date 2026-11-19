@@ -339,12 +339,12 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
-        <div className="fixed right-5 bottom-5 z-40">
+        <div className="fixed right-3 bottom-3 z-40">
           <Tooltip>
             <TooltipTrigger asChild>
               <button type="button" onClick={() => onOpenChange(!open)} aria-label={open ? 'Close Ask' : 'Ask about an account'} aria-expanded={open}
-                className="grid size-16 place-items-center rounded-full outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
-                <VoiceOrb state={orb} variant="violet" className="size-16" />
+                className="grid size-20 place-items-center rounded-full outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
+                <VoiceOrb state={orb} variant="violet" className="-m-4 size-28" />
               </button>
             </TooltipTrigger>
             {!open && <TooltipContent side="left">Ask about an account</TooltipContent>}
@@ -358,7 +358,7 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
         aria-label="Ask"
       >
         <div className="flex items-center gap-2 border-b border-hairline py-2.5 pr-2 pl-4">
-          <VoiceOrb state={orb} variant="violet" className="size-6" />
+          <VoiceOrb state={orb} variant="violet" className="-my-2 -ml-1 size-10" />
           <h2 className="text-sm font-medium">Ask</h2>
           <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">TransAmerica</span>
           <Tip tip="New chat">
