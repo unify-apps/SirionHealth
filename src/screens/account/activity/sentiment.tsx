@@ -15,12 +15,12 @@ export function JourneyStrip({ months, now, next }: { months: JourneyMonth[]; no
   const nNeg = months.filter(m => m.state === 'neg').length, nPos = months.filter(m => m.state === 'pos').length
   return (
     <div className="grid gap-3">
-      <div className="flex items-center" role="group" aria-label={`${months.length} months from ${ymLabel(months[0].ym)} to the Dec 30, 2026 renewal: ${nNeg} with risk events, ${nPos} with positive events`}>
+      <div className="flex min-w-0 items-center overflow-x-auto py-0.5" role="group" aria-label={`${months.length} months from ${ymLabel(months[0].ym)} to the Dec 30, 2026 renewal: ${nNeg} with risk events, ${nPos} with positive events`}>
         {months.map((m, i) => (
           <span key={m.ym} className="flex flex-1 items-center last:flex-none">
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" aria-label={ymLabel(m.ym)} className="grid size-5 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <button type="button" aria-label={ymLabel(m.ym)} className="grid size-4 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                   <span className={cn('size-2.5 rounded-full', DOT[m.state])} />
                 </button>
               </TooltipTrigger>

@@ -1,3 +1,4 @@
+import { setTab } from '../tab'
 /* Small shared pieces for the account header and Summary tab: info tips, source tags,
    widget load/empty/error states, collapsible section titles, evidence rows. */
 import { useEffect, useState } from 'react'
@@ -116,8 +117,7 @@ export function EvidenceRow({ e }: { e: Evidence }) {
 
 /** Switches the account tabs (index.tsx keeps them uncontrolled) and optionally scrolls to an element. */
 export function showTab(value: string, scrollTo?: string) {
-  const t = document.querySelector<HTMLElement>(`[role="tab"][id$="-trigger-${value}"]`)
-  if (t && t.getAttribute('aria-selected') !== 'true') t.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+  setTab(value)
   if (scrollTo) requestAnimationFrame(() => requestAnimationFrame(() =>
     document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' })))
 }

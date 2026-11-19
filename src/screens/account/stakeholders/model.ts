@@ -114,7 +114,7 @@ export function orbitPeople(rows: StakeRow[]): OrbitPerson[] {
   return rows.filter(r => r.label && (r.source === 'tagged' || r.source === 'mine' || r.kind === 'departed' || r.news || r.mentions >= 2 || (r.days != null && r.days <= 90)))
     .map(r => {
       const ring = r.days == null ? 2 : RINGS.findIndex(x => r.days! <= x[1])
-      const state: OrbitState = r.kind === 'departed' || ring === 2 ? (r.source === 'inferred' || r.source === 'news' ? 'ai' : 'quiet') : r.source === 'inferred' || r.source === 'news' ? 'ai' : 'active'
+      const state: OrbitState = r.source === 'news' ? 'ai' : r.kind === 'departed' || ring === 2 ? 'quiet' : r.source === 'inferred' ? 'ai' : 'active'
       const role = r.kind === 'departed' ? (/Former champion/.test(r.label) ? 'Champion, handed over' : r.label) : r.source === 'inferred' || r.source === 'news' ? `Inferred · ${r.label}` : r.label
       return { key: r.key, name: r.name, role, state, ring, mentions: r.mentions, last: r.last, tagged: r.source === 'tagged' }
     })

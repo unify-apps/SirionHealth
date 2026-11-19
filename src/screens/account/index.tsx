@@ -1,6 +1,7 @@
-import { Activity, FileText, HeartPulse, Sparkles, TrendingUp, Users } from 'lucide-react'
+import { Activity, FileText, HeartPulse, Newspaper, TrendingUp, Users } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AccountHeader } from './header'
+import { setTab, useTab } from './tab'
 import { OverviewTab } from './overview'
 import { HealthTab } from './health'
 import { AdoptionTab } from './adoption'
@@ -14,14 +15,15 @@ const TABS = [
   { id: 'adoption', label: 'Adoption', icon: TrendingUp, C: AdoptionTab },
   { id: 'activity', label: 'Activity', icon: Activity, C: ActivityTab },
   { id: 'stakeholders', label: 'Stakeholders', icon: Users, C: StakeholdersTab },
-  { id: 'intelligence', label: 'Intelligence', icon: Sparkles, C: IntelligenceTab },
+  { id: 'intelligence', label: 'Intelligence', icon: Newspaper, C: IntelligenceTab },
 ] as const
 
 export function AccountScreen() {
+  const tab = useTab()
   return (
     <div className="flex flex-col gap-6">
       <AccountHeader />
-      <Tabs defaultValue="overview" className="gap-6">
+      <Tabs value={tab} onValueChange={setTab} className="gap-6">
         <TabsList variant="line" className="sticky top-14 z-10 w-full justify-start overflow-x-auto bg-background/80 backdrop-blur-md">
           {TABS.map(t => (
             <TabsTrigger key={t.id} value={t.id}><t.icon />{t.label}</TabsTrigger>
