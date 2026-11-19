@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { CalendarDays, ChartColumn, PanelLeftClose, PanelLeftOpen, Check, ChevronsUpDown, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
+import { ChartColumn, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -11,13 +10,10 @@ import { CommandMenu } from './command-menu'
 import { AskPanel } from './ask'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu,
-  SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar,
+  SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, useSidebar,
 } from '@/components/ui/sidebar'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Separator } from '@/components/ui/separator'
 import { go, type Route } from '@/lib/route'
 import { useTheme } from '@/lib/theme'
 
@@ -27,7 +23,6 @@ const WORKSPACE: NavItem[] = [
   { route: 'portfolio', label: 'Portfolio', icon: ChartColumn },
 ]
 const REFERENCE: NavItem[] = [{ route: 'states', label: 'States', icon: Shapes }]
-const LABEL: Record<Route, string> = { accounts: 'My accounts', portfolio: 'Portfolio', states: 'States', account: 'TransAmerica' }
 
 /** Navigate and, on phones, close the sidebar sheet. */
 function useNav() {
@@ -87,6 +82,21 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         </Tooltip>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup className="pb-0">
+          <SidebarMenu className="gap-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="hover:bg-sidebar-accent/50">
+                <Search /><span>Search</span>
+              </SidebarMenuButton>
+              <SidebarMenuBadge><Kbd className="h-5 text-[10px]">⌘K</Kbd></SidebarMenuBadge>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Ask about an account" onClick={onAsk} className="hover:bg-sidebar-accent/50">
+                <MessageSquareText /><span>Ask</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
         <NavGroup label="Workspace" items={WORKSPACE} active={active} />
         <SidebarGroup>
           <SidebarGroupLabel>Recent</SidebarGroupLabel>
@@ -169,59 +179,14 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
   const [open, setOpen] = useSidebarOpen()
   const [cmd, setCmd] = useState(false)
   const [ask, setAsk] = useState(false)
-  const [range, setRange] = useState<string>('Lifetime')
   useEffect(() => { document.title = route === 'account' ? 'TransAmerica · Sirion Account Health' : 'Sirion Account Health' }, [route])
   return (
     <SidebarProvider open={open} onOpenChange={setOpen}>
       <AppSidebar route={route} theme={theme} toggleTheme={toggleTheme} onFind={() => setCmd(true)} onAsk={() => setAsk(true)} />
       <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-hairline bg-background/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
-          <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
-          <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 md:hidden" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              {route === 'account' ? (
-                <>
-                  <BreadcrumbItem><BreadcrumbLink href="#accounts">My accounts</BreadcrumbLink></BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem><BreadcrumbPage>TransAmerica</BreadcrumbPage></BreadcrumbItem>
-                </>
-              ) : (
-                <BreadcrumbItem><BreadcrumbPage>{LABEL[route]}</BreadcrumbPage></BreadcrumbItem>
-              )}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="ml-auto flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => setCmd(true)} aria-label="Find an account"><Search /></Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Find an account <Kbd className="ml-1">⌘K</Kbd></TooltipContent>
-            </Tooltip>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" aria-label={`Date range: ${range}`} className="text-muted-foreground"><CalendarDays />{range}</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuLabel>Date range</DropdownMenuLabel>
-                {['Last 30 days', 'Last 90 days', 'Last 180 days', 'Last 12 months', 'Lifetime'].map(r => (
-                  <DropdownMenuItem key={r} onSelect={() => { if (r !== range) toast(`Showing ${r.toLowerCase()}`, { description: 'Applies to trends and activity' }) ; setRange(r) }}>
-                    {r}{range === r && <Check className="ml-auto" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => setAsk(true)} aria-label="Ask about an account"><MessageSquareText /></Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Ask about an account</TooltipContent>
-            </Tooltip>
-          </div>
-        </header>
         <CommandMenu open={cmd} onOpenChange={setCmd} />
         <AskPanel open={ask} onOpenChange={setAsk} />
-        <main className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1280px] px-4 pt-6 pb-10 sm:px-6 lg:px-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

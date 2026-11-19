@@ -14,7 +14,7 @@ import {
   EVENT_LABEL, eventEvidence, events, fmtD, fmtDY, months, RENEWAL, runway, score, sourceLabel, TODAY, ymLabel,
   type KeyEvent, type Month,
 } from '../facts'
-import { EvidenceRow, Term, useWidget, WidgetBody } from './bits'
+import { EvidenceRow, InfoTip, Term, useWidget, WidgetBody } from './bits'
 
 const cfg = {
   health: { label: 'Monthly health', color: SERIES[0] },
@@ -181,20 +181,25 @@ function EventSheet({ event, onOpenChange }: { event: KeyEvent | null; onOpenCha
   const related = event ? eventEvidence(event) : []
   return (
     <Sheet open={!!event} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-3xl">
+      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-2xl">
         {event && (
           <>
             <SheetHeader className="sticky top-0 z-10 border-b border-hairline bg-popover px-6 py-4 pr-14">
               <SheetDescription>{fmtDY(event.date)} · {EVENT_LABEL[event.kind]}</SheetDescription>
-              <SheetTitle className="text-lg font-normal leading-snug">{event.text}</SheetTitle>
+              <SheetTitle className="flex items-start gap-2 text-lg font-normal leading-snug">
+                <span>{event.text}</span>
+                <InfoTip className="mt-1" text={`Source: ${sourceLabel(event.source)}${event.ai ? ' (written by AI)' : ''}`} />
+              </SheetTitle>
             </SheetHeader>
-            <div className="grid gap-8 p-6 md:grid-cols-[14rem_minmax(0,1fr)]">
-              <section className="space-y-1">
-                <h3 className="text-sm font-medium">Source</h3>
-                <p>{sourceLabel(event.source)}</p>
-                {event.ai && <p className="text-xs text-muted-foreground">Written by AI</p>}
-                {event.kind === 'flag' && <p className="text-muted-foreground">Weighted {score.weighted} → final {score.final} (<Term>{score.overrideCode}</Term>).</p>}
-              </section>
+            <div className="flex flex-col gap-6 p-6">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border border-hairline p-4">
+                <div className="grid gap-1"><dt className="text-xs text-muted-foreground">Date</dt><dd className="tabular-nums">{fmtDY(event.date)}</dd></div>
+                <div className="grid gap-1"><dt className="text-xs text-muted-foreground">Kind</dt><dd>{EVENT_LABEL[event.kind]}</dd></div>
+                {event.kind === 'flag' && (
+                  <div className="col-span-2 grid gap-1"><dt className="text-xs text-muted-foreground">Score</dt>
+                    <dd className="tabular-nums">Weighted {score.weighted} → final {score.final} (<Term>{score.overrideCode}</Term>)</dd></div>
+                )}
+              </dl>
               <section className="min-w-0">
                 <h3 className="text-sm font-medium">Evidence</h3>
                 {related.length

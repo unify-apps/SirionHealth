@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, Building2, ChevronDown, Columns3, DollarSign, HeartPulse, ListFilter, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
+import { AlertTriangle, Building2, ChevronDown, Columns3, DollarSign, HeartPulse, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
 import { money, TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
 import { go } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
 import { BlockHeader, Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
@@ -18,11 +17,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  BOOK, avgBand, DEFAULT_HIDDEN, FILTERS, FIRST_DIR, isTA, OPTIONAL_COLS, rows as ALL_ROWS, sortRows, SORT_NAME, VIEWS,
-  type ColId, type FilterId, type Row, type SortKey, type ViewId,
+  BOOK, avgBand, DEFAULT_HIDDEN, filterCount, FIRST_DIR, isTA, NO_FILTERS, OPTIONAL_COLS, passes, rows as ALL_ROWS, sortRows, SORT_NAME, VIEWS,
+  type ColId, type FilterState, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
-  InsightsPopover, NrrCell, PreviewSheet, RunwayCell, SignalsCell, TableSkeleton, TilesSkeleton,
+  AccountFilter, FilterChips, InsightsPopover, PodArrSplit, NrrCell, RunwayCell, SignalsCell, TableSkeleton, TilesSkeleton,
 } from './accounts/parts'
 
 type Status = 'loading' | 'error' | 'ready'
@@ -55,12 +54,11 @@ export function AccountsScreen() {
   const { status, data, retry } = useAccounts()
   const [view, setView] = useState<ViewId>('needs')
   const [q, setQ] = useState('')
-  const [active, setActive] = useState<FilterId[]>([])
+  const [filters, setFilters] = useState<FilterState>(NO_FILTERS)
   const [sortKey, setSortKey] = useState<SortKey>('health')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [pinned, setPinned] = useState(true)
   const [hidden, setHidden] = useState<Set<ColId>>(() => new Set(DEFAULT_HIDDEN))
-  const [preview, setPreview] = useState<Row | null>(null)
   const filterBtn = useRef<HTMLButtonElement>(null)
 
   const priority = pinned && view === 'needs'
@@ -69,15 +67,17 @@ export function AccountsScreen() {
   const list = useMemo(() => {
     const v = VIEWS.find(x => x.id === view)!
     const f = data.filter(v.test)
-      .filter(r => active.every(id => FILTERS.find(x => x.id === id)!.test(r)))
+      .filter(r => passes(r, filters))
       .filter(r => !query || `${r.name} ${r.ind} ${r.seg}`.toLowerCase().includes(query))
     return sortRows(f, sortKey, sortDir, priority)
-  }, [data, view, active, query, sortKey, sortDir, priority])
+  }, [data, view, filters, query, sortKey, sortDir, priority])
 
-  const dirty = !!q || active.length > 0 || !pinned || view !== 'needs' || sortKey !== 'health' || sortDir !== 'asc'
+  const nFilters = filterCount(filters)
+  // Reset covers search, filters and sort; switching views is not something to reset
+  const dirty = !!q || nFilters > 0 || !pinned || sortKey !== 'health' || sortDir !== 'asc'
   const reset = () => {
-    setQ(''); setActive([]); setPinned(true); setView('needs'); setSortKey('health'); setSortDir('asc')
-    toast('Filters reset', { description: 'Back to Needs me first, sorted by what needs you first' })
+    setQ(''); setFilters(NO_FILTERS); setPinned(true); setSortKey('health'); setSortDir('asc')
+    toast('Filters reset', { description: 'Search, filters and sort are back to their defaults' })
   }
   const moreView = PRIMARY.includes(view) ? null : VIEWS.find(v => v.id === view)!
   const sortBy = (k: SortKey) => {
@@ -85,10 +85,12 @@ export function AccountsScreen() {
     if (!priority && sortKey === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(k); setSortDir(FIRST_DIR[k]) }
   }
-  const openRow = useCallback((r: Row) => { setIns(null); if (isTA(r)) go('account'); else setPreview(r) }, [])
-  const removeFilter = (id: FilterId | '*') => {
-    setActive(a => (id === '*' ? [] : a.filter(x => x !== id)))
-    requestAnimationFrame(() => filterBtn.current?.focus())
+  // every account opens its account page (only TransAmerica has data in this build)
+  const openRow = useCallback((_r: Row) => { setIns(null); go('account') }, [])
+  const changeFilters = (f: FilterState) => {
+    const removed = filterCount(f) < nFilters
+    setFilters(f)
+    if (removed) requestAnimationFrame(() => filterBtn.current?.focus())
   }
 
   /* insights popover: one at a time; opens after 220ms hover or on focus (no focus move), on click with focus */
@@ -116,8 +118,8 @@ export function AccountsScreen() {
         sub={`${BOOK.owner}'s book · ${today} · ${BOOK.count} accounts`} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`${BOOK.arrPer} average per account`} />
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`By pod · ${BOOK.arrPer} average per account`} visual={<PodArrSplit />} />
           <Stat icon={AlertTriangle} label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Health under 40 or unsigned"
             visual={<Meter value={BOOK.atRiskM} max={BOOK.arrM} tone="bad" label="Share of ARR at risk" showValue={`${Math.round((BOOK.atRiskM / BOOK.arrM) * 100)}% of ARR`} />} />
           <Stat icon={Target} label="Open pipeline" value={BOOK.pipeline} hint={`${BOOK.opps} opportunities`}
@@ -138,13 +140,14 @@ export function AccountsScreen() {
           </div>
         ) : (
           <>
-            {/* one toolbar row: saved views left; search, Filter, Columns, Reset right. On phones the views scroll and search drops below. */}
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap sm:px-5">
+            {/* one toolbar row: saved views left ("More" last); search, Filter, Columns, Reset right; all 32px.
+                On phones the views scroll and search drops below. */}
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5 lg:flex-nowrap">
               <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-                <ToggleGroup type="single" size="sm" spacing={1} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
+                <ToggleGroup type="single" spacing={1} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
                   onValueChange={v => v && setView(v as ViewId)}>
                   {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
-                    <ToggleGroupItem key={v.id} value={v.id} className="gap-1.5 data-[state=on]:text-foreground">
+                    <ToggleGroupItem key={v.id} value={v.id} className="h-8 gap-1.5 px-2.5 data-[state=on]:text-foreground">
                       {v.band && (
                         <Tooltip>
                           <TooltipTrigger asChild><span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" /></TooltipTrigger>
@@ -158,8 +161,8 @@ export function AccountsScreen() {
                 </ToggleGroup>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" aria-label="More saved views"
-                      className={cn('shrink-0 gap-1.5', moreView ? 'bg-muted text-foreground' : 'text-muted-foreground')}>
+                    <Button variant="ghost" aria-label="More saved views"
+                      className={cn('shrink-0 gap-1.5 px-2.5', moreView ? 'bg-muted text-foreground' : 'text-muted-foreground')}>
                       {moreView ? <>{moreView.label}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span></> : 'More'}
                       <ChevronDown />
                     </Button>
@@ -176,45 +179,19 @@ export function AccountsScreen() {
                 </DropdownMenu>
               </div>
 
-              <InputGroup className="order-3 w-full transition-[width] duration-200 sm:order-2 sm:w-[200px] sm:focus-within:w-64">
-                <InputGroupAddon><Search /></InputGroupAddon>
-                <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
-                  value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
-                {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
-              </InputGroup>
-
-              <div className="order-2 flex shrink-0 items-center gap-0.5 sm:order-3">
+              <div className="order-2 ml-auto flex shrink-0 items-center gap-2">
+                <InputGroup className="hidden h-8 w-[200px] transition-[width] duration-200 focus-within:w-64 sm:flex">
+                  <InputGroupAddon><Search /></InputGroupAddon>
+                  <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
+                    value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
+                  {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
+                </InputGroup>
+                <AccountFilter value={filters} onChange={changeFilters} rows={data} buttonRef={filterBtn} />
                 <DropdownMenu>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <DropdownMenuTrigger asChild>
-                        <Button ref={filterBtn} variant="ghost" size="icon" className="relative" disabled={active.length === FILTERS.length}
-                          aria-label={active.length ? `Filter, ${active.length} active` : 'Filter'}>
-                          <ListFilter />
-                          {active.length > 0 && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-signal" aria-hidden="true" />}
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>{active.length ? `Filter · ${active.length} active` : 'Filter'}</TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="end" className="w-60">
-                    <DropdownMenuLabel>Add a filter</DropdownMenuLabel>
-                    {['Health', 'Renewal', 'Stage', 'Segment'].map(g => {
-                      const items = FILTERS.filter(f => f.group === g && !active.includes(f.id))
-                      return items.length ? (
-                        <DropdownMenuGroup key={g}>
-                          <DropdownMenuSeparator />
-                          {items.map(f => <DropdownMenuItem key={f.id} onSelect={() => setActive(a => [...a, f.id])}>{f.label}</DropdownMenuItem>)}
-                        </DropdownMenuGroup>
-                      ) : null
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Columns"><Columns3 /></Button>
+                        <Button variant="outline" size="icon" aria-label="Columns"><Columns3 /></Button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent>Columns</TooltipContent>
@@ -230,25 +207,21 @@ export function AccountsScreen() {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {dirty && <Button variant="ghost" size="sm" onClick={reset}><RotateCcw />Reset</Button>}
+                {dirty && <Button variant="ghost" onClick={reset}><RotateCcw />Reset</Button>}
               </div>
+
+              {/* phones: search on its own row */}
+              <InputGroup className="order-3 h-8 w-full sm:hidden">
+                <InputGroupAddon><Search /></InputGroupAddon>
+                <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
+                  value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
+              </InputGroup>
             </div>
 
-            {active.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 sm:px-5">
-                {active.map(id => {
-                  const f = FILTERS.find(x => x.id === id)!
-                  return (
-                    <Badge key={id} variant="outline" className="h-6 gap-1 rounded-md pr-0.5 font-normal">
-                      {f.label}
-                      <button type="button" aria-label={`Remove filter ${f.label}`} onClick={() => removeFilter(id)}
-                        className="grid size-4 place-items-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                  )
-                })}
-                <Button variant="outline" size="xs" onClick={() => removeFilter('*')}>Clear all</Button>
+            {nFilters > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 sm:px-5" role="group" aria-label="Active filters">
+                <FilterChips value={filters} onChange={changeFilters} />
+                <Button variant="ghost" size="sm" onClick={() => changeFilters(NO_FILTERS)}>Clear all</Button>
               </div>
             )}
 
@@ -281,7 +254,7 @@ export function AccountsScreen() {
                       const b = bandOf(r.health)
                       const pin = isTA(r) && priority
                       return (
-                        <TableRow key={r.name} tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. ${isTA(r) ? 'Open account' : 'Preview account'}`}
+                        <TableRow key={r.name} tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
                           className="cursor-pointer focus-visible:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-11 [&>td]:py-1.5"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
@@ -341,7 +314,6 @@ export function AccountsScreen() {
         )}
       </Card>
 
-      <PreviewSheet row={preview} onClose={() => setPreview(null)} />
     </div>
   )
 }

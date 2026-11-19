@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CalendarDays, FileText, Filter, RotateCcw, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
-import { Empty, Fact, Tip, ListGroupHeader, ListRow, SheetColumns, sheetHeaderCls } from '@/components/page'
+import { Empty, Fact, Tip, ListGroupHeader, ListRow, SheetBody, sheetHeaderCls } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -95,13 +95,13 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
       </div>
 
       <section aria-label="Upcoming">
-        <ListGroupHeader count={up.length} className="top-23">Upcoming</ListGroupHeader>
+        <ListGroupHeader count={up.length} className="top-11">Upcoming</ListGroupHeader>
         {up.length ? <div className="grid gap-1">{up.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
       </section>
 
       {months.length ? months.map(([ym, rows]) => (
         <section key={ym} aria-label={ymLong(ym)}>
-          <ListGroupHeader count={rows.length} className="top-23">{ymLong(ym)}</ListGroupHeader>
+          <ListGroupHeader count={rows.length} className="top-11">{ymLong(ym)}</ListGroupHeader>
           <div className="grid gap-1">{rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div>
         </section>
       )) : <Empty title="No past activity" sub="Nothing in this filter." className="py-6" />}
@@ -136,7 +136,7 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
   const I = item ? CH_ICON[item.ch] : Mail
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl">
+      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
         {item && (
           <>
             <SheetHeader className={sheetHeaderCls}>
@@ -148,7 +148,7 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
               </SheetDescription>
             </SheetHeader>
             <ScrollArea className="min-h-0 flex-1">
-              <SheetColumns aside={
+              <SheetBody facts={
                 <>
                   <Fact label="Date"><span className="tabular-nums">{dayMon(item.date)}</span></Fact>
                   <Fact label="Channel"><span className="inline-flex items-center gap-1.5"><I className="size-4 text-muted-foreground" aria-hidden="true" />{CH_NAME[item.ch]}</span></Fact>
@@ -165,13 +165,13 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
                     </>
                   )}
                   {item.tickets.length > 0 && (
-                    <Fact label="Tickets">
+                    <Fact label="Tickets" wide>
                       <span className="flex flex-wrap gap-1.5">{item.tickets.map(t => (
                         <span key={t} className="inline-flex items-center gap-1 rounded-md border border-hairline px-1.5 text-xs"><LifeBuoy className="size-3 text-muted-foreground" aria-hidden="true" />{t}</span>
                       ))}</span>
                     </Fact>
                   )}
-                  <Fact label="Source"><span className="text-muted-foreground">{item.src}</span></Fact>
+                  <Fact label="Source" wide><span className="text-muted-foreground">{item.src}</span></Fact>
                 </>
               }>
                 {item.record && !item.who.length ? (
@@ -185,7 +185,7 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
                     {item.desc ? <p className="leading-relaxed text-pretty">{item.desc}</p> : <p className="text-muted-foreground">No statement recorded.</p>}
                   </section>
                 )}
-              </SheetColumns>
+              </SheetBody>
             </ScrollArea>
           </>
         )}

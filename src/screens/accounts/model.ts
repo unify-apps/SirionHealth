@@ -28,17 +28,37 @@ export const VIEWS: { id: ViewId; label: string; band?: Band; test: (r: Row) => 
   { id: 'impl', label: 'In implementation', test: r => /Implementation/.test(r.stage) },
 ]
 
-/* ---------- filters ---------- */
-export type FilterId = 'h70' | 'h40' | 'r90' | 'bau' | 'impl' | 'ent' | 'mid'
-export const FILTERS: { id: FilterId; label: string; group: string; test: (r: Row) => boolean }[] = [
-  { id: 'h70', group: 'Health', label: 'Health under 70', test: r => lt(r, 70) },
-  { id: 'h40', group: 'Health', label: 'Health under 40', test: r => lt(r, 40) },
-  { id: 'r90', group: 'Renewal', label: 'Renews within 90 days', test: renewing90 },
-  { id: 'bau', group: 'Stage', label: 'Stage: BAU', test: r => /BAU/.test(r.stage) },
-  { id: 'impl', group: 'Stage', label: 'Stage: Implementation', test: r => /Implementation/.test(r.stage) },
-  { id: 'ent', group: 'Segment', label: 'Segment: Enterprise', test: r => r.seg === 'Enterprise' },
-  { id: 'mid', group: 'Segment', label: 'Segment: Mid market or SMB', test: r => r.seg !== 'Enterprise' },
+/* ---------- filters: dimension -> checkable options (any of the checked values matches) ---------- */
+export type DimId = 'band' | 'renew' | 'stage' | 'seg' | 'ind'
+export type FilterState = Record<DimId, string[]>
+export const NO_FILTERS: FilterState = { band: [], renew: [], stage: [], seg: [], ind: [] }
+export type FilterOption = { value: string; label: string; test: (r: Row) => boolean }
+export type FilterDim = { id: DimId; label: string; options: FilterOption[] }
+
+const renewWindow = (r: Row) => {
+  if (!live(r)) return 'churned'
+  const d = runway(r).days
+  return d < 0 ? 'overdue' : d <= 30 ? '30' : d <= 90 ? '90' : d <= 180 ? '180' : 'later'
+}
+const distinct = (f: (r: Row) => string) => [...new Set(rows.map(f))].sort((a, b) => a.localeCompare(b))
+
+export const FILTER_DIMS: FilterDim[] = [
+  { id: 'band', label: 'Health band', options: (['bad', 'warn', 'good', 'none'] as Band[]).map(b => ({
+    value: b, label: b === 'bad' ? 'At risk (under 40)' : b === 'warn' ? 'Watch (40 to 69)' : b === 'good' ? 'Healthy (70+)' : 'No data',
+    test: r => bandOf(r.health) === b,
+  })) },
+  { id: 'renew', label: 'Renewal window', options: ([
+    ['overdue', 'Overdue'], ['30', 'Within 30 days'], ['90', '31 to 90 days'], ['180', '91 to 180 days'], ['later', 'Over 180 days'], ['churned', 'Churned'],
+  ] as const).map(([value, label]) => ({ value, label, test: r => renewWindow(r) === value })) },
+  { id: 'stage', label: 'Stage', options: distinct(r => r.stage).map(v => ({ value: v, label: v, test: r => r.stage === v })) },
+  { id: 'seg', label: 'Segment', options: distinct(r => r.seg).map(v => ({ value: v, label: v, test: r => r.seg === v })) },
+  { id: 'ind', label: 'Industry', options: distinct(r => r.ind).map(v => ({ value: v, label: v, test: r => r.ind === v })) },
 ]
+
+/** A row passes when, for every dimension with checked values, it matches one of them. */
+export const passes = (r: Row, f: FilterState) =>
+  FILTER_DIMS.every(d => !f[d.id].length || d.options.some(o => f[d.id].includes(o.value) && o.test(r)))
+export const filterCount = (f: FilterState) => FILTER_DIMS.reduce((n, d) => n + f[d.id].length, 0)
 
 /* ---------- columns + sort ---------- */
 /** Hidden until turned on in the Columns menu; their values also sit in the preview sheet. */

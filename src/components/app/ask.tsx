@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUp, Building2, CalendarClock, HeartPulse, ListTodo, MessageSquare, RotateCcw, Users, type LucideIcon } from 'lucide-react'
+import { ArrowUp, Building2, CalendarClock, FileText, HeartPulse, ListTodo, MessageSquare, SquarePen, Users, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { ListRow, Tip } from '@/components/page'
+import { Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { AREAS, daysBetween, monthEnd, money, rel, ROWS, T, TA_EVENTS, TA_EXAMPLE, TA_RECORD, taEpisode, taEvidence, taMonths, taPeople, TODAY } from '@/data/legacy'
 import { go, type Route } from '@/lib/route'
@@ -263,11 +263,18 @@ function answer(q: string): Answer {
 
 type Msg = { id: number; who: 'me'; text: string } | { id: number; who: 'bot'; typing: true } | { id: number; who: 'bot'; answer: Answer }
 
+/** Suggested questions: a vertical stack of compact outline pills, full text wrapping, a small icon. */
 function Chips({ onAsk, disabled }: { onAsk: (q: string) => void; disabled: boolean }) {
   return (
-    <ul className="-mx-2 mt-2 grid gap-1" aria-label="Suggested questions">
+    <ul className="mt-3 grid justify-items-start gap-1.5" aria-label="Suggested questions">
       {SUGGEST.map(([q, I]) => (
-        <li key={q}><ListRow icon={I} title={<span className="font-normal">{q}</span>} onClick={disabled ? undefined : () => onAsk(q)} className={disabled ? 'opacity-50' : undefined} /></li>
+        <li key={q} className="max-w-full">
+          <button type="button" disabled={disabled} onClick={() => onAsk(q)}
+            className="flex max-w-full items-start gap-2 rounded-2xl border border-border bg-card px-3 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+            <I className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className="text-pretty">{q}</span>
+          </button>
+        </li>
       ))}
     </ul>
   )
@@ -277,8 +284,8 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [busy, setBusy] = useState(false)
   const [draft, setDraft] = useState('')
-  const input = useRef<HTMLInputElement>(null)
-  const log = useRef<HTMLDivElement>(null)
+  const input = useRef<HTMLTextAreaElement>(null)
+  const end = useRef<HTMLDivElement>(null)
   const nextId = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -305,11 +312,18 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
     return () => window.removeEventListener('sirion:ask', on)
   }, [onOpenChange, send])
 
-  useEffect(() => {
-    const el = log.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [msgs, open])
+  // keep the latest message in view
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }) }, [msgs, open])
 
+  // the textarea grows with its text, 1 to 4 rows
+  useEffect(() => {
+    const el = input.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 4 * 20 + 12)}px`
+  }, [draft, open])
+
+  const submit = () => { if (!draft.trim() || busy) return; send(draft); setDraft('') }
   const reset = () => {
     clearTimeout(timer.current)
     setMsgs([]); setBusy(false); setDraft('')
@@ -318,96 +332,95 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl"
+        className="w-full gap-0 p-0 data-[side=right]:sm:max-w-md"
         onOpenAutoFocus={e => { e.preventDefault(); input.current?.focus() }}
-        onInteractOutside={e => e.preventDefault()}
       >
-        <SheetHeader className="flex-row items-center gap-3 border-b border-hairline p-6 pr-12">
-          <div className="min-w-0 flex-1">
-            <SheetTitle>Ask about TransAmerica</SheetTitle>
-            <SheetDescription className="text-xs">AHI record, order forms, 18 monthly summaries, public news</SheetDescription>
-          </div>
-          <Button variant="ghost" size="sm" onClick={reset} disabled={!msgs.length}>
-            <RotateCcw aria-hidden="true" />New chat
-          </Button>
+        <SheetHeader className="flex-row items-center gap-2 border-b border-hairline py-3 pr-12 pl-5">
+          <SheetTitle className="text-base font-medium">Ask</SheetTitle>
+          <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">TransAmerica</span>
+          <SheetDescription className="sr-only">Answers from TransAmerica's AHI record, order forms, monthly summaries and public news</SheetDescription>
+          <Tip tip="New chat">
+            <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={reset} disabled={!msgs.length} aria-label="New chat">
+              <SquarePen aria-hidden="true" />
+            </Button>
+          </Tip>
         </SheetHeader>
 
-        <div className="grid min-h-0 flex-1 md:grid-cols-[240px_minmax(0,1fr)]">
-        {/* suggestions stay in view beside the conversation on wider sheets */}
-        <aside className="hidden min-h-0 overflow-y-auto border-r border-hairline p-4 md:block" aria-label="Suggested questions">
-          <h3 className="px-2 text-xs text-muted-foreground">Suggested</h3>
-          <Chips onAsk={send} disabled={busy} />
-        </aside>
-        <div className="flex min-h-0 flex-col">
-        <div ref={log} className="flex-1 overflow-y-auto px-6 py-5" aria-live="polite" aria-label="Conversation">
-          <div className="grid max-w-[65ch] content-start gap-5 text-sm leading-relaxed">
-            <div>
-              <P>Hello Rahul. I have TransAmerica's record, its order forms, 18 monthly summaries and this year's public news ready. What do you want to know?</P>
-              {!msgs.length && <div className="md:hidden"><Chips onAsk={send} disabled={busy} /></div>}
-            </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5" aria-live="polite" aria-label="Conversation">
+          <div className="grid content-start gap-6 text-sm leading-relaxed">
+            {!msgs.length && (
+              <div>
+                <p className="text-muted-foreground">Ask about TransAmerica's health, renewal, people or your book.</p>
+                <Chips onAsk={send} disabled={busy} />
+              </div>
+            )}
             {msgs.map(m => {
               if (m.who === 'me') {
                 return (
                   <div key={m.id} className="flex justify-end">
-                    <p className="max-w-[85%] rounded-xl rounded-br-sm bg-secondary px-3 py-2">{m.text}</p>
+                    <p className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-2 text-pretty">{m.text}</p>
                   </div>
                 )
               }
               if ('typing' in m) {
                 return (
-                  <div key={m.id} className="flex gap-1 py-2" role="status" aria-label="Composing an answer">
-                    {[0, 150, 300].map(d => (
-                      <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted-foreground motion-reduce:animate-none" style={{ animationDelay: `${d}ms` }} />
+                  <div key={m.id} className="flex gap-1 py-1" role="status" aria-label="Composing an answer">
+                    {[0, 160, 320].map(d => (
+                      <span key={d} className="size-1.5 animate-pulse rounded-full bg-muted-foreground/60 motion-reduce:animate-none" style={{ animationDelay: `${d}ms` }} />
                     ))}
                   </div>
                 )
               }
               const a = m.answer
               return (
-                <div key={m.id} className="min-w-0">
+                <div key={m.id} className="min-w-0 max-w-[65ch]">
                   {a.body}
-                  {a.chips && <div className="md:hidden"><Chips onAsk={send} disabled={busy} /></div>}
+                  {a.chips && <Chips onAsk={send} disabled={busy} />}
                   {!!a.sources?.length && (
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-hairline pt-2.5">
-                      <span className="mr-1 text-xs text-muted-foreground">Sources</span>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                       {a.sources.map(s => (
-                        <Button key={s.label} variant="outline" size="xs" className="text-signal" onClick={() => go(s.route)}>
-                          {s.label}
-                        </Button>
+                        <Tip key={s.label} tip={`Open ${s.label}`}>
+                          <button type="button" onClick={() => go(s.route)}
+                            className="inline-flex h-6 items-center gap-1 rounded-full border border-border px-2 text-xs text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                            <FileText className="size-3" aria-hidden="true" />{s.label}
+                          </button>
+                        </Tip>
                       ))}
                     </div>
                   )}
                 </div>
               )
             })}
+            <div ref={end} />
           </div>
         </div>
 
-        <form
-          className="flex gap-2 border-t border-hairline px-6 py-3"
-          onSubmit={e => { e.preventDefault(); send(draft); setDraft('') }}
-        >
-          <Input
-            ref={input}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="Ask about TransAmerica or your book"
-            aria-label="Your question"
-            autoComplete="off"
-          />
-          <Tip tip="Send">
-            <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Send">
-              <ArrowUp aria-hidden="true" />
-            </Button>
-          </Tip>
+        <form className="border-t border-hairline p-3" onSubmit={e => { e.preventDefault(); submit() }}>
+          <InputGroup className="h-auto items-end rounded-2xl">
+            <InputGroupTextarea
+              ref={input}
+              rows={1}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit() } }}
+              placeholder="Ask about TransAmerica…"
+              aria-label="Your question"
+              className="max-h-[92px] min-h-0 resize-none py-2.5 text-sm leading-5"
+            />
+            <InputGroupAddon align="inline-end" className="pb-1.5">
+              <Tip tip="Send · Enter">
+                <InputGroupButton type="submit" size="icon-sm" variant={draft.trim() ? 'default' : 'ghost'} className="rounded-full"
+                  disabled={busy || !draft.trim()} aria-label="Send">
+                  <ArrowUp aria-hidden="true" />
+                </InputGroupButton>
+              </Tip>
+            </InputGroupAddon>
+          </InputGroup>
         </form>
-        </div>
-        </div>
       </SheetContent>
     </Sheet>
   )
 }
-

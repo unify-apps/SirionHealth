@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ArrowDownRight, ArrowLeft, ArrowUpRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -54,26 +54,16 @@ function SentimentReads({ lastYm }: { lastYm: string }) {
   )
 }
 
-/** One area's drill-down. Top: trend (sticky) beside the inputs. Below, full width: drivers, cap rule, strong negatives. */
+/** One area's drill-down, one column: trend, inputs, drivers, cap rule, strong negatives. */
 export function AreaSheetBody({ area, data, onBack }: { area: Area; data: HealthData; onBack?: () => void }) {
   const ms = data.months, first = ms[0], last = ms[ms.length - 1], prev = ms[ms.length - 2]
   const have = area.scored.length, all = area.inputs.length
   // scored inputs weakest first, then the ones with no data
   const ordered = [...area.scored, ...area.missing]
-  // the trend column sticks just under the sticky sheet header, whatever its height
-  const head = useRef<HTMLDivElement>(null)
-  const [headH, setHeadH] = useState(0)
-  useLayoutEffect(() => {
-    const el = head.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setHeadH(el.offsetHeight))
-    ro.observe(el); setHeadH(el.offsetHeight)
-    return () => ro.disconnect()
-  }, [])
   const vs = (prev?.label ?? 'last month').split(' ')[0]
   return (
     <>
-      <SheetHeader ref={head} className={sheetHeaderCls}>
+      <SheetHeader className={sheetHeaderCls}>
         {onBack && (
           <Button variant="outline" size="sm" className="w-fit" onClick={onBack}><ArrowLeft />All inputs</Button>
         )}
@@ -97,25 +87,20 @@ export function AreaSheetBody({ area, data, onBack }: { area: Area; data: Health
         </div>
       </SheetHeader>
 
-      <div className="grid items-start lg:grid-cols-2 lg:divide-x lg:divide-hairline">
-        <div className="min-w-0 lg:sticky" style={{ top: headH }}>
-          <Section title="Last 18 months" sub={`${first.label} ${first.areas[area.key]}, ${last.label} ${area.score}`}>
-            <TrendChart months={ms} area={area.key} name={area.name} className="h-52" />
-          </Section>
-        </div>
-        <div className="min-w-0 border-t border-hairline lg:border-t-0">
-          <Section title="Inputs" sub={`${have} of ${all} have data`}>
-            {ordered.length
-              ? <MoreList items={ordered} n={4} noun="more inputs" className="divide-y divide-hairline" render={i => <InputRow key={i.field + i.name} input={i} />} />
-              : <Empty title="No inputs" className="py-6" />}
-            {area.missing.length > 0 && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                {area.missing.length} sent no value and {area.missing.length > 1 ? 'are' : 'is'} left out of the average and the drivers.
-              </p>
-            )}
-          </Section>
-        </div>
-      </div>
+      <Section title="Last 18 months" sub={`${first.label} ${first.areas[area.key]}, ${last.label} ${area.score}`}>
+        <TrendChart months={ms} area={area.key} name={area.name} className="h-48" />
+      </Section>
+
+      <Section title="Inputs" sub={`${have} of ${all} have data`}>
+        {ordered.length
+          ? <MoreList items={ordered} n={4} noun="more inputs" className="divide-y divide-hairline" render={i => <InputRow key={i.field + i.name} input={i} />} />
+          : <Empty title="No inputs" className="py-6" />}
+        {area.missing.length > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {area.missing.length} sent no value and {area.missing.length > 1 ? 'are' : 'is'} left out of the average and the drivers.
+          </p>
+        )}
+      </Section>
 
       <Section title="What drives it">
         {area.weakest ? (

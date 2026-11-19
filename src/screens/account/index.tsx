@@ -27,8 +27,8 @@ export function AccountScreen() {
         <AccountHeader />
       </section>
       <Tabs value={tab} onValueChange={setTab} className="gap-0">
-        {/* full-bleed sticky tab strip under the top bar; tabs sized to their label, left aligned */}
-        <div className="sticky top-12 z-10 -mx-4 border-b border-hairline bg-background/85 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        {/* full-bleed sticky tab strip pinned to top; tabs sized to their label, left aligned */}
+        <div className="sticky top-0 z-10 -mx-4 border-b border-hairline bg-background/85 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <TabsList variant="line" className="h-11 w-full justify-start gap-1 overflow-x-auto rounded-none p-0 [scrollbar-width:none]">
             {TABS.map(t => (
               <TabsTrigger key={t.id} value={t.id}

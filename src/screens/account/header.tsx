@@ -2,11 +2,13 @@
    One idea per zone, a visual instead of a sentence; the derivation and provenance live in the sheets. */
 import { useEffect, useState } from 'react'
 import {
-  ArrowDown, ArrowUp, CalendarClock, DollarSign, Gauge, HeartPulse, Layers, Mail, Minus, RefreshCw, TrendingDown, Users, type LucideIcon,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarClock, DollarSign, Gauge, HeartPulse, Layers, Mail, Minus, RefreshCw, TrendingDown, Users, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Meter } from '@/components/charts'
 import { PageHeader } from '@/components/page'
+import { DateRangeMenu } from '@/components/app/date-range'
+import { go } from '@/lib/route'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -96,22 +98,25 @@ export function AccountHeader() {
   const [area, setArea] = useState<AreaKey | null>(null)
   const w = useWidget(buildVerdict)
   const openArea = (k: AreaKey) => { setHow(false); setArea(k) }
+  // hovering an area lights the ring; hovering the ring lights every area: the areas feed the score
+  const [hl, setHl] = useState<Link>(null)
 
   return (
     <header className="flex flex-col gap-4">
       <PageHeader
+        back={{ label: 'My accounts', onClick: () => go('accounts') }}
         lead="TA"
         title="TransAmerica"
         sub="Financial services · Enterprise · North America · BAU"
-        actions={<Button variant="ghost" size="sm" onClick={() => setHow(true)}>How scores work</Button>}
+        actions={<><DateRangeMenu /><Button variant="ghost" size="sm" onClick={() => setHow(true)}>How scores work</Button></>}
       />
 
       <Card className="gap-0 py-0">
         <WidgetBody w={w} what="the health verdict" skeleton={<VerdictSkeleton />}>
           {d => (
             <div className="grid divide-y divide-hairline md:grid-cols-12 md:divide-y-0">
-              <ScoreZone onHow={() => setHow(true)} />
-              <AreasZone d={d} onArea={openArea} />
+              <ScoreZone onHow={() => setHow(true)} hl={hl} onHl={setHl} />
+              <AreasZone d={d} onArea={openArea} hl={hl} onHl={setHl} />
               <RenewalZone />
             </div>
           )}
@@ -138,7 +143,9 @@ function ZoneLabel({ id, icon: Icon, children, right }: { id: string; icon: Luci
 }
 
 /* ---------- zone 1: score ---------- */
-function ScoreZone({ onHow }: { onHow: () => void }) {
+type Link = 'ring' | 'areas' | null
+
+function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l: Link) => void }) {
   const b = bandOf(score.final)
   return (
     <section aria-labelledby="h-health" className="flex flex-col gap-2 p-5 md:col-span-4 lg:col-span-3">
@@ -147,8 +154,10 @@ function ScoreZone({ onHow }: { onHow: () => void }) {
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" onClick={onHow}
-              aria-label={`Health ${score.final} of 100, capped from ${score.weighted} by the renewal rule. See how scores work`}
-              className={cn('shrink-0 rounded-full p-1 transition-colors hover:bg-accent/60', focusRing)}>
+              onPointerEnter={() => onHl('areas')} onPointerLeave={() => onHl(null)} onFocus={() => onHl('areas')} onBlur={() => onHl(null)}
+              aria-label={`Health ${score.final} of 100: weighted ${score.weighted} minus a ${score.cap}-point renewal cap. See how scores work`}
+              className={cn('shrink-0 rounded-full p-1 transition-[background-color,box-shadow] duration-200 hover:bg-accent/60', focusRing,
+                hl === 'ring' && 'bg-accent/60 shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_25%,transparent)]')}>
               <ScoreRing value={score.final} />
             </button>
           </TooltipTrigger>
@@ -160,10 +169,12 @@ function ScoreZone({ onHow }: { onHow: () => void }) {
           </TooltipTrigger>
           <TooltipContent>{BAND_LABEL[b]}: {b === 'good' ? '70 and above' : b === 'warn' ? '40 to 69' : 'under 40'}</TooltipContent>
         </Tooltip>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          <Term className="no-underline" tip={`${score.overrideCode} · ${GLOSSARY.O7}. Weighted ${score.weighted} → final ${score.final}.`}>
-            Capped from {score.weighted}
-          </Term>
+        <span className="flex items-center gap-1 text-xs tabular-nums" aria-label={`${score.weighted} weighted average, minus ${score.cap} renewal cap, equals ${score.final}`}>
+          <span className="text-foreground">{score.weighted}</span><span className="text-muted-foreground">avg</span>
+          <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
+          <Term tip={`${score.overrideCode} · ${GLOSSARY.O7}`} className="text-foreground">−{score.cap}</Term><span className="text-muted-foreground">cap</span>
+          <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
+          <span className={cn('font-medium', bandText[b])}>{score.final}</span>
         </span>
       </div>
     </section>
@@ -171,12 +182,20 @@ function ScoreZone({ onHow }: { onHow: () => void }) {
 }
 
 /* ---------- zone 2: areas ---------- */
-function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void }) {
+function AreasZone({ d, onArea, hl, onHl }: {
+  d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void; hl: Link; onHl: (l: Link) => void
+}) {
   const since = ymLabel(previous.ym).split(' ')[0]
   const drawn = useDrawn()
   return (
-    <section aria-labelledby="h-areas" className="flex min-w-0 flex-col gap-2 p-5 md:col-span-8 md:border-l md:border-hairline md:px-6 lg:col-span-6">
-      <ZoneLabel id="h-areas" icon={Layers}>Area scores</ZoneLabel>
+    <section aria-labelledby="h-areas" className="relative flex min-w-0 flex-col gap-2 p-5 md:col-span-8 md:border-l md:border-hairline md:px-6 lg:col-span-6">
+      {/* sits on the divider: the areas feed the score on the left */}
+      <span aria-hidden="true"
+        className={cn('absolute top-1/2 -left-3 z-10 hidden size-6 -translate-y-1/2 place-items-center rounded-full border border-hairline bg-card text-muted-foreground transition-colors md:grid',
+          hl && 'border-ring/50 text-foreground')}>
+        <ArrowLeft className="size-3.5" />
+      </span>
+      <ZoneLabel id="h-areas" icon={Layers}>Area scores · weighted {score.weighted}</ZoneLabel>
       <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
         {d.areas.map((a, i) => {
           const weak = a.k === d.weakest
@@ -186,8 +205,9 @@ function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: 
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" onClick={() => onArea(a.k)}
+                    onPointerEnter={() => onHl('ring')} onPointerLeave={() => onHl(null)} onFocus={() => onHl('ring')} onBlur={() => onHl(null)}
                     aria-label={`${AREA_NAME[a.k]} ${a.v}${weak ? ', the lowest area' : ''}. ${tip}. Open inputs`}
-                    className={cn('-mx-2 flex w-[calc(100%+1rem)] flex-col gap-1 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent/60', focusRing)}>
+                    className={cn('-mx-2 flex w-[calc(100%+1rem)] flex-col gap-1 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent/60', focusRing, hl === 'areas' && 'bg-accent/40')}>
                     <span className="flex h-5 items-center gap-2 text-xs">
                       <span className="truncate text-muted-foreground">{AREA_SHORT[a.k]}</span>
                       {weak && <span className="rounded bg-muted px-1 py-px text-[11px] leading-none text-foreground">Lowest</span>}

@@ -10,7 +10,7 @@ import { Avatar, EngagementPill, MonthStrip, RoleMenu, RoleTag, TonePill } from 
 import { roleChange, roleStore } from './store'
 import { toast } from 'sonner'
 import { Copy } from 'lucide-react'
-import { Fact, SheetColumns, sheetHeaderCls, Tip } from '@/components/page'
+import { Fact, SheetBody, sheetHeaderCls, Tip } from '@/components/page'
 
 /** Copies an address and confirms it. */
 export function copyEmail(email: string) {
@@ -51,7 +51,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
   const G = row ? GAP_ICON[row.gap[0]] : null
   return (
     <Sheet open={!!row} onOpenChange={o => { if (!o) setAll(false); onOpenChange(o) }}>
-      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl">
+      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
         {row && G && (
           <>
             <SheetHeader className={sheetHeaderCls}>
@@ -72,7 +72,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
               </div>
             </SheetHeader>
             <ScrollArea className="min-h-0 flex-1">
-              <SheetColumns aside={
+              <SheetBody facts={
                 <>
                   <Fact label={<>Role{SOURCE_TEXT[row.source] && <> · {SOURCE_TEXT[row.source]}</>}</>}><RoleTag row={row} /></Fact>
                   <Fact label="Engagement">
@@ -89,7 +89,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
                   <Fact label="Mentions, 18 months">
                     <span className="flex items-center gap-2"><MonthStrip months={row.months} labels={months} max={max} /><span className="tabular-nums">{row.mentions}</span></span>
                   </Fact>
-                  {(row.sources.length > 0 || row.news) && <Fact label="Seen in"><span className="text-muted-foreground">{row.news ? row.news.source : row.sources.join(', ')}</span></Fact>}
+                  {(row.sources.length > 0 || row.news) && <Fact label="Seen in" wide><span className="text-muted-foreground">{row.news ? row.news.source : row.sources.join(', ')}</span></Fact>}
                   {row.email && (
                     <Fact label="Email">
                       <span className="flex min-w-0 items-center gap-1">
@@ -122,7 +122,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
                     ) : <p className="text-muted-foreground">No statements name them.</p>}
                   </section>
                 )}
-              </SheetColumns>
+              </SheetBody>
             </ScrollArea>
           </>
         )}

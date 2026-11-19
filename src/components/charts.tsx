@@ -40,12 +40,11 @@ export const ANIM_MS = 700
 export const gridProps = { vertical: false } as const
 export const xAxisProps = { tickLine: false, axisLine: false, tickMargin: 8 } as const
 export const yAxisProps = { tickLine: false, axisLine: false, tickMargin: 8, width: 32 } as const
-/** Threshold reference line: dashed 3 3. Pair with `refLabel` for an optional label. */
+/** Threshold reference line: dashed 3 3. Pair with `refLabel` for an optional label. Prefer no label on a y threshold
+ *  whose value is already a y tick: the dashed line plus the tick says it, and a label can sit on the series. */
 export const thresholdLine = { strokeDasharray: '3 3', ifOverflow: 'extendDomain' } as const
-export const refLabel = (value: string, position: 'insideTopLeft' | 'insideBottomLeft' | 'top' = 'insideTopLeft') => ({ value, position })
-/** Threshold label at the right end, just above its line, with a card-coloured halo so a crossing line stays legible. */
-const endLabel = (value: string) => ({
-  value, position: 'insideTopRight' as const, offset: 4, fontSize: 10,
+export const refLabel = (value: string, position: 'insideTopRight' | 'top' = 'insideTopRight') => ({
+  value, position, offset: 4, fontSize: 10,
   stroke: 'var(--card)', strokeWidth: 3, paintOrder: 'stroke' as const, strokeLinejoin: 'round' as const,
 })
 /** Hover dot on a line or area; its ring takes the card colour from CSS. */
@@ -71,7 +70,7 @@ function Swatch({ color, className }: { color: string; className?: string }) {
 
 export type ScorePoint = { tick: string; label: string; value: number }
 
-/** Monthly 0 to 100 score: flat-fill area, 2px line, Watch (70) and At risk (40) lines. The tooltip gives the value and its band.
+/** Monthly 0 to 100 score: flat-fill area, 2px line, dashed Watch (70) and At risk (40) lines, labelled by the y ticks. The tooltip gives the value and its band.
  *  `compact` hides the axes and threshold labels for small spaces. */
 export function ScoreTrend({ data, name, thresholds = true, compact = false, className }: {
   data: ScorePoint[]; name: string; thresholds?: boolean; compact?: boolean; className?: string
@@ -85,8 +84,9 @@ export function ScoreTrend({ data, name, thresholds = true, compact = false, cla
         {!compact && <CartesianGrid {...gridProps} />}
         <XAxis dataKey="tick" {...xAxisProps} minTickGap={24} hide={compact} />
         <YAxis domain={[0, 100]} ticks={thresholds ? [0, 40, 70, 100] : [0, 50, 100]} {...yAxisProps} hide={compact} />
-        {thresholds && <ReferenceLine y={70} {...thresholdLine} label={compact ? undefined : endLabel('Watch below 70')} />}
-        {thresholds && <ReferenceLine y={40} {...thresholdLine} label={compact ? undefined : endLabel('At risk below 40')} />}
+        {/* no labels: the 40 and 70 y ticks name these lines, and a label would sit on the series */}
+        {thresholds && <ReferenceLine y={70} {...thresholdLine} />}
+        {thresholds && <ReferenceLine y={40} {...thresholdLine} />}
         <ChartTooltip content={
           <ChartTooltipContent labelFormatter={(_, p) => p?.[0]?.payload?.label}
             formatter={v => {

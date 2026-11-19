@@ -1,6 +1,7 @@
 import { isValidElement, useState } from 'react'
-import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,13 +12,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
  * Compact page header in the body: one title row (2xl, regular weight) with a muted meta line, actions on the right
  * on the same row. ~64px tall. The top bar above keeps only the breadcrumb and global tools.
  */
-export function PageHeader({ eyebrow, title, sub, actions, lead }: {
+export function PageHeader({ eyebrow, title, sub, actions, lead, back }: {
   eyebrow?: string; title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode
+  /** small back link above the title, replaces the old breadcrumb bar */
+  back?: { label: string; onClick: () => void }
   /** before the title: a string renders a monogram as tall as the title + meta lines; or pass any element */
   lead?: React.ReactNode
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-5">
+    <header className="pb-5">
+      <div className={cn('flex items-center gap-2', back ? 'mb-3' : 'mb-3 md:hidden')}>
+        <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
+        {back && (
+          <button type="button" onClick={back.onClick}
+            className="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            <ChevronLeft className="size-4" aria-hidden="true" />{back.label}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <div className="flex min-w-0 items-center gap-3">
         {typeof lead === 'string'
           ? <span aria-hidden="true" className="grid size-[52px] shrink-0 place-items-center rounded-full bg-muted text-base font-medium text-foreground">{lead}</span>
@@ -29,6 +42,7 @@ export function PageHeader({ eyebrow, title, sub, actions, lead }: {
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
     </header>
   )
 }
@@ -105,8 +119,9 @@ export function DeltaChip({ value, format, label, health, className }: Delta & {
   )
 }
 
-/** KPI tile: icon + label, big value with an optional delta chip, and a small visual.
- *  `tone` colours the value only (health semantics). */
+/** KPI tile with one fixed structure so tiles in a row line up: icon + label, value (+ delta, + aside),
+ *  a visual row that is always 20px tall (reserved when empty), and a one-line truncated hint.
+ *  Tiles fill their grid cell, so a row of tiles is equal height. `tone` colours the value only (health semantics). */
 export function Stat({ label, value, hint, tone, icon, delta, aside, visual, className }: {
   label: React.ReactNode; value: React.ReactNode; hint?: React.ReactNode
   tone?: 'good' | 'warn' | 'bad'
@@ -114,25 +129,25 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, cla
   icon?: IconLike
   /** change chip next to the value */
   delta?: Delta
-  /** small visual to the right of the value, e.g. a ring */
+  /** small visual to the right of the value, e.g. a ring (keep it ≤32px tall) */
   aside?: React.ReactNode
-  /** small visual under the value, e.g. a meter or sparkline */
+  /** small visual under the value, e.g. a meter or sparkline; fits a 20px row */
   visual?: React.ReactNode
   className?: string
 }) {
   return (
-    <Card className={cn('gap-1 px-5 py-4', className)}>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} />{label}</div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-          <div className={cn('text-2xl font-normal tabular-nums tracking-[-0.02em]',
+    <Card className={cn('h-full gap-1.5 px-5 py-4', className)}>
+      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{label}</span></div>
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
             tone === 'good' && 'text-good', tone === 'warn' && 'text-warn', tone === 'bad' && 'text-bad')}>{value}</div>
-          {delta && <DeltaChip {...delta} />}
+          {delta && <DeltaChip {...delta} className="shrink-0" />}
         </div>
         {aside}
       </div>
-      {visual && <div className="py-1">{visual}</div>}
-      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+      <div className="flex h-5 min-w-0 items-center [&>*]:w-full" aria-hidden={visual ? undefined : true}>{visual}</div>
+      <div className="h-4 truncate text-xs text-muted-foreground" title={typeof hint === 'string' ? hint : undefined}>{hint}</div>
     </Card>
   )
 }
@@ -345,27 +360,28 @@ export function TableFooterBar({ shown, total, children, className }: {
   )
 }
 
-/* ---------- side sheets: sticky header, then facts left (~240px) and content right; prose capped at ~65ch ---------- */
+/* ---------- side sheets: sticky header, then a fact grid and the content in one column; prose capped at ~65ch ---------- */
 
 /** Classes for a sheet's sticky header (title, key status, actions). */
 export const sheetHeaderCls = 'sticky top-0 z-10 gap-2 border-b border-hairline bg-popover/95 p-6 pr-12 backdrop-blur-sm'
 
-/** Two-column sheet body: `aside` holds facts and meta, children hold the content. Stacks on phones. */
-export function SheetColumns({ aside, children, className }: { aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
+/** Single-column sheet body (24px padding): `facts` as a compact two-column definition grid at the top, then the content.
+ *  Prose is capped at about 65ch. */
+export function SheetBody({ facts, children, className }: { facts?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('grid gap-6 p-6', aside != null && 'md:grid-cols-[240px_minmax(0,1fr)] md:gap-8', className)}>
-      {aside != null && <aside className="grid content-start gap-5 text-sm">{aside}</aside>}
+    <div className={cn('grid content-start gap-6 p-6', className)}>
+      {facts != null && <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-hairline pb-5 text-sm">{facts}</dl>}
       <div className="grid min-w-0 content-start gap-6 [&_p]:max-w-[65ch]">{children}</div>
     </div>
   )
 }
 
-/** One fact in a sheet's aside: small muted label over the value. */
-export function Fact({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+/** One fact in a sheet's fact grid: small muted label over the value. `wide` spans both columns. */
+export function Fact({ label, children, wide }: { label: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="grid gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="min-w-0">{children}</div>
+    <div className={cn('grid min-w-0 content-start gap-1', wide && 'col-span-2')}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { CalendarClock, HeartPulse, ShieldCheck, TriangleAlert } from 'lucide-re
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BAND_LABEL, bandOf } from '@/components/health'
 import { Term } from './account/overview/bits'
+import { DateRangeMenu } from '@/components/app/date-range'
 import { Meter } from '@/components/charts'
 import { HealthRing } from '@/components/health'
 import { PageHeader, Stat } from '@/components/page'
@@ -81,7 +82,7 @@ export function PortfolioScreen() {
       <PageHeader
         title="Portfolio"
         sub={`${scope} · as of ${BOOK.asOf}`}
-        actions={<FilterBar value={filters} onChange={setFilters} onClear={clear} />}
+        actions={<><FilterBar value={filters} onChange={setFilters} onClear={clear} /><DateRangeMenu /></>}
       />
 
       <BandSplit status={split.status} onRetry={split.retry} filters={filters} onClearFilters={clear} />

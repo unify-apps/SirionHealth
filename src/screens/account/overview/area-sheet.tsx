@@ -7,7 +7,7 @@ import {
   AREA_NAME, AREA_SOURCE, areaDelta, areaEvidence, areaInputs, areaSeries, latest, months, previous, score,
   strongThisMonth, ymLabel, type AreaKey,
 } from '../facts'
-import { EvidenceRow, Glossed, Term } from './bits'
+import { EvidenceRow, Glossed, InfoTip, Term } from './bits'
 import { BAND_LABEL } from '@/components/health'
 
 function Sec({ title, children, className }: { title: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -22,7 +22,7 @@ function Sec({ title, children, className }: { title: React.ReactNode; children:
 export function AreaSheet({ area, onOpenChange }: { area: AreaKey | null; onOpenChange: (open: boolean) => void }) {
   return (
     <Sheet open={!!area} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-4xl">
+      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-3xl">
         {area && <AreaBody k={area} />}
       </SheetContent>
     </Sheet>
@@ -37,41 +37,26 @@ function AreaBody({ k }: { k: AreaKey }) {
     <>
       <SheetHeader className="sticky top-0 z-10 border-b border-hairline bg-popover px-6 py-4 pr-14">
         <p className="text-xs text-muted-foreground">{isAI ? 'Scored by AI from emails' : 'Scored by rules from source data'}</p>
-        <SheetTitle className="text-lg font-normal">
-          {AREA_NAME[k]}: <span className={cn('tabular-nums', bandText[bandOf(v)])}>{v}</span>
+        <SheetTitle className="flex items-center gap-2 text-lg font-normal">
+          <span>{AREA_NAME[k]}: <span className={cn('tabular-nums', bandText[bandOf(v)])}>{v}</span></span>
+          <InfoTip text={`Source: AHI's monthly sentiment summaries (AI) and the ${ymLabel(latest.ym)} scored record. The original emails are not linked in AHI today.`} />
         </SheetTitle>
         <SheetDescription>
           {ymLabel(first.ym)} {first.areas[k]} → {ymLabel(latest.ym)} {v} · {d === 0 ? 'no change' : `${d > 0 ? '+' : '−'}${Math.abs(d)}`} vs {ymLabel(previous.ym)}
         </SheetDescription>
       </SheetHeader>
 
-      <div className="grid gap-8 p-6 lg:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-8">
-          <Sec title="Last 18 months">
-            <ScoreTrend name={AREA_NAME[k]} data={series.map(p => ({ tick: p.label.replace(/ 20(\d\d)$/, " '$1"), label: p.label, value: p.value }))} />
-          </Sec>
-
-          {k === 'commercial' && (
-            <Sec title="Cap rule">
-              <p className="leading-relaxed"><Term>{score.overrideCode}</Term>: “{score.overrideReason}”. Weighted {score.weighted} → final {score.final}.</p>
-            </Sec>
-          )}
-
-          {k === 'sentiment' && (
-            <Sec title={`Strong negatives in ${ymLabel(latest.ym)} (${strong.length})`}>
-              {strong.length
-                ? <div className="divide-y divide-hairline">{strong.map(e => <EvidenceRow key={e.text} e={e} />)}</div>
-                : <p className="text-muted-foreground">No strong negatives this month.</p>}
-            </Sec>
-          )}
-        </div>
+      <div className="flex flex-col gap-8 p-6">
+        <Sec title="Last 18 months">
+          <ScoreTrend name={AREA_NAME[k]} className="h-48" data={series.map(p => ({ tick: p.label.replace(/ 20(\d\d)$/, " '$1"), label: p.label, value: p.value }))} />
+        </Sec>
 
         <Sec title={`Inputs (${ins.length - missing} of ${ins.length} have data)`}>
           <ul className="divide-y divide-hairline">
             {ins.map(i => {
               const b = bandOf(i.score)
               return (
-                <li key={i.field} className="grid grid-cols-[minmax(0,1fr)_5rem_3.5rem] items-center gap-3 py-2.5">
+                <li key={i.field} className="grid grid-cols-[minmax(0,1fr)_7.5rem_3.5rem] items-center gap-4 py-2.5">
                   <div className="min-w-0">
                     <div><Glossed text={i.name} /></div>
                     <div className="text-xs text-muted-foreground"><Glossed text={i.note} /></div>
@@ -92,16 +77,27 @@ function AreaBody({ k }: { k: AreaKey }) {
           )}
         </Sec>
 
-        {k === 'sentiment' && earlier.length > 0 && (
-          <Sec className="lg:col-span-2" title={`Earlier strong negatives, ${ymLabel(months[0].ym)} to ${ymLabel(previous.ym)} (${earlier.length})`}>
-            <div className="grid gap-x-8 divide-y divide-hairline lg:grid-cols-2 lg:divide-y-0">{earlier.map(e => <EvidenceRow key={e.text} e={e} />)}</div>
+        {k === 'commercial' && (
+          <Sec title="Cap rule">
+            <p className="leading-relaxed"><Term>{score.overrideCode}</Term>: “{score.overrideReason}”. Weighted {score.weighted} → final {score.final}.</p>
           </Sec>
         )}
-      </div>
 
-      <p className="px-6 pb-6 text-xs text-muted-foreground">
-        Source: AHI's monthly sentiment summaries (AI) and the {ymLabel(latest.ym)} scored record. The original emails are not linked in AHI today.
-      </p>
+        {k === 'sentiment' && (
+          <>
+            <Sec title={`Strong negatives in ${ymLabel(latest.ym)} (${strong.length})`}>
+              {strong.length
+                ? <div className="divide-y divide-hairline">{strong.map(e => <EvidenceRow key={e.text} e={e} />)}</div>
+                : <p className="text-muted-foreground">No strong negatives this month.</p>}
+            </Sec>
+            {earlier.length > 0 && (
+              <Sec title={`Earlier strong negatives, ${ymLabel(months[0].ym)} to ${ymLabel(previous.ym)} (${earlier.length})`}>
+                <div className="divide-y divide-hairline">{earlier.map(e => <EvidenceRow key={e.text} e={e} />)}</div>
+              </Sec>
+            )}
+          </>
+        )}
+      </div>
     </>
   )
 }

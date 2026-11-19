@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleSlash, Newspaper } from 'lucide-react'
-import { BlockHeader, Empty, Fact, ListColumns, ListRow, Meter, MeterValue, SectionTitle, SheetColumns, sheetHeaderCls } from '@/components/page'
+import { BlockHeader, Empty, Fact, ListColumns, ListRow, Meter, MeterValue, SectionTitle, SheetBody, sheetHeaderCls } from '@/components/page'
 import { BAND_LABEL, bandOf } from '@/components/health'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -107,7 +107,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
         })}
       </ul>
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl">
+        <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
           {open && (
             <>
               <SheetHeader className={sheetHeaderCls}>
@@ -115,7 +115,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                 <SheetDescription>{open.events.filter(e => e.date).length} dated events, 2026</SheetDescription>
               </SheetHeader>
               <ScrollArea className="min-h-0 flex-1">
-                <SheetColumns aside={
+                <SheetBody facts={
                   <>
                     <Fact label="Relevance to the renewal">
                       {open.relevance == null ? <span className="text-muted-foreground">No events</span> : (
@@ -152,7 +152,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                       <p className="leading-relaxed text-pretty">{open.why}</p>
                     </section>
                   )}
-                </SheetColumns>
+                </SheetBody>
               </ScrollArea>
             </>
           )}

@@ -68,7 +68,7 @@ export function HealthTab() {
 
       <Sheet open={!!panel && !!data} onOpenChange={o => { if (!o) setPanel(null) }}>
         <SheetContent className={cn('gap-0 overflow-y-auto p-0 data-[side=right]:w-full',
-          panel?.kind === 'all' ? 'data-[side=right]:sm:max-w-6xl' : 'data-[side=right]:sm:max-w-5xl')}>
+          panel?.kind === 'all' ? 'data-[side=right]:sm:max-w-5xl' : 'data-[side=right]:sm:max-w-3xl')}>
           {data && panel?.kind === 'all' && (
             <div className="flex flex-col">
               <ScorecardBody data={data} area={filter} onArea={setFilter}
