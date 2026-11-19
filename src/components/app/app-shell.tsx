@@ -57,7 +57,7 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
   // clicking empty sidebar space (not a control) toggles it, like the rail
   const onBlankClick = (e: React.MouseEvent) => {
     if (isMobile) return
-    if ((e.target as HTMLElement).closest('button, a, input, [role="menuitem"], [data-sidebar="menu-button"], [data-sidebar="menu-badge"]')) return
+    if ((e.target as HTMLElement).closest('button, a, input, [role="menuitem"], [data-sidebar="menu-button"], [data-sidebar="menu-badge"], [data-sidebar="menu"], [data-sidebar="header"], [data-sidebar="footer"]')) return
     toggleSidebar()
   }
   return (
