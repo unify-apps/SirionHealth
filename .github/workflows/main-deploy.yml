@@ -20,7 +20,6 @@ permissions:
 
 jobs:
   deploy-prototype-vercel:
-    if: hashFiles('package.json') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

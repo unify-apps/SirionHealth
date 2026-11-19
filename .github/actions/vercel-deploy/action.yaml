@@ -44,7 +44,7 @@ runs:
   steps:
     - name: Install Vercel CLI
       shell: bash
-      run: pnpm add -g vercel
+      run: npm i -g vercel@latest
 
     - name: Link Vercel project (creates it on first run)
       shell: bash
