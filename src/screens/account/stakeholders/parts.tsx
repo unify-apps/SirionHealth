@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Crown, Pencil, RotateCcw, Star, User, UserMinus, Wrench } from 'lucide-react'
+import { Award, Check, ChevronDown, Crown, Pencil, RotateCcw, User, UserMinus, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -8,9 +8,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { ymLabel } from '../activity/shared'
 import { ENG_LABEL, persona, ROLE_OPTS, TONE_LABEL, type Engagement, type StakeRow, type Tone } from './model'
-import { roleStore } from './store'
+import { roleChange, roleStore } from './store'
 
-const P_ICON = { sponsor: Crown, champion: Star, tech: Wrench, former: UserMinus, user: User }
+const P_ICON = { sponsor: Crown, champion: Award, tech: Wrench, former: UserMinus, user: User }
 
 /** Role tag. Inferred roles (suggested from the summaries, not confirmed) get a dashed border and say so. */
 export function RoleTag({ row, className }: { row: Pick<StakeRow, 'label' | 'source'>; className?: string }) {
@@ -68,7 +68,7 @@ export function MonthStrip({ months, labels, max, className }: { months: number[
         <span tabIndex={0} role="img" aria-label={`${total} mentions across ${months.length} monthly summaries`}
           className={cn('inline-flex h-[18px] items-end gap-0.5 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50', className)}>
           {months.map((n, k) => (
-            <i key={k} className={cn('w-1 rounded-[1px]', n ? 'bg-chart-1' : 'bg-border')} style={{ height: n ? 4 + Math.round((n / Math.max(1, max)) * 14) : 2 }} />
+            <i key={k} className={cn('w-1 rounded-[1px]', n ? 'bg-chart-1' : 'bg-chart-5')} style={{ height: n ? 4 + Math.round((n / Math.max(1, max)) * 14) : 2 }} />
           ))}
         </span>
       </TooltipTrigger>
@@ -85,26 +85,33 @@ export function RoleMenu({ row, children, align = 'start' }: { row: StakeRow; ch
   const canKeep = row.source === 'inferred' || row.source === 'news'
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-        {children ?? (
-          <Button variant="ghost" size="icon-xs" aria-label={`Edit role for ${row.name}`}><Pencil /></Button>
-        )}
-      </DropdownMenuTrigger>
+      {children ? (
+        <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>{children}</DropdownMenuTrigger>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+              <Button variant="ghost" size="icon-xs" aria-label={`Edit role for ${row.name}`}><Pencil /></Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Edit role</TooltipContent>
+        </Tooltip>
+      )}
       <DropdownMenuContent align={align} className="w-60" onClick={e => e.stopPropagation()}>
         <DropdownMenuLabel>Role for {row.name}</DropdownMenuLabel>
         {canKeep && row.aiRole && (
-          <DropdownMenuItem onSelect={() => roleStore.confirm(row.key)}>
+          <DropdownMenuItem onSelect={() => roleChange(() => roleStore.confirm(row.key), `Confirmed ${row.name} as ${row.aiRole}`)}>
             <Check />Keep {row.aiRole} <span className="ml-auto text-xs text-muted-foreground">inferred</span>
           </DropdownMenuItem>
         )}
         {canKeep && <DropdownMenuSeparator />}
-        <DropdownMenuRadioGroup value={row.label} onValueChange={v => roleStore.set(row.key, v)}>
+        <DropdownMenuRadioGroup value={row.label} onValueChange={v => roleChange(() => roleStore.set(row.key, v), `${row.name} is now ${v.toLowerCase()}`)}>
           {ROLE_OPTS.map(o => <DropdownMenuRadioItem key={o} value={o}>{o}</DropdownMenuRadioItem>)}
         </DropdownMenuRadioGroup>
         {row.source === 'mine' && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => roleStore.reset(row.key)}><RotateCcw />Undo my change</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => roleChange(() => roleStore.reset(row.key), `Role change undone for ${row.name}`)}><RotateCcw />Undo my change</DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>

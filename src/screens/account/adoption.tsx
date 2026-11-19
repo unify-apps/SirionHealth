@@ -3,12 +3,13 @@ import { Empty, SectionTitle } from '@/components/page'
 import { TrendChart } from './health/charts'
 import { LoadError, useLoad } from './health/load'
 import { loadAdoption } from './adoption/model'
-import { ChartCard, ChartSkeleton, SplitBar, StatGrid, StatGridSkeleton, ThemeBars } from './adoption/parts'
+import { SplitBar } from '@/components/charts'
+import { ChartCard, ChartSkeleton, StatGrid, StatGridSkeleton, ThemeBars } from './adoption/parts'
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 
 export function AdoptionTab() {
-  const load = useLoad(loadAdoption)
+  const load = useLoad(loadAdoption, undefined, 'adoption and support')
 
   if (load.status === 'loading') return (
     <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading adoption and support">
@@ -53,7 +54,7 @@ export function AdoptionTab() {
         <StatGrid rows={d.support} />
         <div className="grid gap-3 lg:grid-cols-2">
           <ChartCard title="By priority" sub={`${fmt(ticketTotal)} tickets`}>
-            <SplitBar parts={d.priority} unit="tickets" label="Tickets by priority" />
+            <SplitBar parts={d.priority} unit="tickets" label="Tickets by priority" ordinal="desc" />
           </ChartCard>
           <ChartCard title="Ticket themes" sub={`Top ${d.themes.length} of ${d.themeCount}`}>
             <ThemeBars themes={d.themes} />

@@ -1,14 +1,123 @@
 import { setTab } from '../tab'
 /* Small shared pieces for the account header and Summary tab: info tips, source tags,
    widget load/empty/error states, collapsible section titles, evidence rows. */
-import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronDown, Info } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  AlertTriangle, CalendarClock, ChevronDown, DollarSign, Info, LifeBuoy, MessageSquare, TrendingUp, Users, type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Empty } from '@/components/page'
-import { fmtDY, ymLabel, type Evidence } from '../facts'
+import { fmtDY, ymLabel, type AreaKey, type Evidence } from '../facts'
+
+/* ---------- terms, codes and truncated text ---------- */
+
+/** One line per code or abbreviation the app shows. */
+export const GLOSSARY: Record<string, string> = {
+  NRR: 'Net revenue retention: revenue kept from existing customers, including expansion',
+  GRR: 'Gross revenue retention: revenue kept from existing customers, before expansion',
+  CARR: 'Contracted annual recurring revenue',
+  ARR: 'Annual recurring revenue',
+  MAU: 'Monthly active users',
+  PER: 'Product enhancement requests (open Jira tickets)',
+  O7: 'Renewal cap: renewal within 60 days with auto-renew off holds health at 50',
+  TFC: 'Termination for convenience',
+}
+
+/** A term with a definition: dotted underline, tooltip on hover and keyboard focus.
+ *  `focusable={false}` inside a button or another trigger (hover still works). */
+export function Term({ children, tip, focusable = true, className }: {
+  children: React.ReactNode; tip?: React.ReactNode; focusable?: boolean; className?: string
+}) {
+  const text = tip ?? (typeof children === 'string' ? GLOSSARY[children] : undefined)
+  if (!text) return <>{children}</>
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={focusable ? 0 : undefined}
+          className={cn('cursor-help rounded-sm underline decoration-muted-foreground/50 decoration-dotted underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-72">{text}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+const CODE_RE = new RegExp(`\\b(${Object.keys(GLOSSARY).join('|')})\\b`, 'g')
+
+/** Plain text with every known code (NRR, GRR, CARR, MAU, PER, O7...) wrapped in a `Term`. */
+export function Glossed({ text, focusable = true }: { text: string; focusable?: boolean }) {
+  const parts = text.split(CODE_RE)
+  return <>{parts.map((p, i) => (i % 2 ? <Term key={i} focusable={focusable}>{p}</Term> : p))}</>
+}
+
+/** One-line text that shows its full content in a tooltip, only when it is cut off. */
+export function Truncate({ children, tip, className }: { children: React.ReactNode; tip?: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const cut = () => !!ref.current && ref.current.scrollWidth > ref.current.clientWidth + 1
+  return (
+    <Tooltip open={open} onOpenChange={o => setOpen(o && cut())}>
+      <TooltipTrigger asChild>
+        <span ref={ref} className={cn('block truncate', className)}>{children}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-80">{tip ?? children}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** One icon per health area, used wherever an area is named. */
+export const AREA_ICON: Record<AreaKey, LucideIcon> = {
+  commercial: DollarSign, adoption: TrendingUp, support: LifeBuoy, engagement: Users, sentiment: MessageSquare, renewalRisk: CalendarClock,
+}
+
+/** Status dot classes for list rows. Green, amber and red are health only. */
+export const DOT = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad', none: 'bg-muted-foreground/50' } as const
+
+/** Compact list row: neutral icon circle, one-line title, one muted meta line, status dot on the right.
+ *  The whole row is the button when `onClick` is set. */
+export function ListRow({ icon: Icon, title, meta, status, onClick, label }: {
+  icon: LucideIcon; title: React.ReactNode; meta?: React.ReactNode
+  status?: { tone: keyof typeof DOT; label: string }; onClick?: () => void; label?: string
+}) {
+  const body = (
+    <>
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted" aria-hidden="true">
+        <Icon className="size-4 text-muted-foreground" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <Truncate>{title}</Truncate>
+        {meta && <Truncate className="text-xs tabular-nums text-muted-foreground">{meta}</Truncate>}
+      </span>
+      {status && (
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="grid size-4 place-items-center" aria-hidden="true">
+                <span className={cn('size-2 rounded-full', DOT[status.tone])} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{status.label}</TooltipContent>
+          </Tooltip>
+          <span className="hidden sm:inline">{status.label}</span>
+          <span className="sr-only sm:hidden">{status.label}</span>
+        </span>
+      )}
+    </>
+  )
+  const cls = '-mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-1.5 text-left'
+  return (
+    <li>
+      {onClick
+        ? <button type="button" onClick={onClick} aria-label={label}
+            className={cn(cls, 'cursor-pointer transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>{body}</button>
+        : <div className={cls}>{body}</div>}
+    </li>
+  )
+}
 
 /** The prototype's (i) tip: hover or focus shows the text. */
 export function InfoTip({ text, className }: { text: React.ReactNode; className?: string }) {
@@ -16,7 +125,7 @@ export function InfoTip({ text, className }: { text: React.ReactNode; className?
     <Tooltip>
       <TooltipTrigger asChild>
         <button type="button" aria-label={typeof text === 'string' ? `About this: ${text}` : 'About this'}
-          className={cn('inline-grid size-4 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50', className)}>
+          className={cn('inline-grid size-4 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}>
           <Info className="size-3.5" />
         </button>
       </TooltipTrigger>
@@ -86,10 +195,16 @@ export function SectionHead({ title, tip, open, onToggle, actions, id }: {
       <div className="ml-auto flex items-center gap-3">
         {actions}
         {onToggle && (
-          <Button variant="ghost" size="icon-xs" onClick={onToggle} aria-expanded={open}
-            aria-label={`${open ? 'Collapse' : 'Expand'} ${typeof title === 'string' ? title : 'section'}`}>
-            <ChevronDown className={cn('transition-transform duration-200', !open && '-rotate-90')} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-xs" onClick={onToggle} aria-expanded={open}
+                aria-label={`${open ? 'Collapse' : 'Expand'} ${typeof title === 'string' ? title : 'section'}`}
+                className="hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+                <ChevronDown className={cn('transition-transform duration-200', !open && '-rotate-90')} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{open ? 'Collapse' : 'Expand'}</TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>

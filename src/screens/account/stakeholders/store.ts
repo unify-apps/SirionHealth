@@ -1,6 +1,7 @@
 /* Role edits and confirmations made on this page. Module-level so they survive tab switches and are shared by
    the Stakeholders table, the person sheet, Activity's participant roles and Intelligence's news link. */
 import { useSyncExternalStore } from 'react'
+import { toast } from 'sonner'
 
 export interface RoleState { roles: Record<string, string>; confirmed: Record<string, true> }
 let state: RoleState = { roles: {}, confirmed: {} }
@@ -18,6 +19,16 @@ export const roleStore = {
   },
   /** Keep the inferred role as it is. */
   confirm(key: string) { state = { ...state, confirmed: { ...state.confirmed, [key]: true } }; emit() },
+  /** The whole state, to undo a change. */
+  snapshot(): RoleState { return state },
+  restore(s: RoleState) { state = s; emit() },
+}
+
+/** Runs a role change and confirms it with a toast that can undo it. */
+export function roleChange(run: () => void, title: string) {
+  const before = roleStore.snapshot()
+  run()
+  toast.success(title, { action: { label: 'Undo', onClick: () => roleStore.restore(before) } })
 }
 
 export const useRoles = () => useSyncExternalStore(f => { subs.add(f); return () => { subs.delete(f) } }, () => state)

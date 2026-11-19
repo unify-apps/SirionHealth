@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { bandOf, bandText, isMissing } from '@/components/health'
+import { DeltaChip } from '@/components/page'
 import { cn } from '@/lib/utils'
 import type { Evidence } from '../stakeholders/model'
 import type { JourneyMonth, SentimentMonth } from './model'
@@ -63,10 +64,9 @@ export function SentimentMonths({ months }: { months: SentimentMonth[] }) {
             <li key={m.ym} className="grid gap-3 py-4 first:pt-0 md:grid-cols-[150px_minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
               <div>
                 <h4 className="font-medium">{ymLong(m.ym)}</h4>
-                <p className="mt-0.5 flex items-baseline gap-2 text-xs text-muted-foreground">
-                  Sentiment
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {isMissing(m.score) ? <span>No data</span> : <span className={cn('text-base tabular-nums font-medium', bandText[b])}>{m.score}</span>}
-                  {d != null && d !== 0 && <span className="tabular-nums">{d > 0 ? '+' : '−'}{Math.abs(d)} vs {ymLabel(prevYm(m.ym)).split(' ')[0]}</span>}
+                  {d != null && <DeltaChip value={d} health label={`vs ${ymLabel(prevYm(m.ym)).split(' ')[0]}`} />}
                 </p>
               </div>
               <Drivers label="Positive" items={m.pos} dot="bg-good" />

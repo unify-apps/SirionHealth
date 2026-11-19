@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, RotateCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -8,14 +9,19 @@ export type Load<T> =
 
 /** Reads a tab's data after a short beat, the way the legacy view showed skeletons on entry.
     A throw in the reader becomes an error state with a retry. */
-export function useLoad<T>(read: () => T, delay = 450): Load<T> {
+export function useLoad<T>(read: () => T, delay = 450, what = 'this section'): Load<T> {
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<{ attempt: number; data?: T; error?: string } | null>(null)
   const retry = useCallback(() => { setState(null); setAttempt(a => a + 1) }, [])
   useEffect(() => {
     const t = setTimeout(() => {
       try { setState({ attempt, data: read() }) }
-      catch (e) { setState({ attempt, error: e instanceof Error ? e.message : String(e) }) }
+      catch (e) {
+        const error = e instanceof Error ? e.message : String(e)
+        setState({ attempt, error })
+        // a retry that fails again says so, with another way to retry
+        if (attempt > 0) toast.error(`Couldn't load ${what}`, { description: error, action: { label: 'Retry', onClick: () => { setState(null); setAttempt(a => a + 1) } } })
+      }
     }, delay)
     return () => clearTimeout(t)
     // read is a stable module function; attempt drives retries (deps intentionally exclude it)

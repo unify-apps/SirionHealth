@@ -1,17 +1,22 @@
 /* Summary tab: account brief, strengths and risks, renewal runway, recent activity, order forms.
    Ported from renderSummary, openRef, renderCLM, renderRunway and the #s-summary markup. */
 import { useState } from 'react'
-import { Calendar, ChevronRight, FileText, Mail, MessageSquare, Phone, StickyNote, Ticket, TrendingDown, type LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import {
+  CalendarDays, ChevronRight, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
+  type LucideIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 import { taPeople } from '@/data/legacy'
 import {
-  activityItems, AREA_NAME, evidence, TODAY, ymLabel, type ActivityItem, type AreaKey, type Channel,
+  activityItems, AREA_NAME, evidence, fmtD, TODAY, ymLabel, type ActivityItem, type AreaKey, type Channel,
 } from './facts'
-import { EvidenceRow, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
+import { AREA_ICON, EvidenceRow, Glossed, ListRow, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
+import { ACT_STATUS, ActivitySheet } from './overview/activity-sheet'
 import { ATTN, BRIEF, CLM, REF_ORDER, SUM_REFS, WELL, type ListItem } from './overview/content'
 import { AreaSheet } from './overview/area-sheet'
 import { RunwayChart } from './overview/runway-chart'
@@ -67,16 +72,27 @@ function Cited({ text }: { text: string }) {
   )
 }
 
+/** What a footnote points at, for its tooltip. */
+function refName(k: string) {
+  const r = SUM_REFS[k]
+  return !r ? 'Source' : r.kind === 'rec' ? r.label : r.kind === 'ev' ? 'Monthly summary (AI)' : 'Suggested role (AI)'
+}
+
 function Footnote({ k }: { k: string }) {
   const n = REF_ORDER.indexOf(k) + 1
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button type="button" aria-label={`Source ${n}`}
-          className="ml-0.5 inline-grid h-4 min-w-4 -translate-y-0.5 place-items-center rounded-[5px] border border-border px-1 align-middle text-[10px] tabular-nums text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:border-signal data-[state=open]:text-signal">
-          {n}
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button type="button" aria-label={`Source ${n}: ${refName(k)}`}
+              className="ml-0.5 inline-grid h-4 min-w-4 -translate-y-0.5 place-items-center rounded-[5px] border border-border px-1 align-middle text-[10px] tabular-nums text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-signal data-[state=open]:text-signal">
+              {n}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{refName(k)}</TooltipContent>
+      </Tooltip>
       <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)] gap-1.5 p-3">
         <RefBody k={k} />
       </PopoverContent>
@@ -90,7 +106,7 @@ function RefBody({ k }: { k: string }) {
   if (r.kind === 'rec') return (
     <>
       <p className="text-xs text-muted-foreground">{r.label}</p>
-      <p className="leading-relaxed">{r.text}</p>
+      <p className="leading-relaxed"><Glossed text={r.text} /></p>
     </>
   )
   if (r.kind === 'ev') {
@@ -116,25 +132,48 @@ function RefBody({ k }: { k: string }) {
 }
 
 /* ---------- account brief ---------- */
+const briefText = (d: [string, string][]) =>
+  d.map(([h, t]) => `${h}: ${t.replace(/\s?\{\w+\}/g, '')}`).join('\n')
+
+async function copyBrief(d: [string, string][]) {
+  try {
+    await navigator.clipboard.writeText(`TransAmerica account brief\n${briefText(d)}`)
+    toast('Brief copied')
+  } catch {
+    toast.error("Couldn't copy the brief", { description: 'The browser blocked clipboard access.' })
+  }
+}
+
 function Brief() {
   const w = useWidget(() => BRIEF)
+  const ready = w.status === 'ready' && !!w.data?.length
   return (
     <section aria-labelledby="h-brief">
-      <SectionHead id="h-brief" title="Account brief" />
-      <Card className="px-5 py-5">
+      <SectionHead id="h-brief" title="Account brief" actions={ready && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" aria-label="Copy brief" onClick={() => copyBrief(w.data!)}
+              className="hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+              <Copy />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Copy brief</TooltipContent>
+        </Tooltip>
+      )} />
+      <Card className="px-5 py-4">
         <WidgetBody w={w} what="the account brief" isEmpty={d => d.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
-          skeleton={<div className="grid gap-6 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /></div>)}</div>}>
+          skeleton={<div className="grid gap-5 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
           {d => (
             <>
-              <div className="grid gap-x-8 gap-y-5 md:grid-cols-3 md:divide-x md:divide-hairline">
+              <div className="grid gap-x-8 gap-y-4 md:grid-cols-3 md:divide-x md:divide-hairline">
                 {d.map(([h, t]) => (
                   <div key={h} className="min-w-0 md:pl-8 md:first:pl-0">
-                    <h3 className="mb-1.5 text-sm font-medium">{h}</h3>
+                    <h3 className="mb-1 text-xs text-muted-foreground">{h}</h3>
                     <p className="leading-relaxed"><Cited text={t} /></p>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">AI summary. Select a number for its source.</p>
+              <p className="mt-3 text-xs text-muted-foreground">From monthly summaries</p>
             </>
           )}
         </WidgetBody>
@@ -142,6 +181,12 @@ function Brief() {
     </section>
   )
 }
+
+const listSkeleton = (n: number) => (
+  <ul className="pt-1">{Array.from({ length: n }, (_, i) => (
+    <li key={i} className="flex min-h-12 items-center gap-3"><Skeleton className="size-7 rounded-full" /><div className="flex-1 space-y-1.5"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/3" /></div></li>
+  ))}</ul>
+)
 
 /* ---------- going well / needs attention ---------- */
 function ListCard({ title, items, tone, onArea }: {
@@ -153,23 +198,13 @@ function ListCard({ title, items, tone, onArea }: {
       <h3 className="mb-1 text-sm font-medium">{title}</h3>
       <WidgetBody w={w} what={title.toLowerCase()} isEmpty={d => d.length === 0}
         empty={{ title: tone === 'good' ? 'Nothing stands out yet' : 'Nothing needs attention' }}
-        skeleton={<div className="space-y-4 pt-2">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
+        skeleton={listSkeleton(3)}>
         {d => (
-          <ul className="divide-y divide-hairline">
-            {d.map(([h, t, m, area]) => (
-              <li key={h} className="flex gap-3 py-3.5">
-                <span className={cn('mt-[7px] size-1.5 shrink-0 rounded-full', tone === 'good' ? 'bg-good' : 'bg-bad')} aria-hidden="true" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <span className="font-medium">{h}</span>
-                    <span className="text-xs tabular-nums text-muted-foreground">{m}</span>
-                  </div>
-                  <p className="leading-relaxed text-muted-foreground"><Cited text={t} /></p>
-                  <Button variant="outline" size="xs" onClick={() => onArea(area)}>
-                    {AREA_NAME[area]} inputs <ChevronRight />
-                  </Button>
-                </div>
-              </li>
+          <ul>
+            {d.map(([h, , m, area]) => (
+              <ListRow key={h} icon={AREA_ICON[area]} title={h} meta={`${m} · ${AREA_NAME[area]}`}
+                status={{ tone, label: tone === 'good' ? 'Strength' : 'Risk' }}
+                onClick={() => onArea(area)} label={`${h}. ${m}. Open ${AREA_NAME[area]} inputs`} />
             ))}
           </ul>
         )}
@@ -180,99 +215,62 @@ function ListCard({ title, items, tone, onArea }: {
 
 /* ---------- recent activity ---------- */
 const CH_ICON: Record<Channel, LucideIcon> = {
-  meeting: Calendar, email: Mail, ticket: Ticket, record: TrendingDown, file: FileText, ai: StickyNote,
+  meeting: CalendarDays, email: Mail, ticket: LifeBuoy, record: HeartPulse, file: FileText, ai: StickyNote,
   teams: MessageSquare, call: Phone, note: StickyNote,
-}
-const CH_NAME: Record<Channel, string> = {
-  email: 'Email', meeting: 'Meeting', teams: 'Teams', call: 'Call', ticket: 'Ticket', record: 'AHI record',
-  file: 'Order form', ai: 'AI insight', note: 'Summary note',
-}
-const CAT: Partial<Record<ActivityItem['kind'], [string, string]>> = {
-  neg: ['Risk', 'bg-bad'], flag: ['Risk', 'bg-bad'], pos: ['Positive', 'bg-good'], goal: ['Target', 'bg-muted-foreground'], end: ['Renewal', 'bg-muted-foreground'],
 }
 
 function RecentActivity() {
+  const [open, setOpen] = useState<ActivityItem | null>(null)
   const w = useWidget(() => {
     // the header already states the health cap; engagement snapshots carry no content
     const all = activityItems().filter(i => i.date <= TODAY && !/Engagement snapshot/.test(i.source) && i.kind !== 'flag')
       .sort((a, b) => +b.date - +a.date)
-    return { top: all.slice(0, 4), total: all.length }
+    return { top: all.slice(0, 5), total: all.length }
   })
   return (
     <Card className="gap-0 px-5 py-4">
       <div className="mb-1 flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">Recent activity</h3>
+        {w.status === 'ready' && w.data!.total > 0 && (
+          <Button variant="outline" size="sm" className="rounded-full" onClick={() => showTab('activity')}>
+            View all {w.data!.total} <ChevronRight />
+          </Button>
+        )}
       </div>
-      <WidgetBody w={w} what="recent activity" isEmpty={d => d.total === 0} empty={{ title: 'No activity yet' }}
-        skeleton={<div className="space-y-4 pt-2">{[0, 1, 2, 3].map(i => <div key={i} className="flex gap-3"><Skeleton className="size-4" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /></div></div>)}</div>}>
+      <WidgetBody w={w} what="recent activity" isEmpty={d => d.total === 0} empty={{ title: 'No activity yet' }} skeleton={listSkeleton(5)}>
         {d => (
-          <>
-            <ul className="divide-y divide-hairline">
-              {d.top.map(i => {
-                const Ic = CH_ICON[i.channel], cat = CAT[i.kind]
-                const desc = i.key && i.desc === i.source + '.' ? i.source : i.desc
-                return (
-                  <li key={i.id} className="flex gap-3 py-3">
-                    <Ic className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label={CH_NAME[i.channel]} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {i.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </span>
-                        <span className="font-medium">{i.title}</span>
-                        {i.who[0] && <span className="text-xs text-muted-foreground">{i.who[0]}</span>}
-                      </div>
-                      {desc !== i.title && <p className="mt-0.5 line-clamp-2 text-muted-foreground">{desc}</p>}
-                    </div>
-                    {cat && (
-                      <span className="flex shrink-0 items-center gap-1.5 self-start text-xs text-muted-foreground">
-                        <span className={cn('size-1.5 rounded-full', cat[1])} aria-hidden="true" />{cat[0]}
-                      </span>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-            <Button variant="outline" size="sm" className="mt-2 self-start" onClick={() => showTab('activity')}>
-              View all {d.total} in Activity <ChevronRight />
-            </Button>
-          </>
+          <ul>
+            {d.top.map(i => (
+              <ListRow key={i.id} icon={CH_ICON[i.channel]} title={i.title}
+                meta={[fmtD(i.date), i.who[0]].filter(Boolean).join(' · ')}
+                status={ACT_STATUS[i.kind]} onClick={() => setOpen(i)} label={`${i.title}, ${fmtD(i.date)}. Open details`} />
+            ))}
+          </ul>
         )}
       </WidgetBody>
+      <ActivitySheet item={open} onOpenChange={o => !o && setOpen(null)} />
     </Card>
   )
 }
 
 /* ---------- order forms (renderCLM) ---------- */
+const CLM_ICON = [FileText, FileSignature, FileX]
+
 function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
   const w = useWidget(() => CLM)
   return (
     <Card className="gap-0 px-5 py-4">
-      <h3 className="mb-3 text-sm font-medium">Order forms</h3>
-      <WidgetBody w={w} what="order forms" isEmpty={d => d.length === 0} empty={{ title: 'No order forms' }}
-        skeleton={<div className="space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>}>
+      <h3 className="mb-1 text-sm font-medium">Order forms</h3>
+      <WidgetBody w={w} what="order forms" isEmpty={d => d.length === 0} empty={{ title: 'No order forms' }} skeleton={listSkeleton(3)}>
         {d => (
-          <div className="grid gap-2">
-            {d.map(([l, v, detail, area]) => {
-              const inner = (
-                <>
-                  <span className="text-xs text-muted-foreground">{l}</span>
-                  <span className="text-lg tracking-tight">{v}</span>
-                  <span className="text-xs text-muted-foreground">{detail}</span>
-                </>
-              )
-              const cls = 'grid gap-0.5 rounded-lg border border-hairline px-3.5 py-2.5 text-left'
-              return area
-                ? (
-                  <button key={l} type="button" onClick={() => onArea(area)} aria-label={`${l}: ${v}. Open ${AREA_NAME[area]} inputs`}
-                    className={cn(cls, 'group relative transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50')}>
-                    {inner}
-                    <ChevronRight className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  </button>
-                )
-                : <div key={l} className={cls}>{inner}</div>
-            })}
-          </div>
+          <ul>
+            {d.map(([l, v, detail, area, tone], i) => (
+              <ListRow key={l} icon={CLM_ICON[i] ?? FileText} title={v} meta={detail ? `${l} · ${detail}` : l}
+                status={tone ? { tone, label: tone === 'bad' ? 'Open' : 'Done' } : undefined}
+                onClick={area ? () => onArea(area) : undefined}
+                label={area ? `${l}: ${v}. Open ${AREA_NAME[area]} inputs` : undefined} />
+            ))}
+          </ul>
         )}
       </WidgetBody>
     </Card>

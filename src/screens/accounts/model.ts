@@ -41,21 +41,23 @@ export const FILTERS: { id: FilterId; label: string; group: string; test: (r: Ro
 ]
 
 /* ---------- columns + sort ---------- */
-export type ColId = 'signals' | 'stage' | 'repo' | 'lic'
+/** Hidden until turned on in the Columns menu; their values also sit in the preview sheet. */
+export const DEFAULT_HIDDEN: ColId[] = ['nrr', 'repo', 'lic']
+export type ColId = 'nrr' | 'signals' | 'stage' | 'repo' | 'lic'
 export const OPTIONAL_COLS: { id: ColId; label: string }[] = [
-  { id: 'signals', label: 'Signals' }, { id: 'stage', label: 'Stage' },
+  { id: 'nrr', label: 'NRR' }, { id: 'signals', label: 'Signal' }, { id: 'stage', label: 'Stage' },
   { id: 'repo', label: 'Repository' }, { id: 'lic', label: 'Licence use' },
 ]
-export type SortKey = 'name' | 'health' | 'carr' | 'renew' | 'repo' | 'lic'
+export type SortKey = 'name' | 'health' | 'carr' | 'nrr' | 'renew' | 'repo' | 'lic'
 export const SORT_NAME: Record<SortKey, string> = {
-  name: 'Account', health: 'Health', carr: 'ARR', renew: 'Renewal', repo: 'Repository', lic: 'Licence use',
+  name: 'Account', health: 'Health', carr: 'ARR', nrr: 'NRR', renew: 'Renewal', repo: 'Repository', lic: 'Licence use',
 }
 /** First click direction per column: worst/soonest/alphabetical first, biggest first otherwise. */
 export const FIRST_DIR: Record<SortKey, 'asc' | 'desc'> = {
-  name: 'asc', health: 'asc', renew: 'asc', carr: 'desc', repo: 'desc', lic: 'desc',
+  name: 'asc', health: 'asc', renew: 'asc', carr: 'desc', nrr: 'desc', repo: 'desc', lic: 'desc',
 }
 const KEY: Record<SortKey, (r: Row) => string | number | null> = {
-  name: r => r.name.toLowerCase(), health: h, carr: r => r.carr, renew: r => +r.renew, repo: r => r.repo, lic: r => r.lic,
+  name: r => r.name.toLowerCase(), health: h, carr: r => r.carr, nrr: r => r.nrr, renew: r => +r.renew, repo: r => r.repo, lic: r => r.lic,
 }
 
 export function sortRows(list: Row[], key: SortKey, dir: 'asc' | 'desc', priority: boolean) {
@@ -127,5 +129,7 @@ export const BOOK = {
   pipeline: '$8.47M',
   opps: 57,
   avgHealth: 55,
+  /** the same figures in $M, for the tile meters */
+  arrM: bookArr, atRiskM: 3.81, pipelineM: 8.47,
 }
 export const avgBand = bandOf(BOOK.avgHealth)

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowRight, ChevronRight } from 'lucide-react'
 import { BAND_LABEL, bandBg, bandOf, bandText, HealthBar, type Band } from '@/components/health'
+import { SplitBar } from '@/components/charts'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { money } from '@/data/legacy'
 import { go } from '@/lib/route'
 import { cn } from '@/lib/utils'
@@ -14,18 +14,19 @@ import type { Filters } from './filters'
 
 type LiveBand = Exclude<Band, 'none'>
 
+// this split IS health, so its segments take the health colours
+const BAND_COLOR: Record<LiveBand, string> = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' }
+
 export function BandSplit({ status, onRetry, filters, onClearFilters }: {
   status: WidgetStatus; onRetry: () => void; filters: Filters; onClearFilters: () => void
 }) {
   const [band, setBand] = useState<LiveBand | null>(null)
-  // segments draw in from equal widths once data arrives
-  const [drawn, setDrawn] = useState(false)
-  useEffect(() => {
-    if (status !== 'ready') return
-    const id = requestAnimationFrame(() => setDrawn(true))
-    return () => cancelAnimationFrame(id)
-  }, [status])
   const toggle = (b: LiveBand) => setBand(cur => (cur === b ? null : b))
+  const counts = useMemo(() => {
+    const c: Record<LiveBand, number> = { good: 0, warn: 0, bad: 0 }
+    rows.forEach(r => { const b = bandOf(r.health); if (isLive(r) && b !== 'none') c[b]++ })
+    return c
+  }, [])
 
   return (
     <Card>
@@ -40,36 +41,10 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
         )}
         {status === 'ready' && (
           <>
-            <div className="flex h-11 gap-[3px] overflow-hidden rounded-lg" role="group" aria-label="ARR by health band">
-              {BANDS.map(s => {
-                const pct = Math.round((s.arr / BOOK.arr) * 100)
-                const on = band === s.band
-                return (
-                  <Tooltip key={s.band}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-pressed={on}
-                        aria-label={`${s.label}: $${s.arr}M, ${pct}% of ARR`}
-                        onClick={() => toggle(s.band)}
-                        style={{ flexGrow: drawn ? s.arr : 1 }}
-                        className={cn(
-                          'flex min-w-0 basis-0 items-center overflow-hidden whitespace-nowrap px-3.5 text-sm font-medium transition-[flex-grow,opacity] duration-700 ease-out motion-reduce:transition-none',
-                          'outline-none focus-visible:ring-3 focus-visible:ring-ring/60 focus-visible:ring-inset',
-                          bandBg[s.band], 'text-background',
-                          band && !on && 'opacity-35 hover:opacity-60',
-                          !band && 'hover:opacity-90',
-                        )}
-                      >
-                        {pct > 8 ? `$${s.arr}M` : ''}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>${s.arr}M · {s.label} · {pct}% of ARR</TooltipContent>
-                  </Tooltip>
-                )
-              })}
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <SplitBar label="ARR by health band" legend={false}
+              parts={BANDS.map(s => ({ key: s.band, label: s.label, value: s.arr, color: BAND_COLOR[s.band] }))}
+              format={v => `$${v}M`} selected={band} onSelect={k => toggle(k as LiveBand)} />
+            <div className="mt-3 grid gap-2 sm:grid-cols-3" role="group" aria-label="Health bands">
               {BANDS.map(s => {
                 const on = band === s.band
                 return (
@@ -79,15 +54,19 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
                     aria-pressed={on}
                     onClick={() => toggle(s.band)}
                     className={cn(
-                      'rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50',
+                      'grid gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50',
                       on && 'border-border bg-accent',
                     )}
                   >
-                    <span className={cn('block text-xl tabular-nums tracking-[-0.02em]', bandText[s.band])}>${s.arr}M</span>
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className={cn('size-1.5 rounded-full', bandBg[s.band])} />
-                      {s.label} · {s.range}
+                      <span className={cn('size-2 rounded-full', bandBg[s.band])} aria-hidden="true" />
+                      <span className="text-foreground">{s.label}</span> {s.range}
                     </span>
+                    <span className="flex items-baseline gap-2">
+                      <span className={cn('text-xl tabular-nums tracking-[-0.02em]', bandText[s.band])}>${s.arr}M</span>
+                      <span className="text-xs tabular-nums text-muted-foreground">{Math.round((s.arr / BOOK.arr) * 100)}%</span>
+                    </span>
+                    <span className="text-xs tabular-nums text-muted-foreground">{counts[s.band]} in My accounts</span>
                   </button>
                 )
               })}

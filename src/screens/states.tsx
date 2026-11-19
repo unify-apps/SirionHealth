@@ -109,7 +109,7 @@ const WIDGETS: { name: string; loading: React.ReactNode; empty: React.ReactNode;
   },
   {
     name: 'Table',
-    loading: <TableSkeleton rows={3} cols={4} />,
+    loading: <TableSkeleton cols={4} />,
     empty: <EmptyState title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" />,
     error: <RetryDemo title="Pod data didn't load" sub="The CS roster service timed out." />,
   },

@@ -1,90 +1,183 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, CalendarDays, Check, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
+import { CalendarDays, ChartColumn, PanelLeftClose, PanelLeftOpen, Check, ChevronsUpDown, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { HealthRing } from '@/components/health'
+import { SirionLogo, SirionMark } from './logo'
 import { CommandMenu } from './command-menu'
 import { AskPanel } from './ask'
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarInset, SidebarMenu,
-  SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu,
+  SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { go, type Route } from '@/lib/route'
 import { useTheme } from '@/lib/theme'
 
-const NAV: { route: Route; label: string; icon: React.ElementType }[] = [
+type NavItem = { route: Route; label: string; icon: React.ElementType }
+const WORKSPACE: NavItem[] = [
   { route: 'accounts', label: 'My accounts', icon: LayoutList },
-  { route: 'portfolio', label: 'Portfolio', icon: BarChart3 },
-  { route: 'states', label: 'States', icon: Shapes },
+  { route: 'portfolio', label: 'Portfolio', icon: ChartColumn },
 ]
+const REFERENCE: NavItem[] = [{ route: 'states', label: 'States', icon: Shapes }]
+const LABEL: Record<Route, string> = { accounts: 'My accounts', portfolio: 'Portfolio', states: 'States', account: 'TransAmerica' }
 
-function SirionMark() {
+/** Navigate and, on phones, close the sidebar sheet. */
+function useNav() {
+  const { isMobile, setOpenMobile } = useSidebar()
+  return (r: Route) => { go(r); if (isMobile) setOpenMobile(false) }
+}
+
+function NavGroup({ label, items, active }: { label: string; items: NavItem[]; active: Route }) {
+  const nav = useNav()
   return (
-    <svg viewBox="0 0 32 32" className="size-6 shrink-0 text-sidebar-ring" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeWidth="2">
-        <ellipse cx="16" cy="16" rx="13" ry="9" /><ellipse cx="16" cy="16" rx="9" ry="5.5" /><ellipse cx="16" cy="16" rx="4.5" ry="2.5" />
-      </g>
-    </svg>
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarMenu className="gap-1">
+        {items.map(n => (
+          <SidebarMenuItem key={n.route}>
+            <SidebarMenuButton isActive={active === n.route} tooltip={n.label} onClick={() => nav(n.route)} className="hover:bg-sidebar-accent/50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium">
+              <n.icon />
+              <span>{n.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroup>
   )
+}
+
+function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
+  route: Route; theme: 'dark' | 'light'; toggleTheme: () => void; onFind: () => void; onAsk: () => void
+}) {
+  const nav = useNav()
+  const { state, toggleSidebar, isMobile } = useSidebar()
+  const active = route === 'account' ? 'accounts' : route
+  // clicking empty sidebar space (not a control) toggles it, like the rail
+  const onBlankClick = (e: React.MouseEvent) => {
+    if (isMobile) return
+    if ((e.target as HTMLElement).closest('button, a, input, [role="menuitem"], [data-sidebar="menu-button"], [data-sidebar="menu-badge"]')) return
+    toggleSidebar()
+  }
+  return (
+    <Sidebar collapsible="icon" onClick={onBlankClick}>
+      <SidebarHeader className="group/hdr flex-row items-center gap-1">
+        {/* expanded: logo + collapse button. collapsed: the mark, which turns into the expand button on hover */}
+        <button type="button" onClick={() => nav('accounts')} aria-label="Sirion home"
+          className="flex h-10 min-w-0 flex-1 items-center rounded-md px-2 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:hidden">
+          <SirionLogo className="h-5 w-[93px] shrink-0 text-sidebar-accent-foreground" />
+        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" onClick={toggleSidebar} aria-label={state === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
+              className="relative grid size-8 shrink-0 place-items-center rounded-md text-sidebar-foreground/70 outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:mx-auto">
+              <SirionMark className="hidden h-4 w-[22px] text-sidebar-accent-foreground group-data-[collapsible=icon]:block group-data-[collapsible=icon]:group-hover/hdr:hidden" />
+              <PanelLeftClose className="size-4 group-data-[collapsible=icon]:hidden" />
+              <PanelLeftOpen className="hidden size-4 group-data-[collapsible=icon]:group-hover/hdr:block" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">{state === 'expanded' ? 'Collapse' : 'Expand'} <Kbd className="ml-1">⌘B</Kbd></TooltipContent>
+        </Tooltip>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavGroup label="Workspace" items={WORKSPACE} active={active} />
+        <SidebarGroup>
+          <SidebarGroupLabel>Recent</SidebarGroupLabel>
+          <SidebarMenu className="gap-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton isActive={route === 'account'} tooltip="TransAmerica · 50" onClick={() => nav('account')}>
+                <HealthRing value={50} size={16} stroke={2} label={false} />
+                <span>TransAmerica</span>
+              </SidebarMenuButton>
+              <SidebarMenuBadge className="text-warn">50</SidebarMenuBadge>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+        <NavGroup label="Reference" items={REFERENCE} active={active} />
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                  <Avatar className="size-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-sidebar-accent text-xs text-sidebar-accent-foreground">RS</AvatarFallback>
+                  </Avatar>
+                  <span className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium text-sidebar-accent-foreground">Rahul Dev Sharma</span>
+                    <span className="truncate text-xs text-sidebar-foreground/70">Customer Success Manager</span>
+                  </span>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg" side="right" align="end" sideOffset={4}>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="grid text-sm leading-tight">
+                    <span className="font-medium">Rahul Dev Sharma</span>
+                    <span className="text-xs text-muted-foreground">260 accounts · CS – NA</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={toggleTheme}>
+                  {theme === 'dark' ? <Sun /> : <Moon />}{theme === 'dark' ? 'Light theme' : 'Dark theme'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={onFind}><Search />Find an account<DropdownMenuShortcut>⌘K</DropdownMenuShortcut></DropdownMenuItem>
+                <DropdownMenuItem onSelect={onAsk}><MessageSquareText />Ask about an account</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+
+const OPEN_KEY = 'sah-sidebar-open'
+const WIDE = '(min-width: 1280px)'
+
+/**
+ * Sidebar open state:
+ * - desktop: the user's last choice (⌘B, the trigger or the rail) is remembered;
+ *   with no saved choice it is expanded on wide screens and collapsed to icons below 1280px.
+ * - crossing the 1280px breakpoint re-applies that default, so a narrowing window never squeezes the content.
+ * - phones (<768px, handled by shadcn) use a sheet that closes after navigating.
+ */
+function useSidebarOpen() {
+  const saved = () => { try { const v = localStorage.getItem(OPEN_KEY); return v == null ? null : v === '1' } catch { return null } }
+  const [open, setOpen] = useState<boolean>(() => saved() ?? matchMedia(WIDE).matches)
+  useEffect(() => {
+    const mq = matchMedia(WIDE)
+    const on = () => { setOpen(mq.matches); try { localStorage.removeItem(OPEN_KEY) } catch {} }
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const set = (v: boolean) => { setOpen(v); try { localStorage.setItem(OPEN_KEY, v ? '1' : '0') } catch {} }
+  return [open, set] as const
 }
 
 export function AppShell({ route, children }: { route: Route; children: React.ReactNode }) {
   const [theme, toggleTheme] = useTheme()
+  const [open, setOpen] = useSidebarOpen()
   const [cmd, setCmd] = useState(false)
   const [ask, setAsk] = useState(false)
   const [range, setRange] = useState<string>('Lifetime')
   useEffect(() => { document.title = route === 'account' ? 'TransAmerica · Sirion Account Health' : 'Sirion Account Health' }, [route])
-  const active = route === 'account' ? 'accounts' : route
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="icon" variant="sidebar">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" onClick={() => go('accounts')} tooltip="Sirion Account Health">
-                <SirionMark />
-                <div className="grid leading-tight">
-                  <span className="text-sm font-medium text-sidebar-accent-foreground">Sirion</span>
-                  <span className="text-xs text-sidebar-foreground/70">Account health</span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarMenu>
-              {NAV.map(n => (
-                <SidebarMenuItem key={n.route}>
-                  <SidebarMenuButton isActive={active === n.route} tooltip={n.label} onClick={() => go(n.route)}>
-                    <n.icon />
-                    <span>{n.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" tooltip="Rahul Dev Sharma, CSM">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground">RS</span>
-                <div className="grid leading-tight">
-                  <span className="text-sm text-sidebar-accent-foreground">Rahul Dev Sharma</span>
-                  <span className="text-xs text-sidebar-foreground/70">Customer Success Manager</span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
+      <AppSidebar route={route} theme={theme} toggleTheme={toggleTheme} onFind={() => setCmd(true)} onAsk={() => setAsk(true)} />
       <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-hairline bg-background/80 px-4 backdrop-blur-md">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+        <header className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-hairline bg-background/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+          <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
+          <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4 md:hidden" />
           <Breadcrumb>
             <BreadcrumbList>
               {route === 'account' ? (
@@ -94,37 +187,41 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
                   <BreadcrumbItem><BreadcrumbPage>TransAmerica</BreadcrumbPage></BreadcrumbItem>
                 </>
               ) : (
-                <BreadcrumbItem><BreadcrumbPage>{NAV.find(n => n.route === route)?.label}</BreadcrumbPage></BreadcrumbItem>
+                <BreadcrumbItem><BreadcrumbPage>{LABEL[route]}</BreadcrumbPage></BreadcrumbItem>
               )}
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="hidden w-56 justify-start gap-2 text-muted-foreground sm:flex" onClick={() => setCmd(true)}>
-              <Search /> Find an account <Kbd className="ml-auto">⌘K</Kbd>
-            </Button>
-            <Button variant="outline" size="icon" className="sm:hidden" onClick={() => setCmd(true)} aria-label="Find an account"><Search /></Button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setCmd(true)} aria-label="Find an account"><Search /></Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Find an account <Kbd className="ml-1">⌘K</Kbd></TooltipContent>
+            </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" aria-label={`Date range: ${range}`}><CalendarDays />{range}</Button>
+                <Button variant="ghost" size="sm" aria-label={`Date range: ${range}`} className="text-muted-foreground"><CalendarDays />{range}</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Date range</DropdownMenuLabel>
                 {['Last 30 days', 'Last 90 days', 'Last 180 days', 'Last 12 months', 'Lifetime'].map(r => (
-                  <DropdownMenuItem key={r} onSelect={() => setRange(r)}>
+                  <DropdownMenuItem key={r} onSelect={() => { if (r !== range) toast(`Showing ${r.toLowerCase()}`, { description: 'Applies to trends and activity' }) ; setRange(r) }}>
                     {r}{range === r && <Check className="ml-auto" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="secondary" size="sm" onClick={() => setAsk(true)}><MessageSquareText />Ask</Button>
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-              {theme === 'dark' ? <Sun /> : <Moon />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setAsk(true)} aria-label="Ask about an account"><MessageSquareText /></Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Ask about an account</TooltipContent>
+            </Tooltip>
           </div>
         </header>
         <CommandMenu open={cmd} onOpenChange={setCmd} />
         <AskPanel open={ask} onOpenChange={setAsk} />
-        <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

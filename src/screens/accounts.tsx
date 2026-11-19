@@ -1,29 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Info, ListFilter, RotateCcw, Search, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { AlertTriangle, ChevronDown, Columns3, DollarSign, HeartPulse, ListFilter, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
 import { money, TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
 import { go } from '@/lib/route'
-import { BAND_LABEL, bandBg, bandOf, HealthBar } from '@/components/health'
-import { Empty, PageHeader, Stat } from '@/components/page'
+import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
+import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  BOOK, avgBand, FILTERS, FIRST_DIR, isTA, OPTIONAL_COLS, rows as ALL_ROWS, sortRows, SORT_NAME, VIEWS,
+  BOOK, avgBand, DEFAULT_HIDDEN, FILTERS, FIRST_DIR, isTA, OPTIONAL_COLS, rows as ALL_ROWS, sortRows, SORT_NAME, VIEWS,
   type ColId, type FilterId, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
-  InsightsPopover, Monogram, NrrLine, PreviewSheet, RunwayCell, SignalsCell, TableSkeleton, TilesSkeleton,
+  InsightsPopover, NrrCell, PreviewSheet, RunwayCell, SignalsCell, TableSkeleton, TilesSkeleton,
 } from './accounts/parts'
 
 type Status = 'loading' | 'error' | 'ready'
+
+/** Views shown as segments; the rest sit in the More menu. */
+const PRIMARY: ViewId[] = ['needs', 'all', 'risk', 'watch', 'healthy']
+const SHORT_VIEW: Partial<Record<ViewId, string>> = { all: 'All' }
 
 /** Fixture "fetch". `?accounts=loading|error|empty` in the URL forces a state for review. */
 function useAccounts() {
@@ -33,7 +39,10 @@ function useAccounts() {
   useEffect(() => {
     if (force === 'loading') return
     setStatus('loading')
-    const t = setTimeout(() => setStatus(force === 'error' ? 'error' : 'ready'), 350)
+    const t = setTimeout(() => {
+      setStatus(force === 'error' ? 'error' : 'ready')
+      if (force === 'error' && attempt > 0) toast.error("Couldn't load your accounts", { action: { label: 'Retry', onClick: () => setAttempt(a => a + 1) } })
+    }, 350)
     return () => clearTimeout(t)
   }, [attempt, force])
   const data = force === 'empty' ? [] : ALL_ROWS
@@ -50,7 +59,7 @@ export function AccountsScreen() {
   const [sortKey, setSortKey] = useState<SortKey>('health')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [pinned, setPinned] = useState(true)
-  const [hidden, setHidden] = useState<Set<ColId>>(new Set())
+  const [hidden, setHidden] = useState<Set<ColId>>(() => new Set(DEFAULT_HIDDEN))
   const [preview, setPreview] = useState<Row | null>(null)
   const filterBtn = useRef<HTMLButtonElement>(null)
 
@@ -65,7 +74,12 @@ export function AccountsScreen() {
     return sortRows(f, sortKey, sortDir, priority)
   }, [data, view, active, query, sortKey, sortDir, priority])
 
-  const reset = () => { setQ(''); setActive([]); setPinned(true); setView('needs'); setSortKey('health'); setSortDir('asc') }
+  const dirty = !!q || active.length > 0 || !pinned || view !== 'needs' || sortKey !== 'health' || sortDir !== 'asc'
+  const reset = () => {
+    setQ(''); setActive([]); setPinned(true); setView('needs'); setSortKey('health'); setSortDir('asc')
+    toast('Filters reset', { description: 'Back to Needs me first, sorted by what needs you first' })
+  }
+  const moreView = PRIMARY.includes(view) ? null : VIEWS.find(v => v.id === view)!
   const sortBy = (k: SortKey) => {
     setPinned(false)
     if (!priority && sortKey === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
@@ -92,20 +106,9 @@ export function AccountsScreen() {
 
   const show = (c: ColId) => !hidden.has(c)
   const viewLabel = VIEWS.find(v => v.id === view)!.label
-  // a render helper, not a component: a component defined here would remount and drop focus on every sort
-  const sortHead = (k: SortKey, children: React.ReactNode, className?: string) => {
-    const on = !priority && sortKey === k
-    const Icon = on ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown
-    return (
-      <TableHead key={k} className={className} aria-sort={on ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-        <button type="button" onClick={() => sortBy(k)}
-          className={cn('-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            on ? 'text-foreground' : 'text-muted-foreground', className?.includes('text-right') && 'flex-row-reverse')}>
-          {children}<Icon className={cn('size-3', !on && 'opacity-40')} aria-hidden="true" />
-        </button>
-      </TableHead>
-    )
-  }
+  const sortHead = (k: SortKey, children: React.ReactNode, opts: { numeric?: boolean; sticky?: boolean; tip?: string } = {}) => (
+    <SortHead key={k} active={!priority && sortKey === k} dir={sortDir} onSort={() => sortBy(k)} numeric={opts.numeric} sticky={opts.sticky} title={opts.tip}>{children}</SortHead>
+  )
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -114,11 +117,14 @@ export function AccountsScreen() {
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="Portfolio ARR" value={BOOK.arr} hint={`${BOOK.arrPer} average per account`} />
-          <Stat label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Health under 40 or unsigned" />
-          <Stat label="Open pipeline" value={BOOK.pipeline} hint={`${BOOK.opps} opportunities`} />
-          <Stat label="Average health" tone={avgBand === 'none' ? undefined : avgBand}
-            value={<>{BOOK.avgHealth}<span className="text-sm text-muted-foreground">/100</span></>} hint="Across the book" />
+          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`${BOOK.arrPer} average per account`} />
+          <Stat icon={AlertTriangle} label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Health under 40 or unsigned"
+            visual={<Meter value={BOOK.atRiskM} max={BOOK.arrM} tone="bad" label="Share of ARR at risk" showValue={`${Math.round((BOOK.atRiskM / BOOK.arrM) * 100)}% of ARR`} />} />
+          <Stat icon={Target} label="Open pipeline" value={BOOK.pipeline} hint={`${BOOK.opps} opportunities`}
+            visual={<Meter value={BOOK.pipelineM} max={BOOK.arrM} label="Pipeline against ARR" showValue={`${Math.round((BOOK.pipelineM / BOOK.arrM) * 100)}% of ARR`} />} />
+          <Stat icon={HeartPulse} label="Average health" tone={avgBand === 'none' ? undefined : avgBand}
+            value={<>{BOOK.avgHealth}<span className="text-sm text-muted-foreground">/100</span></>} hint="Across the book"
+            visual={<Meter value={BOOK.avgHealth} tone={avgBand === 'none' ? undefined : avgBand} label="Average health out of 100" />} />
         </div>
       )}
 
@@ -134,65 +140,100 @@ export function AccountsScreen() {
           </div>
         ) : (
           <>
-            {/* saved views */}
-            <div className="overflow-x-auto px-4 pt-3 sm:px-5">
-              <ToggleGroup type="single" size="sm" spacing={1} value={view} aria-label="Saved views"
-                onValueChange={v => v && setView(v as ViewId)}>
-                {VIEWS.map(v => (
-                  <ToggleGroupItem key={v.id} value={v.id} className="gap-1.5 data-[state=on]:text-foreground">
-                    {v.band && <span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" />}
-                    {v.label}
-                    <span className="tabular-nums text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
+            {/* one toolbar row: saved views left; search, Filter, Columns, Reset right. On phones the views scroll and search drops below. */}
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap sm:px-5">
+              <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+                <ToggleGroup type="single" size="sm" spacing={1} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
+                  onValueChange={v => v && setView(v as ViewId)}>
+                  {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
+                    <ToggleGroupItem key={v.id} value={v.id} className="gap-1.5 data-[state=on]:text-foreground">
+                      {v.band && (
+                        <Tooltip>
+                          <TooltipTrigger asChild><span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" /></TooltipTrigger>
+                          <TooltipContent>{v.band === 'bad' ? 'Health under 40' : v.band === 'warn' ? 'Health 40 to 69' : 'Health 70 or more'}</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {SHORT_VIEW[v.id] ?? v.label}
+                      <span className="tabular-nums text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" aria-label="More saved views"
+                      className={cn('shrink-0 gap-1.5', moreView ? 'bg-muted text-foreground' : 'text-muted-foreground')}>
+                      {moreView ? <>{moreView.label}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span></> : 'More'}
+                      <ChevronDown />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuRadioGroup value={view} onValueChange={v => setView(v as ViewId)}>
+                      {VIEWS.filter(v => !PRIMARY.includes(v.id)).map(v => (
+                        <DropdownMenuRadioItem key={v.id} value={v.id}>
+                          {v.label}<span className="ml-auto tabular-nums text-xs text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-            {/* list bar */}
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
-              <InputGroup className="w-full sm:w-64">
+              <InputGroup className="order-3 w-full transition-[width] duration-200 sm:order-2 sm:w-[200px] sm:focus-within:w-64">
                 <InputGroupAddon><Search /></InputGroupAddon>
-                <InputGroupInput type="search" placeholder="Filter accounts..." aria-label="Search accounts" autoComplete="off"
+                <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
                   value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
                 {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
               </InputGroup>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button ref={filterBtn} variant="outline" size="sm" disabled={active.length === FILTERS.length}><ListFilter />Filter</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-60">
-                  <DropdownMenuLabel>Add a filter</DropdownMenuLabel>
-                  {['Health', 'Renewal', 'Stage', 'Segment'].map(g => {
-                    const items = FILTERS.filter(f => f.group === g && !active.includes(f.id))
-                    return items.length ? (
-                      <DropdownMenuGroup key={g}>
-                        <DropdownMenuSeparator />
-                        {items.map(f => <DropdownMenuItem key={f.id} onSelect={() => setActive(a => [...a, f.id])}>{f.label}</DropdownMenuItem>)}
-                      </DropdownMenuGroup>
-                    ) : null
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm"><Columns3 />Columns</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuLabel>Show columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {OPTIONAL_COLS.map(c => (
-                    <DropdownMenuCheckboxItem key={c.id} checked={show(c.id)} onSelect={e => e.preventDefault()}
-                      onCheckedChange={on => setHidden(h => { const n = new Set(h); if (on) n.delete(c.id); else n.add(c.id); return n })}>
-                      {c.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="ghost" size="sm" onClick={reset}><RotateCcw />Reset</Button>
-              <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
-                <ArrowUpDown className="size-3" aria-hidden="true" />
-                {priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]} ${sortDir === 'asc' ? '↑' : '↓'}`}
-              </span>
+
+              <div className="order-2 flex shrink-0 items-center gap-0.5 sm:order-3">
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button ref={filterBtn} variant="ghost" size="icon" className="relative" disabled={active.length === FILTERS.length}
+                          aria-label={active.length ? `Filter, ${active.length} active` : 'Filter'}>
+                          <ListFilter />
+                          {active.length > 0 && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-signal" aria-hidden="true" />}
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{active.length ? `Filter · ${active.length} active` : 'Filter'}</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="end" className="w-60">
+                    <DropdownMenuLabel>Add a filter</DropdownMenuLabel>
+                    {['Health', 'Renewal', 'Stage', 'Segment'].map(g => {
+                      const items = FILTERS.filter(f => f.group === g && !active.includes(f.id))
+                      return items.length ? (
+                        <DropdownMenuGroup key={g}>
+                          <DropdownMenuSeparator />
+                          {items.map(f => <DropdownMenuItem key={f.id} onSelect={() => setActive(a => [...a, f.id])}>{f.label}</DropdownMenuItem>)}
+                        </DropdownMenuGroup>
+                      ) : null
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Columns"><Columns3 /></Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Columns</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {OPTIONAL_COLS.map(c => (
+                      <DropdownMenuCheckboxItem key={c.id} checked={show(c.id)} onSelect={e => e.preventDefault()}
+                        onCheckedChange={on => setHidden(h => { const n = new Set(h); if (on) n.delete(c.id); else n.add(c.id); return n })}>
+                        {c.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {dirty && <Button variant="ghost" size="sm" onClick={reset}><RotateCcw />Reset</Button>}
+              </div>
             </div>
 
             {active.length > 0 && (
@@ -223,64 +264,66 @@ export function AccountsScreen() {
                   <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={reset}><RotateCcw />Reset search and filters</Button></div>
                 </div>
               ) : (
-                <Table aria-label="Accounts" className="min-w-[860px]">
+                <Table aria-label="Accounts" className="min-w-[760px]">
                   <TableHeader>
-                    <TableRow className="border-hairline hover:bg-transparent">
-                      {sortHead('name', 'Account', 'pl-4 sm:pl-5')}
+                    <TableRow>
+                      {sortHead('name', 'Account', { sticky: true })}
                       {sortHead('health', 'Health')}
-                      {sortHead('renew', 'Renewal')}
-                      {sortHead('carr', 'ARR / NRR', 'text-right')}
-                      {show('signals') && <TableHead className="text-xs text-muted-foreground">Signals</TableHead>}
-                      {show('stage') && <TableHead className="text-xs text-muted-foreground">Stage</TableHead>}
-                      {show('repo') && sortHead('repo', 'Repository', 'text-right')}
-                      {show('lic') && sortHead('lic', 'Licence use', 'pr-4 text-right sm:pr-5')}
+                      {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date' })}
+                      {sortHead('carr', 'ARR', { numeric: true, tip: 'Contracted annual recurring revenue (CARR)' })}
+                      {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover' })}
+                      {show('signals') && <TableHead>Signal</TableHead>}
+                      {show('stage') && <TableHead>Stage</TableHead>}
+                      {show('repo') && sortHead('repo', 'Repository', { numeric: true })}
+                      {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought' })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {list.map(r => {
                       const b = bandOf(r.health)
+                      const pin = isTA(r) && priority
                       return (
                         <TableRow key={r.name} tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. ${isTA(r) ? 'Open account' : 'Preview account'}`}
-                          className="cursor-pointer border-hairline hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                          className="cursor-pointer focus-visible:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-11 [&>td]:py-1.5"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
-                          <TableCell className="py-2.5 pl-4 sm:pl-5">
-                            <div className="flex items-center gap-2.5">
-                              <Monogram row={r} />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 font-medium" title={isTA(r) && priority ? 'Pinned first because it changed since you last looked' : undefined}>
-                                  {r.name}
-                                  {isTA(r) && priority && <Badge variant="secondary" className="h-4 rounded-sm px-1 text-[10px] text-signal">Pinned</Badge>}
-                                </div>
-                                <div className="text-xs text-muted-foreground">{r.seg} · {r.ind}</div>
-                              </div>
-                            </div>
+                          <TableCell className={cn(stickyCol, 'max-w-72')}>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate font-medium">{r.name}</span>
+                              {pin && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={-1} aria-label="Pinned first" className="shrink-0"><Pin className="size-3.5 text-muted-foreground" aria-hidden="true" /></span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Pinned first because it changed since you last looked</TooltipContent>
+                                </Tooltip>
+                              )}
+                              <span className="truncate text-xs text-muted-foreground">{r.ind}</span>
+                            </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={e => { e.stopPropagation(); clearTimeout(timer.current); setIns({ name: r.name, focus: true }) }}>
                             <InsightsPopover row={r} open={ins?.name === r.name} focusOnOpen={!!ins?.focus}
                               onOpenChange={o => setIns(o ? { name: r.name, focus: true } : null)}
                               onHover={() => hoverIn(r.name)} onLeave={hoverOut} onOpenRow={() => openRow(r)}>
-                              <HealthBar value={r.health} />
-                              <span className="sr-only">{BAND_LABEL[b]}</span>
-                              <Button variant="ghost" size="icon-xs" aria-label={`Insights for ${r.name}`} title="Insights"
-                                className="text-muted-foreground hover:text-foreground"
+                              <span tabIndex={0} role="button" aria-haspopup="dialog" aria-label={`Health ${isMissing(r.health) ? 'No data' : r.health}, ${BAND_LABEL[b]}. Insights for ${r.name}`}
+                                className="inline-flex items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                                 onFocus={() => setIns(s => (s?.name === r.name ? s : { name: r.name, focus: false }))}
-                                onClick={e => { e.stopPropagation(); clearTimeout(timer.current); setIns({ name: r.name, focus: true }) }}
-                                onKeyDown={e => e.stopPropagation()}>
-                                <Info />
-                              </Button>
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setIns({ name: r.name, focus: true }) } }}>
+                                {isMissing(r.health) ? <span className="text-muted-foreground">No data</span> : <>
+                                  <span className={cn('w-6 text-right font-medium tabular-nums', bandText[b])}>{r.health}</span>
+                                  <Meter value={r.health} tone={b === 'none' ? undefined : b} className="w-10" />
+                                </>}
+                              </span>
                             </InsightsPopover>
                           </TableCell>
                           <TableCell><RunwayCell row={r} /></TableCell>
-                          <TableCell className="text-right">
-                            <div className="font-medium tabular-nums">{money(r.carr)}</div>
-                            <NrrLine row={r} />
-                          </TableCell>
+                          <TableCell className="text-right">{money(r.carr)}</TableCell>
+                          {show('nrr') && <TableCell className="text-right"><NrrCell row={r} /></TableCell>}
                           {show('signals') && <TableCell><SignalsCell row={r} /></TableCell>}
-                          {show('stage') && <TableCell className="text-sm">{r.stage}</TableCell>}
-                          {show('repo') && <TableCell className="text-right tabular-nums">{r.repo.toLocaleString()}</TableCell>}
+                          {show('stage') && <TableCell className="text-muted-foreground">{r.stage}</TableCell>}
+                          {show('repo') && <TableCell className="text-right">{r.repo.toLocaleString()}</TableCell>}
                           {show('lic') && (
-                            <TableCell className="pr-4 text-right tabular-nums sm:pr-5">
+                            <TableCell className="text-right">
                               {r.lic == null ? <span className="text-muted-foreground">No data</span> : `${r.lic}%`}
                             </TableCell>
                           )}
@@ -292,9 +335,9 @@ export function AccountsScreen() {
               )}
             </div>
             {status === 'ready' && list.length > 0 && (
-              <p className="border-t border-hairline px-4 py-2.5 text-xs text-muted-foreground tabular-nums sm:px-5">
-                Showing {list.length} of {data.length}
-              </p>
+              <TableFooterBar shown={list.length} total={data.length} className="sm:px-5">
+                <span aria-live="polite">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
+              </TableFooterBar>
             )}
           </>
         )}

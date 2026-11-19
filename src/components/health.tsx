@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { Meter } from '@/components/charts'
 
 /** Health bands. Green, amber and red mean health only — never a chart series or decoration. */
 export type Band = 'good' | 'warn' | 'bad' | 'none'
@@ -56,9 +57,7 @@ export function HealthBar({ value, className }: { value: number | null | undefin
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <span className={cn('w-7 text-right tabular-nums font-medium', bandText[b])}>{value}</span>
-      <span className="h-1 w-16 overflow-hidden rounded-full bg-muted">
-        <span className={cn('block h-full rounded-full', bandBg[b])} style={{ width: `${value}%` }} />
-      </span>
+      <Meter value={value} fill={bandBg[b]} className="w-16" />
     </span>
   )
 }

@@ -2,6 +2,7 @@
    (Candidates for src/components/page.tsx; kept here because that file is shared.) */
 import { useEffect, useState } from 'react'
 import { AlertCircle, Info, RotateCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -13,7 +14,7 @@ export type Load<T> =
 
 /** Builds a widget's data off the render path, so every widget has a loading, error and ready state.
  *  The fixtures are synchronous today; a live fetch drops in here later. */
-export function useLoad<T>(build: () => T, delay = 260): Load<T> {
+export function useLoad<T>(build: () => T, delay = 260, what = 'this section'): Load<T> {
   const [run, setRun] = useState(0)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; data: T }>({ status: 'loading' })
   useEffect(() => {
@@ -21,7 +22,13 @@ export function useLoad<T>(build: () => T, delay = 260): Load<T> {
     setState({ status: 'loading' })
     const t = setTimeout(() => {
       try { const data = build(); if (live) setState({ status: 'ready', data }) }
-      catch (error) { console.error(error); if (live) setState({ status: 'error', error }) }
+      catch (error) {
+        console.error(error)
+        if (!live) return
+        setState({ status: 'error', error })
+        // a retry that fails again says so, with another way to retry
+        if (run > 0) toast.error(`Couldn't load ${what}`, { description: 'The account data still didn\'t come through.', action: { label: 'Retry', onClick: () => setRun(n => n + 1) } })
+      }
     }, delay)
     return () => { live = false; clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps

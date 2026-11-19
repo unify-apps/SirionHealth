@@ -1,4 +1,5 @@
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import { AppShell } from '@/components/app/app-shell'
 import { useRoute } from '@/lib/route'
 import { LoadingProvider } from '@/lib/loading'
@@ -19,6 +20,7 @@ export default function App() {
         {route === 'states' && <StatesScreen />}
         </LoadingProvider>
       </AppShell>
+      <Toaster />
     </TooltipProvider>
   )
 }

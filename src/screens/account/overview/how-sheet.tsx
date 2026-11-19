@@ -1,11 +1,13 @@
-/* openHow + breakdown: six area scores -> weighted average -> renewal cap -> final score. */
+/* openHow + breakdown, as a right side sheet: six area scores -> weighted average -> renewal cap -> final score. */
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { BAND_LABEL, bandOf, bandText, HealthPill } from '@/components/health'
 import {
-  AREA_KEYS, AREA_SHORT, areaCoverage, areaDriver, latest, RULE_TEXT, score, SCORED_LINE, type AreaKey,
+  AREA_KEYS, AREA_SHORT, AREA_SOURCE, areaCoverage, areaDriver, fmtD, latest, RULE_TEXT, runway, score, SCORED_LINE,
+  ymLabel, type AreaKey,
 } from '../facts'
+import { SourceTag } from './bits'
 
 function Step({ n, title, value, valueClass, children }: {
   n: string; title: string; value?: React.ReactNode; valueClass?: string; children?: React.ReactNode
@@ -22,20 +24,21 @@ function Step({ n, title, value, valueClass, children }: {
   )
 }
 
-export function HowScoresDialog({ open, onOpenChange, onOpenArea }: {
+export function HowScoresSheet({ open, onOpenChange, onOpenArea }: {
   open: boolean; onOpenChange: (o: boolean) => void; onOpenArea: (k: AreaKey) => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] gap-5 overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-normal">How scores work</DialogTitle>
-          <DialogDescription>{SCORED_LINE}</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-4xl">
+        <SheetHeader className="border-b border-hairline p-5 pr-12">
+          <SheetTitle className="text-lg font-normal">How scores work</SheetTitle>
+          <SheetDescription>{SCORED_LINE}</SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-6 p-5">
 
         <ol>
           <Step n="1" title="Six area scores">
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-1.5">
               {AREA_KEYS.map(k => {
                 const v = latest.areas[k], drv = areaDriver(k), [have, all] = areaCoverage(k)
                 return (
@@ -43,7 +46,7 @@ export function HowScoresDialog({ open, onOpenChange, onOpenArea }: {
                     className="group flex items-center gap-3 rounded-lg border border-hairline px-3 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span>{AREA_SHORT[k]}</span>
+                        <span className="flex items-baseline gap-2">{AREA_SHORT[k]}<SourceTag kind={AREA_SOURCE[k]} /></span>
                         <span className={cn('tabular-nums font-medium', bandText[bandOf(v)])}>{v}</span>
                       </div>
                       <div className="truncate text-xs text-muted-foreground">
@@ -72,7 +75,17 @@ export function HowScoresDialog({ open, onOpenChange, onOpenArea }: {
           </Step>
         </ol>
 
-        <section className="space-y-2 rounded-lg bg-muted/50 p-3.5">
+        {runway && (
+          <section className="space-y-1.5">
+            <h3 className="text-sm font-medium">Renewal runway</h3>
+            <p className="text-muted-foreground">
+              First flagged {fmtD(runway.firstFlag)} at {runway.firstFlagValue}. {runway.used} of {runway.total} days used, {runway.left} left
+              {runway.cleared.length ? `. The flag cleared once (${runway.cleared.map(c => `${ymLabel(c.ym)} at ${c.final}`).join(', ')}) and came back` : ''}.
+            </p>
+          </section>
+        )}
+
+        <section className="space-y-2">
           <h3 className="text-sm font-medium">Bands</h3>
           <div className="flex flex-wrap gap-2">
             <HealthPill value={80}>{BAND_LABEL.good} · 70 and above</HealthPill>
@@ -93,7 +106,8 @@ export function HowScoresDialog({ open, onOpenChange, onOpenArea }: {
             </div>
           ))}
         </section>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -26,9 +26,9 @@ export const SUM_REFS: Record<string, Ref> = {
 
 /** [heading, text with {ref} markers]. AI-written. */
 export const BRIEF: [string, string][] = [
-  ['Where we stand', 'Product use and commercials are sound. The score is held down by the unsigned renewal and a thinning relationship, not by usage {cap}.'],
-  ["What's in play", 'The account insight says to secure a signed renewal commitment within 7 days, by Nov 26 {insight}. Nick Cavazos is the likely new day-to-day owner to carry it {nick}.'],
-  ["What's at stake", 'Leadership threatened the renewal on Aug 28 and asked whether Sirion has proactive monitoring {threat}. The champion who carried the account has since handed over {handover}.'],
+  ['Where we stand', 'Usage and commercials are sound. The unsigned renewal and a thinner relationship hold the score down {cap}.'],
+  ['Next', 'Get a signed renewal commitment by Nov 26 {insight}. Nick Cavazos is the likely new owner {nick}.'],
+  ['At stake', 'Leadership threatened the renewal on Aug 28 {threat}. The champion has since handed over {handover}.'],
 ]
 
 /** [heading, text, metric, area] */
@@ -44,17 +44,17 @@ export const ATTN: ListItem[] = [
   ['Enhancement requests are aging', `${kpis.openJira} open Jira enhancement requests have waited ${kpis.perAging} days on average {per}.`, `${kpis.perAging} days`, 'support'],
 ]
 
-/** renderCLM tiles: [label, value, detail, opens area] */
-export const CLM: [string, string, string, AreaKey | null][] = [
-  ['Renewal paper', `${renewal.orderForms.length} order forms`, renewal.orderForms.map(o => `${o.id.replace('CU0213 ', '')} $${o.value}K`).join(' · '), null],
-  ['Commitment', renewal.signed ? 'Signed' : 'Not signed', renewal.signed ? 'Signature on file' : 'No signature on file', 'commercial'],
-  ['Termination for convenience', renewal.tfc ? 'Yes' : 'No', renewal.tfc ? 'TFC clause in the contract' : 'No TFC clause in the contract', null],
+/** renderCLM rows: [label, value, detail, opens area, status] */
+export const CLM: [string, string, string, AreaKey | null, 'good' | 'bad' | null][] = [
+  ['Renewal paper', `${renewal.orderForms.length} order forms`, renewal.orderForms.map(o => `${o.id.replace('CU0213 ', '')} $${o.value}K`).join(' · '), null, null],
+  ['Commitment', renewal.signed ? 'Signed' : 'Not signed', renewal.signed ? 'Signature on file' : 'No signature on file', 'commercial', renewal.signed ? 'good' : 'bad'],
+  ['Termination for convenience', renewal.tfc ? 'TFC clause' : 'No TFC clause', '', null, null],
 ]
 
-/** Numbers each source once, in order of first use across the brief and the lists. */
+/** Numbers each source once, in order of first use in the brief (the lists show no paragraphs). */
 export const REF_ORDER: string[] = (() => {
   const order: string[] = []
-  ;[...BRIEF.map(b => b[1]), ...WELL.map(w => w[1]), ...ATTN.map(a => a[1])].forEach(t =>
+  BRIEF.map(b => b[1]).forEach(t =>
     t.replace(/\{(\w+)\}/g, (_, k) => { if (!order.includes(k)) order.push(k); return '' }))
   return order
 })()

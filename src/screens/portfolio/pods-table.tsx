@@ -1,25 +1,28 @@
 import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { HealthBar } from '@/components/health'
+import { Meter, SortHead, stickyCol } from '@/components/page'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableFooter, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { EmptyState, LoadingLabel, TableSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
-import { moneyM, PODS, type Pod } from './data'
+import { PODS, type Pod } from './data'
 import type { Filters } from './filters'
 
 type Key = Exclude<keyof Pod, 'region'>
+/** Seven columns; the at-risk account count lives in the CARR-at-risk tooltip. */
 const COLS: { key: Key; label: string; tip?: string; num?: boolean }[] = [
   { key: 'name', label: 'Pod' },
   { key: 'accounts', label: 'Accounts', num: true },
-  { key: 'carr', label: 'CARR', num: true },
+  { key: 'carr', label: 'CARR', num: true, tip: 'Contracted annual recurring revenue' },
   { key: 'health', label: 'Avg health', num: true, tip: 'Average health of scored accounts. Accounts with no score are left out.' },
-  { key: 'atRisk', label: 'At risk', num: true },
   { key: 'carrAtRisk', label: 'CARR at risk', num: true, tip: 'CARR of accounts with health under 40' },
   { key: 'renewing', label: 'Renewing <60d', num: true },
   { key: 'renewalAtRisk', label: 'Renewal ARR at risk', num: true, tip: 'ARR renewing in 60 days that is at risk or unsigned' },
 ]
+/** One money format down every column: $ millions, two decimals. */
+const fmtM = (m: number) => `$${m.toFixed(2)}M`
 
 export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters }: {
   status: WidgetStatus; onRetry: () => void; filters: Filters; refreshing: boolean; onClearFilters: () => void
@@ -64,86 +67,60 @@ export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters
           Sorted by {sortLabel.toLowerCase()}{sort.dir === 1 ? ', ascending' : ''}.
         </CardDescription>
       </CardHeader>
-      <CardContent className={cn('transition-opacity duration-200', refreshing && 'opacity-55')}>
-        {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton rows={6} cols={8} /></>}
+      <CardContent className={cn('px-0 transition-opacity duration-200', refreshing && 'opacity-55')}>
+        {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton cols={7} /></>}
         {status === 'error' && (
-          <WidgetError title="Pod data didn't load" sub="The CS roster service timed out after 20 seconds. Other sections are up to date." onRetry={onRetry} />
+          <WidgetError className="mx-4" title="Pod data didn't load" sub="The CS roster service timed out after 20 seconds. Other sections are up to date." onRetry={onRetry} />
         )}
         {status === 'ready' && list.length === 0 && (
-          <EmptyState title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" onAction={onClearFilters} />
+          <EmptyState className="mx-4" title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" onAction={onClearFilters} />
         )}
         {status === 'ready' && list.length > 0 && (
-          <Table aria-label="Pods" className="min-w-[760px]">
+          <Table aria-label="Pods" className="min-w-[720px]">
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                {COLS.map(c => {
-                  const on = sort.key === c.key
-                  const Icon = !on ? ChevronsUpDown : sort.dir === 1 ? ArrowUp : ArrowDown
-                  const btn = (
-                    <button
-                      type="button"
-                      onClick={() => onSort(c.key)}
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-sm outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50',
-                        on ? 'text-foreground' : 'text-muted-foreground',
-                      )}
-                    >
-                      {c.label}
-                      <Icon className={cn('size-3', !on && 'opacity-50')} aria-hidden="true" />
-                    </button>
-                  )
-                  return (
-                    <TableHead
-                      key={c.key}
-                      className={cn('text-xs font-normal', c.num && 'text-right')}
-                      aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}
-                    >
-                      {c.tip ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>{btn}</TooltipTrigger>
-                          <TooltipContent className="max-w-60">{c.tip}</TooltipContent>
-                        </Tooltip>
-                      ) : btn}
-                    </TableHead>
-                  )
-                })}
+              <TableRow>
+                {COLS.map((c, i) => (
+                  <SortHead key={c.key} active={sort.key === c.key} dir={sort.dir === 1 ? 'asc' : 'desc'} onSort={() => onSort(c.key)}
+                    numeric={c.num} sticky={i === 0} title={c.tip}>{c.label}</SortHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {list.map(p => (
-                <TableRow key={p.name}>
-                  <TableCell>
+                <TableRow key={p.name} className="[&>td]:h-11">
+                  <TableCell className={stickyCol}>
                     <span className="font-medium">{p.name}</span>
-                    <span className="block text-xs text-muted-foreground">{p.region}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{p.region}</span>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{p.accounts}</TableCell>
-                  <TableCell className="text-right tabular-nums">{moneyM(p.carr)}</TableCell>
+                  <TableCell className="text-right">{p.accounts}</TableCell>
+                  <TableCell className="text-right">{fmtM(p.carr)}</TableCell>
                   <TableCell className="text-right"><HealthBar value={p.health} className="justify-end" /></TableCell>
-                  <TableCell className="text-right tabular-nums">{p.atRisk}</TableCell>
                   <TableCell className="text-right">
-                    <span className="inline-flex items-center justify-end gap-2">
-                      <span className="tabular-nums font-medium">{moneyM(p.carrAtRisk)}</span>
-                      <span className="h-1 w-14 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                        <span className="block h-full rounded-full bg-chart-1" style={{ width: `${(p.carrAtRisk / maxRisk) * 100}%` }} />
-                      </span>
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="inline-flex items-center justify-end gap-2 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                          <Meter value={p.carrAtRisk} max={maxRisk} label={`${p.name} CARR at risk`} className="w-14" />
+                          <span className="w-14 font-medium">{fmtM(p.carrAtRisk)}</span>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{p.atRisk} account{p.atRisk === 1 ? '' : 's'} under 40</TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{p.renewing}</TableCell>
-                  <TableCell className="text-right tabular-nums">{moneyM(p.renewalAtRisk)}</TableCell>
+                  <TableCell className="text-right">{p.renewing}</TableCell>
+                  <TableCell className="text-right">{fmtM(p.renewalAtRisk)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
             {list.length > 1 && (
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className="font-medium">Total</TableCell>
-                  <TableCell className="text-right tabular-nums">{total.accounts}</TableCell>
-                  <TableCell className="text-right tabular-nums">{moneyM(total.carr)}</TableCell>
+                  <TableCell className={cn(stickyCol, 'bg-surface-2 font-medium [tr:hover_&]:bg-surface-2')}>Total</TableCell>
+                  <TableCell className="text-right">{total.accounts}</TableCell>
+                  <TableCell className="text-right">{fmtM(total.carr)}</TableCell>
                   <TableCell className="text-right"><HealthBar value={total.health} className="justify-end" /></TableCell>
-                  <TableCell className="text-right tabular-nums">{total.atRisk}</TableCell>
-                  <TableCell className="pr-[4.5rem] text-right tabular-nums font-medium">{moneyM(total.carrAtRisk)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{total.renewing}</TableCell>
-                  <TableCell className="text-right tabular-nums">{moneyM(total.renewalAtRisk)}</TableCell>
+                  <TableCell className="text-right" title={`${total.atRisk} accounts under 40`}><span className="inline-block w-14 font-medium">{fmtM(total.carrAtRisk)}</span></TableCell>
+                  <TableCell className="text-right">{total.renewing}</TableCell>
+                  <TableCell className="text-right">{fmtM(total.renewalAtRisk)}</TableCell>
                 </TableRow>
               </TableFooter>
             )}

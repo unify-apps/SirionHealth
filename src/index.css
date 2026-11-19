@@ -22,6 +22,12 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-chart-seq-1: var(--chart-seq-1);
+    --color-chart-seq-2: var(--chart-seq-2);
+    --color-chart-seq-3: var(--chart-seq-3);
+    --color-chart-seq-4: var(--chart-seq-4);
+    --color-chart-grid: var(--chart-grid);
+    --color-chart-axis: var(--chart-axis);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -99,18 +105,24 @@
     --bad-soft: rgb(198 47 74 / 0.09);
     --ai: #5b5fd6;
     --ai-soft: rgb(129 139 251 / 0.12);
-    --chart-1: #0d5e68;
-    --chart-2: #5d939a;
-    --chart-3: #92429f;
-    --chart-4: #0f3fbb;
-    --chart-5: #b4cdd0;
-    --sidebar: #05272c;             /* brand teal-black rail in both themes */
-    --sidebar-foreground: #b4cdd0;
-    --sidebar-primary: #92429f;
+    --chart-1: #008c9c;             /* categorical, fixed order: teal, blue, plum (validated: dataviz validate_palette, light #fff) */
+    --chart-2: #3a5be2;
+    --chart-3: #a3409f;
+    --chart-4: #9aa7ab;             /* "Other" / context series: neutral */
+    --chart-5: #c9d6d9;             /* track / background marks */
+    --chart-seq-1: #b3dfe3;         /* sequential teal ramp, light -> dark = low -> high emphasis */
+    --chart-seq-2: #5cb6bf;
+    --chart-seq-3: #008c9c;
+    --chart-seq-4: #005f6a;
+    --chart-grid: rgb(13 94 104 / 0.1);
+    --chart-axis: #6b777d;
+    --sidebar: #fafcfc;             /* shadcn-style sidebar: follows the theme, hairline edge */
+    --sidebar-foreground: #33424a;
+    --sidebar-primary: #0d5e68;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: rgb(180 205 208 / 0.1);
-    --sidebar-accent-foreground: #f5f6f6;
-    --sidebar-border: rgb(180 205 208 / 0.12);
+    --sidebar-accent: rgb(13 94 104 / 0.07);
+    --sidebar-accent-foreground: #0b1821;
+    --sidebar-border: rgb(13 94 104 / 0.1);
     --sidebar-ring: #5d939a;
     --shadow-card: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 1px 2px rgb(11 24 33 / 0.04);
     --shadow-panel: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 16px 36px rgb(11 24 33 / 0.14);
@@ -147,18 +159,24 @@
     --bad-soft: rgb(240 106 133 / 0.12);
     --ai: #a5abfc;
     --ai-soft: rgb(129 139 251 / 0.12);
-    --chart-1: #5d939a;
-    --chart-2: #b4cdd0;
-    --chart-3: #c27ccd;
-    --chart-4: #818bfb;
-    --chart-5: #0d5e68;
-    --sidebar: #05272c;
-    --sidebar-foreground: #b4cdd0;
-    --sidebar-primary: #a24cb0;
+    --chart-1: #18a0ab;             /* categorical, fixed order: teal, blue, plum (validated against #0b1f26) */
+    --chart-2: #7088ff;
+    --chart-3: #c66ac4;
+    --chart-4: #5f7378;
+    --chart-5: #1c3a42;
+    --chart-seq-1: #1d4f56;         /* sequential teal ramp, dark -> light = low -> high emphasis */
+    --chart-seq-2: #23707a;
+    --chart-seq-3: #18a0ab;
+    --chart-seq-4: #7fd0d7;
+    --chart-grid: rgb(180 205 208 / 0.08);
+    --chart-axis: #7f9399;
+    --sidebar: #071920;
+    --sidebar-foreground: #b4c7cb;
+    --sidebar-primary: #18a0ab;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: rgb(180 205 208 / 0.1);
+    --sidebar-accent: rgb(180 205 208 / 0.08);
     --sidebar-accent-foreground: #f5f6f6;
-    --sidebar-border: rgb(180 205 208 / 0.12);
+    --sidebar-border: rgb(180 205 208 / 0.08);
     --sidebar-ring: #90b5ba;
     --shadow-card: inset 0 1px 0 rgb(180 205 208 / 0.05), 0 0 0 0.5px rgb(180 205 208 / 0.12);
     --shadow-panel: inset 0 1px 0 rgb(180 205 208 / 0.08), 0 0 0 0.5px rgb(180 205 208 / 0.12), 0 16px 36px rgb(0 0 0 / 0.45);
@@ -185,4 +203,15 @@
     font-variant-numeric: tabular-nums;
     }
   h1, h2, h3 { font-weight: 400; letter-spacing: -0.02em; text-wrap: balance; }
+}
+/* Chart chrome shared by every shadcn ChartContainer: recessive grid and axes, tabular numbers. */
+@layer components {
+  [data-slot="chart"] { font-variant-numeric: tabular-nums; }
+  [data-slot="chart"] .recharts-cartesian-axis-tick text { fill: var(--chart-axis); font-size: 11px; }
+  [data-slot="chart"] .recharts-cartesian-grid line { stroke: var(--chart-grid); }
+  [data-slot="chart"] .recharts-reference-line line { stroke: var(--chart-axis); stroke-opacity: 0.55; }
+  [data-slot="chart"] .recharts-reference-line text { fill: var(--chart-axis); font-size: 10px; }
+  [data-slot="chart"] .recharts-tooltip-cursor { stroke: var(--chart-axis); stroke-opacity: 0.4; }
+  [data-slot="chart"] .recharts-rectangle.recharts-tooltip-cursor { fill: var(--foreground); fill-opacity: 0.04; stroke: none; }
+  [data-slot="chart"] .recharts-dot, [data-slot="chart"] .recharts-active-dot circle { stroke: var(--card); stroke-width: 2px; }
 }

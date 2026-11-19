@@ -3,7 +3,7 @@ import { CircleAlert, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Empty } from '@/components/page'
+import { Empty, TableSkeleton as PageTableSkeleton } from '@/components/page'
 import { cn } from '@/lib/utils'
 
 /*
@@ -77,6 +77,7 @@ export function KpiSkeleton({ className }: { className?: string }) {
     <Card className={cn('gap-2 px-5 py-4', className)} aria-hidden="true">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-7 w-20" />
+      <Skeleton className="h-1 w-full" />
       <Skeleton className="h-3 w-32" />
     </Card>
   )
@@ -85,27 +86,17 @@ export function KpiSkeleton({ className }: { className?: string }) {
 export function SplitSkeleton() {
   return (
     <div className="grid gap-3" aria-hidden="true">
-      <Skeleton className="h-11 w-full rounded-lg" />
+      <Skeleton className="h-3 w-full rounded-full" />
       <div className="grid gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map(i => <div key={i} className="grid gap-1.5"><Skeleton className="h-5 w-16" /><Skeleton className="h-3 w-24" /></div>)}
+        {[0, 1, 2].map(i => <div key={i} className="grid gap-1.5 px-2.5 py-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-20" /><Skeleton className="h-3 w-28" /></div>)}
       </div>
     </div>
   )
 }
 
-export function TableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?: number }) {
-  return (
-    <div className="grid gap-0" aria-hidden="true">
-      <div className="flex gap-4 border-b border-hairline py-2.5">
-        {Array.from({ length: cols }, (_, i) => <Skeleton key={i} className={cn('h-3', i === 0 ? 'w-28' : 'ml-auto w-14')} />)}
-      </div>
-      {Array.from({ length: rows }, (_, r) => (
-        <div key={r} className="flex items-center gap-4 border-b border-hairline py-3 last:border-0">
-          {Array.from({ length: cols }, (_, i) => <Skeleton key={i} className={cn('h-3.5', i === 0 ? 'w-36' : 'ml-auto w-12')} />)}
-        </div>
-      ))}
-    </div>
-  )
+/** Table placeholder: 5 rows; the first column is the entity (circle + name), the rest are numbers, right-aligned. */
+export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
+  return <PageTableSkeleton rows={rows} columns={Array.from({ length: cols }, (_, i) => i === 0 ? { w: 'w-28' } : { w: 'w-12', right: true })} />
 }
 
 export function BarsSkeleton({ bars = 6 }: { bars?: number }) {
@@ -124,10 +115,10 @@ export function BarsSkeleton({ bars = 6 }: { bars?: number }) {
 
 export function DonutSkeleton() {
   return (
-    <div className="flex flex-wrap items-center gap-6" aria-hidden="true">
+    <div className="grid h-[232px] place-items-center content-center gap-6" aria-hidden="true">
       <Skeleton className="size-36 rounded-full" />
-      <div className="grid gap-2.5">
-        {[0, 1, 2].map(i => <Skeleton key={i} className="h-3.5 w-32" />)}
+      <div className="flex flex-wrap justify-center gap-4">
+        {[0, 1, 2].map(i => <Skeleton key={i} className="h-3 w-24" />)}
       </div>
     </div>
   )
@@ -135,9 +126,9 @@ export function DonutSkeleton() {
 
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="grid gap-3" aria-hidden="true">
+    <div className="grid" aria-hidden="true">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-3">
+        <div key={i} className="flex min-h-11 items-center gap-3 px-2 py-1.5">
           <Skeleton className="size-7 rounded-full" />
           <div className="grid flex-1 gap-1.5"><Skeleton className="h-3 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>
           <Skeleton className="h-3 w-12" />

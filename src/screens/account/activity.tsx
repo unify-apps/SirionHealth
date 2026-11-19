@@ -14,7 +14,7 @@ type View = 'timeline' | 'sentiment'
 
 export function ActivityTab() {
   const [view, setView] = useState<View>('timeline')
-  const load = useLoad(() => ({ data: loadActivity(), journey: journey() }))
+  const load = useLoad(() => ({ data: loadActivity(), journey: journey() }), undefined, 'activity')
   return (
     <div className="grid gap-4">
       <SectionTitle title="Activity" actions={
@@ -46,7 +46,7 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
         {view === 'timeline'
           ? (items.length ? <Timeline items={items} snapshot={data.snapshot} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />)
           : (sentiment.length
-            ? <div className="grid gap-3 px-1"><p className="text-xs text-muted-foreground">From Sirion's monthly summaries. The score is the month's sentiment area score in AHI.</p><SentimentMonths months={sentiment} /></div>
+            ? <div className="grid gap-3 px-1"><p className="text-xs text-muted-foreground">From monthly summaries</p><SentimentMonths months={sentiment} /></div>
             : <Empty title="No monthly summaries" sub="Sentiment drivers appear once Sirion writes a monthly summary." />)}
       </Card>
     </>
@@ -65,10 +65,11 @@ function ActivitySkeleton({ view }: { view: View }) {
         {view === 'timeline' ? (
           <>
             <div className="flex gap-2 pb-3"><Skeleton className="h-7 w-72" /><Skeleton className="h-7 w-32" /></div>
+            <Skeleton className="mx-2 my-2 h-3 w-20" />
             {Array.from({ length: 7 }, (_, i) => (
-              <div key={i} className="grid grid-cols-[16px_88px_minmax(0,1fr)_60px] items-start gap-3 py-3">
-                <Skeleton className="size-4" /><Skeleton className="h-3 w-20" />
-                <div className="grid gap-1.5"><Skeleton className="h-3.5 w-1/2" /><Skeleton className="h-3 w-5/6" /></div>
+              <div key={i} className="flex min-h-11 items-center gap-3 px-2 py-1.5">
+                <Skeleton className="size-7 rounded-full" />
+                <div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>
                 <Skeleton className="h-3 w-12" />
               </div>
             ))}

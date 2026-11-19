@@ -21,16 +21,25 @@ const TABS = [
 export function AccountScreen() {
   const tab = useTab()
   return (
-    <div className="flex flex-col gap-6">
-      <AccountHeader />
-      <Tabs value={tab} onValueChange={setTab} className="gap-6">
-        <TabsList variant="line" className="sticky top-14 z-10 w-full justify-start overflow-x-auto bg-background/80 backdrop-blur-md">
-          {TABS.map(t => (
-            <TabsTrigger key={t.id} value={t.id}><t.icon />{t.label}</TabsTrigger>
-          ))}
-        </TabsList>
+    <div className="flex flex-col">
+      {/* header + score card */}
+      <section className="flex flex-col gap-5 pb-6">
+        <AccountHeader />
+      </section>
+      <Tabs value={tab} onValueChange={setTab} className="gap-0">
+        {/* full-bleed sticky tab strip under the top bar; tabs sized to their label, left aligned */}
+        <div className="sticky top-12 z-10 -mx-4 border-b border-hairline bg-background/85 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <TabsList variant="line" className="h-11 w-full justify-start gap-1 overflow-x-auto rounded-none p-0 [scrollbar-width:none]">
+            {TABS.map(t => (
+              <TabsTrigger key={t.id} value={t.id}
+                className="h-11 flex-none gap-2 rounded-none px-3 text-muted-foreground hover:text-foreground data-active:text-foreground group-data-horizontal/tabs:after:bottom-0 after:h-0.5 after:rounded-full after:bg-signal">
+                <t.icon />{t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
         {TABS.map(t => (
-          <TabsContent key={t.id} value={t.id} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+          <TabsContent key={t.id} value={t.id} className="flex flex-col gap-6 pt-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
             <t.C />
           </TabsContent>
         ))}

@@ -14,6 +14,7 @@ export const BANDS: { band: Exclude<Band, 'none'>; arr: number; label: string; r
 export const KPIS = {
   avgHealth: 55,
   arrAtRisk: '$3.81M',
+  arrAtRiskM: 3.81,
   renewing60: 16,
   grr100: 221,
   grrWithData: 237,

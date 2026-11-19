@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Meter } from '@/components/charts'
+import { HealthRing } from '@/components/health'
 import { PageHeader, Stat } from '@/components/page'
 import { KpiSkeleton, LoadingLabel, WidgetError, useWidget } from './states/widget-states'
 import { BOOK, KPIS, PODS } from './portfolio/data'
@@ -51,10 +53,17 @@ export function PortfolioScreen() {
         )}
         {kpis.status === 'ready' && (
           <>
-            <Stat label="Average health" value={KPIS.avgHealth} hint="Across the book" />
-            <Stat label="ARR at renewal risk" value={KPIS.arrAtRisk} tone="bad" hint="Health under 40 or renewal unsigned" />
-            <Stat label="Renewing in 60 days" value={KPIS.renewing60} hint="accounts" />
-            <Stat label="Accounts at 100%+ GRR" value={KPIS.grr100} tone="good" hint={`of ${KPIS.grrWithData} with GRR data`} />
+            <Stat label="Average health" value={KPIS.avgHealth} hint="Across the book"
+              aside={<HealthRing value={KPIS.avgHealth} size={36} stroke={3} label={false} />} />
+            <Stat label="ARR at renewal risk" value={KPIS.arrAtRisk} tone="bad"
+              visual={<Meter value={KPIS.arrAtRiskM} max={BOOK.arr} min={2} />}
+              hint={`${((KPIS.arrAtRiskM / BOOK.arr) * 100).toFixed(1)}% of the $${BOOK.arr}M book`} />
+            <Stat label="Renewing in 60 days" value={KPIS.renewing60}
+              visual={<Meter value={KPIS.renewing60} max={BOOK.accounts} min={2} />}
+              hint={`of ${BOOK.accounts} accounts`} />
+            <Stat label="Accounts at 100%+ GRR" value={KPIS.grr100} tone="good"
+              visual={<Meter value={KPIS.grr100} max={KPIS.grrWithData} />}
+              hint={`of ${KPIS.grrWithData} with GRR data · ${Math.round((KPIS.grr100 / KPIS.grrWithData) * 100)}%`} />
           </>
         )}
       </section>

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUp, RotateCcw } from 'lucide-react'
+import { ArrowUp, Building2, CalendarClock, HeartPulse, ListTodo, MessageSquare, RotateCcw, Users, type LucideIcon } from 'lucide-react'
+import { toast } from 'sonner'
+import { ListRow, Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -11,13 +13,13 @@ import { go, type Route } from '@/lib/route'
  * summaries and public news (ported from legacy screen-ask.js). No model is called.
  */
 
-const SUGGEST = [
-  'Why is the health score 50?',
-  'What happens with the renewal?',
-  'Who should I talk to now?',
-  'What are customers unhappy about?',
-  'What should I do this week?',
-  'Which accounts need me first?',
+const SUGGEST: [string, LucideIcon][] = [
+  ['Why is the health score 50?', HeartPulse],
+  ['What happens with the renewal?', CalendarClock],
+  ['Who should I talk to now?', Users],
+  ['What are customers unhappy about?', MessageSquare],
+  ['What should I do this week?', ListTodo],
+  ['Which accounts need me first?', Building2],
 ]
 
 /** Open the panel from anywhere and ask a question, e.g. an "Ask about this" button on a card. */
@@ -91,7 +93,7 @@ type Answer = { body: React.ReactNode; sources?: Source[]; chips?: boolean }
 
 const B = ({ children }: { children: React.ReactNode }) => <strong className="font-medium">{children}</strong>
 const Muted = ({ children }: { children: React.ReactNode }) => <span className="text-xs text-muted-foreground">{children}</span>
-const UL = ({ children }: { children: React.ReactNode }) => <ul className="mt-1.5 list-disc space-y-1 pl-4.5 marker:text-muted-foreground">{children}</ul>
+const UL = ({ children }: { children: React.ReactNode }) => <ul className="mt-1.5 grid divide-y divide-hairline [&>li]:py-1.5">{children}</ul>
 const P = ({ children }: { children: React.ReactNode }) => <p className="[&+p]:mt-1.5 [&+ul]:mt-1.5 [ul+&]:mt-1.5">{children}</p>
 
 function topic(raw: string) {
@@ -263,13 +265,11 @@ type Msg = { id: number; who: 'me'; text: string } | { id: number; who: 'bot'; t
 
 function Chips({ onAsk, disabled }: { onAsk: (q: string) => void; disabled: boolean }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {SUGGEST.map(q => (
-        <Button key={q} variant="outline" size="sm" className="h-auto rounded-full py-1 text-left whitespace-normal" disabled={disabled} onClick={() => onAsk(q)}>
-          {q}
-        </Button>
+    <ul className="-mx-2 mt-2 grid" aria-label="Suggested questions">
+      {SUGGEST.map(([q, I]) => (
+        <li key={q}><ListRow icon={I} title={<span className="font-normal">{q}</span>} onClick={disabled ? undefined : () => onAsk(q)} className={disabled ? 'opacity-50' : undefined} /></li>
       ))}
-    </div>
+    </ul>
   )
 }
 
@@ -313,6 +313,7 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const reset = () => {
     clearTimeout(timer.current)
     setMsgs([]); setBusy(false); setDraft('')
+    toast('New chat started')
     input.current?.focus()
   }
 
@@ -320,23 +321,32 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="right"
-        className="w-full gap-0 p-0 sm:max-w-md"
+        className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl"
         onOpenAutoFocus={e => { e.preventDefault(); input.current?.focus() }}
         onInteractOutside={e => e.preventDefault()}
       >
-        <SheetHeader className="border-b border-hairline pr-24">
-          <SheetTitle>Ask about TransAmerica</SheetTitle>
-          <SheetDescription className="text-xs">AHI record, order forms, 18 monthly summaries, public news</SheetDescription>
-          <Button variant="ghost" size="sm" className="absolute top-3 right-12" onClick={reset} disabled={!msgs.length}>
-            <RotateCcw aria-hidden="true" />New
+        <SheetHeader className="flex-row items-center gap-3 border-b border-hairline p-6 pr-12">
+          <div className="min-w-0 flex-1">
+            <SheetTitle>Ask about TransAmerica</SheetTitle>
+            <SheetDescription className="text-xs">AHI record, order forms, 18 monthly summaries, public news</SheetDescription>
+          </div>
+          <Button variant="ghost" size="sm" onClick={reset} disabled={!msgs.length}>
+            <RotateCcw aria-hidden="true" />New chat
           </Button>
         </SheetHeader>
 
-        <div ref={log} className="flex-1 overflow-y-auto px-4 py-4" aria-live="polite" aria-label="Conversation">
-          <div className="grid content-start gap-5 text-sm leading-relaxed">
+        <div className="grid min-h-0 flex-1 md:grid-cols-[240px_minmax(0,1fr)]">
+        {/* suggestions stay in view beside the conversation on wider sheets */}
+        <aside className="hidden min-h-0 overflow-y-auto border-r border-hairline p-4 md:block" aria-label="Suggested questions">
+          <h3 className="px-2 text-xs text-muted-foreground">Suggested</h3>
+          <Chips onAsk={send} disabled={busy} />
+        </aside>
+        <div className="flex min-h-0 flex-col">
+        <div ref={log} className="flex-1 overflow-y-auto px-6 py-5" aria-live="polite" aria-label="Conversation">
+          <div className="grid max-w-[65ch] content-start gap-5 text-sm leading-relaxed">
             <div>
               <P>Hello Rahul. I have TransAmerica's record, its order forms, 18 monthly summaries and this year's public news ready. What do you want to know?</P>
-              {!msgs.length && <Chips onAsk={send} disabled={busy} />}
+              {!msgs.length && <div className="md:hidden"><Chips onAsk={send} disabled={busy} /></div>}
             </div>
             {msgs.map(m => {
               if (m.who === 'me') {
@@ -359,7 +369,7 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
               return (
                 <div key={m.id} className="min-w-0">
                   {a.body}
-                  {a.chips && <Chips onAsk={send} disabled={busy} />}
+                  {a.chips && <div className="md:hidden"><Chips onAsk={send} disabled={busy} /></div>}
                   {!!a.sources?.length && (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-hairline pt-2.5">
                       <span className="mr-1 text-xs text-muted-foreground">Sources</span>
@@ -377,7 +387,7 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
         </div>
 
         <form
-          className="flex gap-2 border-t border-hairline p-3"
+          className="flex gap-2 border-t border-hairline px-6 py-3"
           onSubmit={e => { e.preventDefault(); send(draft); setDraft('') }}
         >
           <Input
@@ -388,10 +398,14 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
             aria-label="Your question"
             autoComplete="off"
           />
-          <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Send">
-            <ArrowUp aria-hidden="true" />
-          </Button>
+          <Tip tip="Send">
+            <Button type="submit" size="icon" disabled={busy || !draft.trim()} aria-label="Send">
+              <ArrowUp aria-hidden="true" />
+            </Button>
+          </Tip>
         </form>
+        </div>
+        </div>
       </SheetContent>
     </Sheet>
   )

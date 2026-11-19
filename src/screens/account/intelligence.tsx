@@ -1,20 +1,23 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
-import { Empty, SectionTitle } from '@/components/page'
-import { bandBg, bandOf, bandText } from '@/components/health'
+import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleSlash, Newspaper } from 'lucide-react'
+import { Empty, Fact, ListRow, Meter, SectionTitle, SheetColumns, sheetHeaderCls } from '@/components/page'
+import { bandOf, bandText } from '@/components/health'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { ErrorState, useLoad } from './activity/shared'
+import { AREA_ICON } from './health/parts'
+import type { AreaKey } from './health/model'
 import { loadIntel, type Input, type IntelData, type Theme } from './intelligence/model'
 import { loadBase, stakeRows } from './stakeholders/model'
 import { PersonSheet } from './stakeholders/person-sheet'
 import { useRoles } from './stakeholders/store'
 
 export function IntelligenceTab() {
-  const load = useLoad(() => ({ intel: loadIntel(), base: loadBase() }))
+  const load = useLoad(() => ({ intel: loadIntel(), base: loadBase() }), undefined, 'intelligence')
   return (
     <div>
       <SectionTitle title="Internal" sub="From AHI's scored record" />
@@ -35,44 +38,44 @@ function Internal({ data }: { data: IntelData }) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <InputList title="Strongest inputs" items={data.strongest} />
-        <InputList title="Weakest inputs" items={data.weakest} />
+        <InputList title="Strongest inputs" icon={ArrowUpRight} items={data.strongest} />
+        <InputList title="Weakest inputs" icon={ArrowDownRight} items={data.weakest} />
       </div>
-      <Card className="gap-2 px-5 py-4">
-        <h3 className="text-sm font-medium">Not scored <span className="font-normal tabular-nums text-muted-foreground">{data.unscored.length}</span></h3>
+      <Card className="gap-1 px-3 py-4">
+        <h3 className="flex items-center gap-2 px-2 pb-1 text-sm font-medium">
+          <CircleSlash className="size-4 text-muted-foreground" aria-hidden="true" />
+          Not scored <span className="font-normal tabular-nums text-muted-foreground">{data.unscored.length}</span>
+        </h3>
         {data.unscored.length ? (
-          <ul className="grid gap-x-8 sm:grid-cols-2">
+          <ul className="grid gap-x-4 sm:grid-cols-2">
             {data.unscored.map(u => (
-              <li key={u.area + u.name} className="flex items-baseline justify-between gap-3 border-t border-hairline py-2 first:border-0 sm:[&:nth-child(2)]:border-0">
-                <span className="min-w-0"><span className="block">{u.name}</span><span className="block text-xs text-muted-foreground">{u.areaName} · {u.note}</span></span>
-                <span className="shrink-0 text-xs text-muted-foreground">No data</span>
+              <li key={u.area + u.name}>
+                <ListRow icon={AREA_ICON[u.area as AreaKey]} title={u.name} meta={`${u.areaName} · ${u.note}`}
+                  right={<span className="text-muted-foreground">No data</span>} />
               </li>
             ))}
           </ul>
-        ) : <p className="text-muted-foreground">Every input has a score.</p>}
+        ) : <p className="px-2 text-muted-foreground">Every input has a score.</p>}
       </Card>
     </div>
   )
 }
 
-function InputList({ title, items }: { title: string; items: Input[] }) {
+function InputList({ title, icon: I, items }: { title: string; icon: typeof ArrowUpRight; items: Input[] }) {
   return (
-    <Card className="gap-1 px-5 py-4">
-      <h3 className="mb-1 text-sm font-medium">{title}</h3>
+    <Card className="gap-1 px-3 py-4">
+      <h3 className="flex items-center gap-2 px-2 pb-1 text-sm font-medium"><I className="size-4 text-muted-foreground" aria-hidden="true" />{title}</h3>
       {items.length ? (
-        <ul className="grid divide-y divide-hairline">
+        <ul className="grid">
           {items.map(x => {
             const b = bandOf(x.v)
             return (
-              <li key={x.area + x.name} className="grid gap-1.5 py-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">{x.name}</span>
-                  <span className={cn('tabular-nums font-medium', bandText[b])}>{x.v}</span>
-                </div>
-                <span className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                  <span className={cn('block h-full rounded-full', bandBg[b])} style={{ width: `${Math.max(2, x.v)}%` }} />
-                </span>
-                <p className="text-muted-foreground"><span className="text-foreground">{x.areaName}</span> · {x.note}</p>
+              <li key={x.area + x.name}>
+                <ListRow icon={AREA_ICON[x.area as AreaKey]} title={x.name} meta={`${x.areaName} · ${x.note}`}
+                  right={<>
+                    <Meter value={x.v} tone={b === 'none' ? undefined : b} label={`${x.name} score`} className="hidden w-14 sm:block" />
+                    <span className={cn('w-7 text-right text-sm tabular-nums font-medium', bandText[b])}>{x.v}</span>
+                  </>} />
               </li>
             )
           })}
@@ -82,82 +85,119 @@ function InputList({ title, items }: { title: string; items: Input[] }) {
   )
 }
 
-/* ---- external: public news themes, each with its dated events and why it matters ---- */
+/* ---- external: public news themes; a row opens the theme's dated events and why it matters ---- */
 function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadBase> }) {
   const roles = useRoles()
   const rows = useMemo(() => stakeRows(base, roles), [base, roles])
   const max = useMemo(() => Math.max(1, ...rows.flatMap(r => r.months)), [rows])
   const [key, setKey] = useState<string | null>(null)
+  const [open, setOpen] = useState<Theme | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const news = base.news[0]
   if (!themes.length) return <Empty title="No news found" sub="Nothing public about Transamerica or Aegon this year." />
   return (
-    <Card className="gap-0 py-0">
-      <ul className="divide-y divide-hairline">
-        {themes.map(t => (
-          <li key={t.title} className="grid gap-2 px-5 py-4 md:grid-cols-[200px_minmax(0,1fr)] md:gap-6">
-            <div className="flex items-start justify-between gap-3 md:block">
-              <h3 className="font-medium">{t.title}</h3>
-              {t.relevance == null ? <span className="text-xs text-muted-foreground md:mt-1 md:block">No events</span> : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0} className="inline-flex items-center gap-2 rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:mt-1.5">
-                      Relevance
-                      <span className="h-1 w-14 overflow-hidden rounded-full bg-muted" aria-hidden="true"><span className="block h-full rounded-full bg-chart-1" style={{ width: `${t.relevance}%` }} /></span>
-                      <span className="tabular-nums text-foreground">{t.relevance}</span>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>How much this matters to the renewal, 0 to 100</TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <div className="grid min-w-0 gap-2">
-              <ul className="grid gap-1.5">
-                {t.events.map((e, i) => (
-                  <li key={i} className="grid gap-x-3 sm:grid-cols-[92px_minmax(0,1fr)]">
-                    {e.date ? <><span className="text-xs tabular-nums text-muted-foreground sm:pt-px">{e.date}</span><span>{e.text}</span></>
-                      : <span className="text-muted-foreground sm:col-span-2">{e.text}</span>}
-                  </li>
-                ))}
-              </ul>
-              {t.why && <p><span className="text-muted-foreground">Why it matters: </span>{t.why}</p>}
-              {t.title === 'Executive leadership' && news && (
-                <Button variant="outline" size="sm" className="w-fit" onClick={() => setKey('news:' + news.name)}>
-                  {news.name} · suggested {news.suggested.toLowerCase()}<ChevronRight />
-                </Button>
-              )}
-            </div>
-          </li>
-        ))}
+    <Card className="gap-0 px-3 py-3">
+      <ul className="grid">
+        {themes.map(t => {
+          const latest = t.events.find(e => e.date) ?? t.events[0]
+          return (
+            <li key={t.title}>
+              <ListRow icon={Newspaper} title={t.title} onClick={() => { setOpen(t); setSheetOpen(true) }} aria-haspopup="dialog"
+                aria-label={`${t.title}${t.relevance == null ? ', no events' : `, relevance ${t.relevance} of 100`}. Open`}
+                meta={latest ? <>{latest.date && <span className="tabular-nums">{latest.date.replace(', 2026', '')} · </span>}{latest.text}</> : 'No events'}
+                right={t.relevance == null ? <span className="text-muted-foreground">No events</span> : (
+                  <span className="inline-flex items-center gap-2">
+                    <Meter value={t.relevance} label={`${t.title} relevance`} tip={`Relevance to the renewal: ${t.relevance} of 100`} className="hidden w-14 sm:block" />
+                    <span className="w-6 text-right tabular-nums text-foreground">{t.relevance}</span>
+                  </span>
+                )} />
+            </li>
+          )
+        })}
       </ul>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-3xl">
+          {open && (
+            <>
+              <SheetHeader className={sheetHeaderCls}>
+                <SheetTitle className="text-lg font-normal">{open.title}</SheetTitle>
+                <SheetDescription>{open.events.filter(e => e.date).length} dated events, 2026</SheetDescription>
+              </SheetHeader>
+              <ScrollArea className="min-h-0 flex-1">
+                <SheetColumns aside={
+                  <>
+                    <Fact label="Relevance to the renewal">
+                      {open.relevance == null ? <span className="text-muted-foreground">No events</span> : (
+                        <span className="flex items-center gap-2">
+                          <Meter value={open.relevance} label="Relevance" tip={`${open.relevance} of 100`} className="w-24" />
+                          <span className="tabular-nums">{open.relevance}</span>
+                        </span>
+                      )}
+                    </Fact>
+                    {open.title === 'Executive leadership' && news && (
+                      <Fact label="Suggested contact">
+                        <Button variant="outline" size="sm" className="w-fit" onClick={() => { setSheetOpen(false); setKey('news:' + news.name) }}>
+                          {news.name}<ChevronRight />
+                        </Button>
+                      </Fact>
+                    )}
+                    <Fact label="Source"><span className="text-muted-foreground">Public news</span></Fact>
+                  </>
+                }>
+                  <section className="grid gap-2">
+                    <h3 className="text-xs text-muted-foreground">Events</h3>
+                    <ul className="grid divide-y divide-hairline">
+                      {open.events.map((e, i) => (
+                        <li key={i} className="grid grid-cols-[84px_minmax(0,1fr)] gap-x-3 py-2 first:pt-0">
+                          <span className="pt-px text-xs tabular-nums text-muted-foreground">{e.date ?? 'Undated'}</span>
+                          <span className="max-w-[65ch] text-pretty">{e.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  {open.why && (
+                    <section className="grid gap-1.5">
+                      <h3 className="text-xs text-muted-foreground">Why it matters</h3>
+                      <p className="leading-relaxed text-pretty">{open.why}</p>
+                    </section>
+                  )}
+                </SheetColumns>
+              </ScrollArea>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
       <PersonSheet row={rows.find(r => r.key === key) ?? null} ev={base.ev} months={base.months} max={max} onOpenChange={o => { if (!o) setKey(null) }} />
     </Card>
   )
 }
 
+const RowSkel = () => (
+  <div className="flex min-h-11 items-center gap-3 px-2 py-1.5">
+    <Skeleton className="size-7 rounded-full" />
+    <div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-2/5" /><Skeleton className="h-3 w-3/5" /></div>
+    <Skeleton className="h-1.5 w-14" />
+  </div>
+)
 function InternalSkeleton() {
   return (
     <div className="grid gap-4" aria-busy="true" aria-label="Loading inputs">
       <div className="grid gap-4 md:grid-cols-2">
         {[0, 1].map(c => (
-          <Card key={c} className="gap-3 px-5 py-4">
-            <Skeleton className="h-4 w-32" />
-            {[0, 1, 2, 3].map(i => <div key={i} className="grid gap-1.5 py-1"><div className="flex justify-between"><Skeleton className="h-3.5 w-40" /><Skeleton className="h-3.5 w-6" /></div><Skeleton className="h-1 w-full" /><Skeleton className="h-3 w-3/4" /></div>)}
+          <Card key={c} className="gap-1 px-3 py-4">
+            <Skeleton className="mx-2 mb-1 h-4 w-32" />
+            {[0, 1, 2, 3].map(i => <RowSkel key={i} />)}
           </Card>
         ))}
       </div>
-      <Card className="gap-2 px-5 py-4"><Skeleton className="h-4 w-24" /><div className="grid gap-2 sm:grid-cols-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-8" />)}</div></Card>
+      <Card className="gap-1 px-3 py-4"><Skeleton className="mx-2 mb-1 h-4 w-24" /><div className="grid sm:grid-cols-2">{[0, 1, 2, 3].map(i => <RowSkel key={i} />)}</div></Card>
     </div>
   )
 }
 function NewsSkeleton() {
   return (
-    <Card className="gap-0 py-0" aria-busy="true" aria-label="Loading news">
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} className="grid gap-3 border-t border-hairline px-5 py-4 first:border-0 md:grid-cols-[200px_1fr] md:gap-6">
-          <div className="grid gap-1.5"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-24" /></div>
-          <div className="grid gap-1.5"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-4/5" /><Skeleton className="h-3 w-2/3" /></div>
-        </div>
-      ))}
+    <Card className="gap-0 px-3 py-3" aria-busy="true" aria-label="Loading news">
+      {[0, 1, 2, 3, 4].map(i => <RowSkel key={i} />)}
     </Card>
   )
 }
