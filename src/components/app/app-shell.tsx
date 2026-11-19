@@ -1,4 +1,8 @@
-import { BarChart3, LayoutList, Moon, Search, Sun, Shapes } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BarChart3, CalendarDays, Check, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { CommandMenu } from './command-menu'
+import { AskPanel } from './ask'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarInset, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger,
@@ -18,7 +22,7 @@ const NAV: { route: Route; label: string; icon: React.ElementType }[] = [
 
 function SirionMark() {
   return (
-    <svg viewBox="0 0 32 32" className="size-6 shrink-0" aria-hidden="true">
+    <svg viewBox="0 0 32 32" className="size-6 shrink-0 text-sidebar-ring" aria-hidden="true">
       <g fill="none" stroke="currentColor" strokeWidth="2">
         <ellipse cx="16" cy="16" rx="13" ry="9" /><ellipse cx="16" cy="16" rx="9" ry="5.5" /><ellipse cx="16" cy="16" rx="4.5" ry="2.5" />
       </g>
@@ -28,6 +32,10 @@ function SirionMark() {
 
 export function AppShell({ route, children }: { route: Route; children: React.ReactNode }) {
   const [theme, toggleTheme] = useTheme()
+  const [cmd, setCmd] = useState(false)
+  const [ask, setAsk] = useState(false)
+  const [range, setRange] = useState<string>('Lifetime')
+  useEffect(() => { document.title = route === 'account' ? 'TransAmerica · Sirion Account Health' : 'Sirion Account Health' }, [route])
   const active = route === 'account' ? 'accounts' : route
   return (
     <SidebarProvider>
@@ -38,8 +46,8 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
               <SidebarMenuButton size="lg" onClick={() => go('accounts')} tooltip="Sirion Account Health">
                 <SirionMark />
                 <div className="grid leading-tight">
-                  <span className="text-sm font-medium text-foreground">Sirion</span>
-                  <span className="text-xs text-muted-foreground">Account health</span>
+                  <span className="text-sm font-medium text-sidebar-accent-foreground">Sirion</span>
+                  <span className="text-xs text-sidebar-foreground/70">Account health</span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -63,10 +71,10 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" tooltip="Rahul Dev Sharma, CSM">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-foreground">RS</span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground">RS</span>
                 <div className="grid leading-tight">
-                  <span className="text-sm text-foreground">Rahul Dev Sharma</span>
-                  <span className="text-xs text-muted-foreground">Customer Success Manager</span>
+                  <span className="text-sm text-sidebar-accent-foreground">Rahul Dev Sharma</span>
+                  <span className="text-xs text-sidebar-foreground/70">Customer Success Manager</span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -91,14 +99,31 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="hidden w-56 justify-start gap-2 text-muted-foreground sm:flex">
+            <Button variant="outline" size="sm" className="hidden w-56 justify-start gap-2 text-muted-foreground sm:flex" onClick={() => setCmd(true)}>
               <Search /> Find an account <Kbd className="ml-auto">⌘K</Kbd>
             </Button>
+            <Button variant="outline" size="icon" className="sm:hidden" onClick={() => setCmd(true)} aria-label="Find an account"><Search /></Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" aria-label={`Date range: ${range}`}><CalendarDays />{range}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuLabel>Date range</DropdownMenuLabel>
+                {['Last 30 days', 'Last 90 days', 'Last 180 days', 'Last 12 months', 'Lifetime'].map(r => (
+                  <DropdownMenuItem key={r} onSelect={() => setRange(r)}>
+                    {r}{range === r && <Check className="ml-auto" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="secondary" size="sm" onClick={() => setAsk(true)}><MessageSquareText />Ask</Button>
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
               {theme === 'dark' ? <Sun /> : <Moon />}
             </Button>
           </div>
         </header>
+        <CommandMenu open={cmd} onOpenChange={setCmd} />
+        <AskPanel open={ask} onOpenChange={setAsk} />
         <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>

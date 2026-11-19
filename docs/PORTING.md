@@ -5,7 +5,7 @@ The new app is Vite + React 19 + TypeScript + Tailwind v4 + shadcn (radix, nova 
 
 ## Goal
 Port each legacy screen to React, keep every fact, KPI and behaviour that matters, and restyle it to the
-**Default** design system (`/Users/akhilbordia/Downloads/DESIGN Default.md`): Linear/Vercel-like, dark-first,
+**Default** design system's structure in **Sirion's brand palette** (sirion.ai: teal-black, plum primary, light-teal accents, periwinkle AI; tokens already in `src/index.css`) (`/Users/akhilbordia/Downloads/DESIGN Default.md`): Linear/Vercel-like, dark-first,
 hairline borders, calm type, compact and information-dense. Polish it to a share-ready product.
 Improve layout and hierarchy where the legacy one is cluttered — verdict first, evidence on demand.
 
@@ -28,7 +28,7 @@ Evidences / "Risk reasons" section, any "N new updates" badge, competitive intel
 - Use theme tokens only (`bg-card`, `bg-muted`, `bg-surface-2`, `border-hairline`, `text-muted-foreground`, `text-good/warn/bad`,
   `bg-good-soft`…, `text-signal`, `text-ai`/`bg-ai-soft` for AI-written content). No hex colours in components.
 - Green / amber / red mean **health only** — never a chart series or decoration. Chart series use `--chart-1..5`.
-- Signal blue only for active state, links, focus. Primary button = default variant (bone pill in dark).
+- `signal` (Sirion teal) only for active state, links, focus. Primary button = default variant (Sirion plum) — one per view.
 - Headings weight 400–500, never 600+. Numbers tabular. 0.5px-feel hairlines, no heavy shadows, no gradients.
 - A missing value reads **"No data"** (use `isMissing`), never −1, "-" or undefined; leave it out of averages.
 - No coloured left-edge strips on cards or rows — use icon tiles, dots or tints.
@@ -41,3 +41,17 @@ Evidences / "Risk reasons" section, any "N new updates" badge, competitive intel
 - Edit only the files you own. If you need a change in a shared file (health.tsx, page.tsx, index.css, ui/*), say so in your report instead.
 - Check with `npx tsc -b`; fix errors in your files (ignore errors in files other agents are still writing).
 - The dev server is already running with HMR. Do not start servers, do not open a browser, do not commit.
+
+## Loading
+`useIsLoading()` from `@/lib/loading` is true for ~700ms after every route change (simulated fetch).
+While true, render each widget's `Skeleton` in the widget's real shape.
+
+## No edge banding, no AI slop (user rule — overrides anything above)
+- **No edge banding**: no coloured left/top/side strips on cards, rows, callouts or tabs; no status-tinted whole cards or tiles
+  (e.g. a red "ARR at risk" tile); no gradient bands or hero washes. Status shows on the value or a small dot/pill only.
+- **No AI slop elements**: no Sparkles/stars/wand icons, no "AI" badges or pills, no `ai-soft` tinted cards, no glow,
+  gradient text or shimmer. AI-written text looks like normal content; if provenance matters, one plain muted line ("From monthly summaries").
+- **No AI slop content**: no eyebrows ("Sirion · Account health"), no italic emphasis in headings, no subtitles that restate the
+  title ("Every account in your book with…"), no "Written from…/Every statement links to…" disclaimers, no "illustrative" notes,
+  no fake freshness ("Updated 26 mins ago"), no stacked info-(i) tips, no decorative icon tiles on every KPI, no count-up animations,
+  no filler words (seamless, actionable, at a glance, insights, unlock, empower). Short, specific, factual labels.

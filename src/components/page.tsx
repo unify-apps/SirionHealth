@@ -44,11 +44,14 @@ export function Stat({ label, value, hint, tone, icon, className }: {
 }
 
 /** One empty state for every widget. A missing value reads "No data", never -1, "-" or undefined. */
-export function Empty({ title = 'No data', sub, className }: { title?: string; sub?: React.ReactNode; className?: string }) {
+export function Empty({ title = 'No data', sub, action, className }: {
+  title?: string; sub?: React.ReactNode; action?: React.ReactNode; className?: string
+}) {
   return (
     <div className={cn('grid place-items-center gap-1 rounded-lg border border-dashed px-6 py-10 text-center', className)}>
       <p className="text-sm">{title}</p>
       {sub && <p className="max-w-sm text-xs text-muted-foreground">{sub}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   )
 }

@@ -1,0 +1,68 @@
+name: PR Deploy
+
+# Deploys a Vercel preview when a same-repo PR carries the "Deploy Prototype" label,
+# and redeploys on every push while the label stays. Deployments are public.
+# Aliases: https://<pr>-sirion.unifyapps.vercel.app and https://<branch>-<hash>-sirion.unifyapps.vercel.app
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID || 'unifyapps' }}
+  VERCEL_PROJECT_NAME: sirion-account-health
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-prototype-vercel:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      contains(github.event.pull_request.labels.*.name, 'Deploy Prototype') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'Deploy Prototype')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-env
+        name: 'Setup Environment'
+
+      - name: Generate branch alias prefix
+        id: branch-alias
+        shell: bash
+        env:
+          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          normalized_ref="$(
+            printf '%s' "$GITHUB_HEAD_REF" |
+              tr '[:upper:]' '[:lower:]' |
+              sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+          )"
+          ref_hash="$(printf '%s' "$GITHUB_HEAD_REF" | sha256sum | cut -c1-8)"
+          normalized_ref="${normalized_ref:0:40}"
+          normalized_ref="${normalized_ref%-}"
+          normalized_ref="${normalized_ref:-branch}"
+          printf 'prefix_name=%s-%s\n' "$normalized_ref" "$ref_hash" >> "$GITHUB_OUTPUT"
+
+      - name: 'Vercel Build and Deploy'
+        uses: ./.github/actions/vercel-deploy
+        with:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ env.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_NAME: ${{ env.VERCEL_PROJECT_NAME }}
+          SUFFIX: sirion.unifyapps.vercel.app
+          PREFIX: ${{ steps.branch-alias.outputs.prefix_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GIT_SHA: ${{ github.sha }}
+          GIT_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          GIT_REPO: ${{ github.event.repository.name }}
+          GIT_ORG: ${{ github.repository_owner }}
+          GIT_AUTHOR: ${{ github.actor }}
+          COMMENT_PLACEHOLDER: '<!--DEPLOY_PROTOTYPE_URLS--> Prototype Deployment'

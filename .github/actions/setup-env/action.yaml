@@ -1,0 +1,32 @@
+name: 'Setup env'
+description: 'Install node and pnpm'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: pnpm/action-setup@v5
+      name: Install pnpm
+      with:
+        run_install: false
+
+    - name: Install Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 'lts/*'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: |
+        for i in {1..3}; do
+          pnpm install && break || {
+            if [ $i -lt 3 ]; then
+              echo "Installation failed, cleaning pnpm state and retrying in 5 seconds..."
+              sleep 5
+              rm -rf node_modules/.pnpm node_modules/.modules.yaml || true
+            else
+              echo "Installation failed after 3 attempts"
+              exit 1
+            fi
+          }
+        done
+      shell: bash

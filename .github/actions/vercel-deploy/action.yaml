@@ -1,0 +1,167 @@
+name: 'Vercel Deploy'
+description: 'Deploy app on vercel'
+
+inputs:
+  VERCEL_TOKEN:
+    description: 'Vercel token'
+    required: true
+  VERCEL_TEAM_ID:
+    description: 'Vercel Team ID'
+    required: true
+  VERCEL_PROJECT_NAME:
+    description: 'Vercel project name; created in the team on first run if missing'
+    required: true
+  SUFFIX:
+    description: 'Domain Suffix'
+    required: true
+  PREFIX:
+    description: 'Domain Prefix'
+    required: true
+  PR_NUMBER:
+    description: 'Pull Request Number'
+  #    required: true
+  GIT_SHA:
+    description: 'Git SHA'
+    required: true
+  GIT_BRANCH_NAME:
+    description: 'Git Branch'
+    required: true
+  GIT_REPO:
+    description: 'Git Repository'
+    required: true
+  GIT_ORG:
+    description: 'Github org'
+    required: true
+  GIT_AUTHOR:
+    description: 'Git Author'
+    required: true
+  COMMENT_PLACEHOLDER:
+    description: 'Comment Placeholder'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Vercel CLI
+      shell: bash
+      run: pnpm add -g vercel
+
+    - name: Link Vercel project (creates it on first run)
+      shell: bash
+      run: vercel link --yes --project "$VERCEL_PROJECT_NAME" --scope "$VERCEL_TEAM_ID" --token="$VERCEL_TOKEN"
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+        VERCEL_TEAM_ID: ${{ inputs.VERCEL_TEAM_ID }}
+        VERCEL_PROJECT_NAME: ${{ inputs.VERCEL_PROJECT_NAME }}
+
+    - name: Make deployments public (no Vercel Authentication / password)
+      shell: bash
+      run: |
+        status=$(curl -sS -o /tmp/vercel-protect.json -w '%{http_code}' -X PATCH \
+          "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_NAME?slug=$VERCEL_TEAM_ID" \
+          -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' \
+          -d '{"ssoProtection":null,"passwordProtection":null}')
+        if [ "$status" != 200 ]; then echo "Could not disable deployment protection (HTTP $status)"; cat /tmp/vercel-protect.json; exit 1; fi
+        echo "Deployment protection off: preview and alias URLs are public."
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+        VERCEL_TEAM_ID: ${{ inputs.VERCEL_TEAM_ID }}
+        VERCEL_PROJECT_NAME: ${{ inputs.VERCEL_PROJECT_NAME }}
+
+    - name: Pull Vercel Environment Information
+      shell: bash
+      run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+
+    - name: Build Project Artifacts
+      shell: bash
+      run: NODE_OPTIONS='--max-old-space-size=8192' vercel build --token="$VERCEL_TOKEN"
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+        GIT_SHA: ${{ inputs.GIT_SHA }}
+
+    - name: Deploy Project Artifacts to Vercel
+      id: deploy_step
+      shell: bash
+      run: |
+        git_commit_message="$(git log -1 --pretty=format:%s)"
+        deploy_url="$(
+          vercel deploy --archive tgz --prebuilt \
+            --token="$VERCEL_TOKEN" \
+            -m "githubCommitSha=$GIT_SHA" \
+            -m "githubCommitAuthorName=$GIT_AUTHOR" \
+            -m "githubCommitAuthorLogin=$GIT_AUTHOR" \
+            -m "githubOrg=$GIT_ORG" \
+            -m "githubRepo=$GIT_REPO" \
+            -m "githubCommitOrg=$GIT_ORG" \
+            -m "githubCommitRepo=$GIT_REPO" \
+            -m "githubCommitMessage=$git_commit_message" \
+            -m "githubCommitRef=$GIT_BRANCH_NAME"
+        )"
+        printf 'deploy_url=%s\n' "$deploy_url" >> "$GITHUB_OUTPUT"
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+        GIT_SHA: ${{ inputs.GIT_SHA }}
+        GIT_AUTHOR: ${{ inputs.GIT_AUTHOR }}
+        GIT_ORG: ${{ inputs.GIT_ORG }}
+        GIT_REPO: ${{ inputs.GIT_REPO }}
+        GIT_BRANCH_NAME: ${{ inputs.GIT_BRANCH_NAME }}
+
+    - name: Generate URL Message
+      shell: bash
+      id: message
+      run: |
+        if [[ -n "$PR_NUMBER" ]]; then
+          vercel alias "$DEPLOY_URL" "$PR_NUMBER-$SUFFIX" --token="$VERCEL_TOKEN" --scope="$VERCEL_TEAM_ID"
+        fi
+        vercel alias "$DEPLOY_URL" "$PREFIX-$SUFFIX" --token="$VERCEL_TOKEN" --scope="$VERCEL_TEAM_ID"
+        {
+          echo 'COMMENT<<EOF'
+          echo "$COMMENT_PLACEHOLDER"
+          echo "Branch URL: https://$PREFIX-$SUFFIX"
+          if [[ -n "$PR_NUMBER" ]]; then
+            echo "PR URL: https://$PR_NUMBER-$SUFFIX"
+          fi
+          echo "Commit URL: $DEPLOY_URL"
+          echo EOF
+        } >> "$GITHUB_OUTPUT"
+      env:
+        VERCEL_TOKEN: ${{ inputs.VERCEL_TOKEN }}
+        VERCEL_TEAM_ID: ${{ inputs.VERCEL_TEAM_ID }}
+        DEPLOY_URL: ${{ steps.deploy_step.outputs.deploy_url }}
+        PR_NUMBER: ${{ inputs.PR_NUMBER }}
+        SUFFIX: ${{ inputs.SUFFIX }}
+        PREFIX: ${{ inputs.PREFIX }}
+        COMMENT_PLACEHOLDER: ${{ inputs.COMMENT_PLACEHOLDER }}
+
+    - name: Find Comment
+      if: ${{ inputs.PR_NUMBER }}
+      uses: peter-evans/find-comment@v4
+      id: fc
+      with:
+        issue-number: ${{ inputs.PR_NUMBER }}
+        body-includes: ${{ inputs.COMMENT_PLACEHOLDER }}
+        comment-author: 'github-actions[bot]'
+
+    - name: Create Comment
+      uses: peter-evans/create-or-update-comment@v5
+      if: ${{ inputs.PR_NUMBER && steps.fc.outputs.comment-id == 0 }}
+      with:
+        issue-number: ${{ inputs.PR_NUMBER }}
+        body: ${{ steps.message.outputs.COMMENT }}
+
+    - name: Update Comment
+      uses: peter-evans/create-or-update-comment@v5
+      if: ${{ inputs.PR_NUMBER && steps.fc.outputs.comment-id != 0 }}
+      with:
+        issue-number: ${{ inputs.PR_NUMBER }}
+        body: ${{ steps.message.outputs.COMMENT }}
+        comment-id: ${{ steps.fc.outputs.comment-id }}
+        edit-mode: replace
+
+    - name: Display Deployed URL
+      shell: bash
+      env:
+        COMMENT: ${{ steps.message.outputs.COMMENT }}
+      run: printf '%s\n' "$COMMENT" >> "$GITHUB_STEP_SUMMARY"
