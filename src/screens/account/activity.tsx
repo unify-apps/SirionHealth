@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Empty, SectionTitle } from '@/components/page'
+import { Activity as ActivityIcon, CalendarClock, MessageSquare } from 'lucide-react'
+import { BlockHeader, Empty, SectionTitle } from '@/components/page'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { TA_EVENTS, TODAY } from '@/data/legacy'
 import { journey, loadActivity, sentimentMonths, withRoles, type ActivityData, type JourneyMonth } from './activity/model'
-import { JourneyStrip, SentimentMonths } from './activity/sentiment'
-import { ErrorState, fmtD, useLoad } from './activity/shared'
+import { HealthRibbon, SentimentMonths } from './activity/sentiment'
+import { ErrorState, useLoad } from './activity/shared'
 import { Timeline } from './activity/timeline'
 import { useRoles } from './stakeholders/store'
 
@@ -34,20 +34,28 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
   const roles = useRoles()
   const items = useMemo(() => withRoles(data.items, roles), [data.items, roles])
   const sentiment = useMemo(() => sentimentMonths(data.ev), [data.ev])
-  const events = TA_EVENTS as unknown as [string, string, string, string][]
-  const last = events.filter(e => new Date(e[0] + 'T00:00:00') <= TODAY && e[1] !== 'end' && !/engagement snapshot/.test(e[3])).pop()
   return (
     <>
-      <Card className="gap-3 px-5 py-4">
-        <h3 className="text-sm font-medium">Timeline to renewal</h3>
-        <JourneyStrip months={months} now={last ? `${last[2]} · ${fmtD(new Date(last[0] + 'T00:00:00'))}` : 'No events yet'} next="Renewal $330K · Dec 30, 2026" />
+      <Card className="gap-0 py-0">
+        <BlockHeader icon={CalendarClock} title="Timeline to renewal" sub={`${months.length} months`} />
+        <div className="p-5"><HealthRibbon months={months} renewal={{ label: 'Renewal $330K', date: new Date(2026, 11, 30) }} /></div>
       </Card>
-      <Card className="px-3 py-4 sm:px-4">
-        {view === 'timeline'
-          ? (items.length ? <Timeline items={items} snapshot={data.snapshot} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />)
-          : (sentiment.length
-            ? <div className="grid gap-3 px-1"><p className="text-xs text-muted-foreground">From monthly summaries</p><SentimentMonths months={sentiment} /></div>
-            : <Empty title="No monthly summaries" sub="Sentiment drivers appear once Sirion writes a monthly summary." />)}
+      <Card className="gap-0 py-0">
+        {view === 'timeline' ? (
+          <>
+            <BlockHeader icon={ActivityIcon} title="Timeline" count={items.length} />
+            <div className="px-3 py-4 sm:px-4">
+              {items.length ? <Timeline items={items} snapshot={data.snapshot} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
+            </div>
+          </>
+        ) : (
+          <>
+            <BlockHeader icon={MessageSquare} title="Monthly sentiment" count={sentiment.length} sub="From monthly summaries" />
+            <div className="p-5">
+              {sentiment.length ? <SentimentMonths months={sentiment} /> : <Empty title="No monthly summaries" sub="Sentiment drivers appear once Sirion writes a monthly summary." />}
+            </div>
+          </>
+        )}
       </Card>
     </>
   )
@@ -58,8 +66,8 @@ function ActivitySkeleton({ view }: { view: View }) {
     <div className="grid gap-4" aria-busy="true" aria-label="Loading activity">
       <Card className="gap-3 px-5 py-4">
         <Skeleton className="h-4 w-36" />
-        <div className="flex items-center justify-between gap-1">{Array.from({ length: 20 }, (_, i) => <Skeleton key={i} className="size-2.5 rounded-full" />)}</div>
-        <Skeleton className="h-3 w-2/3" />
+        <div className="flex gap-0.5 pt-4">{Array.from({ length: 20 }, (_, i) => <Skeleton key={i} className="h-7 flex-1 rounded-sm" />)}</div>
+        <Skeleton className="h-3 w-1/2" />
       </Card>
       <Card className="gap-0 px-4 py-4">
         {view === 'timeline' ? (
@@ -67,8 +75,8 @@ function ActivitySkeleton({ view }: { view: View }) {
             <div className="flex gap-2 pb-3"><Skeleton className="h-7 w-72" /><Skeleton className="h-7 w-32" /></div>
             <Skeleton className="mx-2 my-2 h-3 w-20" />
             {Array.from({ length: 7 }, (_, i) => (
-              <div key={i} className="flex min-h-11 items-center gap-3 px-2 py-1.5">
-                <Skeleton className="size-7 rounded-full" />
+              <div key={i} className="flex min-h-13 items-center gap-3 px-2 py-2">
+                <Skeleton className="size-8 rounded-full" />
                 <div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>
                 <Skeleton className="h-3 w-12" />
               </div>

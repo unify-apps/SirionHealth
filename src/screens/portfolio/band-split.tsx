@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react'
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { ArrowRight, ChevronRight, HeartPulse } from 'lucide-react'
 import { BAND_LABEL, bandBg, bandOf, bandText, HealthBar, type Band } from '@/components/health'
 import { SplitBar } from '@/components/charts'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { BlockHeader } from '@/components/page'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Term } from '../account/overview/bits'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { money } from '@/data/legacy'
+import { fmtDate, money } from '@/data/legacy'
 import { go } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { EmptyState, LoadingLabel, SplitSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
@@ -22,6 +26,20 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
 }) {
   const [band, setBand] = useState<LiveBand | null>(null)
   const toggle = (b: LiveBand) => setBand(cur => (cur === b ? null : b))
+  const listRef = useRef<HTMLDivElement>(null)
+  // the account list opens under the bands; when that is below the fold, say so and offer a jump
+  useEffect(() => {
+    if (!band) return
+    const id = requestAnimationFrame(() => {
+      const el = listRef.current
+      if (!el || el.getBoundingClientRect().top < window.innerHeight - 48) return
+      toast(`${BAND_LABEL[band]} accounts listed below`, {
+        id: 'band-list',
+        action: { label: 'Show', onClick: () => el.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+      })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [band])
   const counts = useMemo(() => {
     const c: Record<LiveBand, number> = { good: 0, warn: 0, bad: 0 }
     rows.forEach(r => { const b = bandOf(r.health); if (isLive(r) && b !== 'none') c[b]++ })
@@ -29,12 +47,9 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
   }, [])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Where the ${BOOK.arr}M sits by health</CardTitle>
-        <CardDescription>Select a band to see its accounts.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={HeartPulse} title={`Where the $${BOOK.arr}M sits by health`} sub="Select a band to see its accounts" />
+      <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="health split" /><SplitSkeleton /></>}
         {status === 'error' && (
           <WidgetError title="The health split didn't load" sub="AHI's portfolio summary timed out. Other sections are up to date." onRetry={onRetry} />
@@ -54,7 +69,7 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
                     aria-pressed={on}
                     onClick={() => toggle(s.band)}
                     className={cn(
-                      'grid gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50',
+                      'grid cursor-pointer gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
                       on && 'border-border bg-accent',
                     )}
                   >
@@ -71,10 +86,10 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
                 )
               })}
             </div>
-            {band && <BandAccounts band={band} filters={filters} onClearFilters={onClearFilters} onClose={() => setBand(null)} />}
+            {band && <div ref={listRef} className="scroll-mt-20"><BandAccounts band={band} filters={filters} onClearFilters={onClearFilters} onClose={() => setBand(null)} /></div>}
           </>
         )}
-      </CardContent>
+      </div>
     </Card>
   )
 }
@@ -116,7 +131,7 @@ function BandAccounts({ band, filters, onClearFilters, onClose }: {
               <TableHead>Account</TableHead>
               <TableHead>Stage</TableHead>
               <TableHead>Health</TableHead>
-              <TableHead className="text-right">CARR</TableHead>
+              <TableHead className="text-right"><Term>CARR</Term></TableHead>
               <TableHead className="text-right">Renewal</TableHead>
               <TableHead className="w-6"><span className="sr-only">Open</span></TableHead>
             </TableRow>
@@ -128,21 +143,35 @@ function BandAccounts({ band, filters, onClearFilters, onClose }: {
               return (
                 <TableRow
                   key={r.name}
-                  className={cn(open && 'cursor-pointer')}
+                  className={cn(open ? 'cursor-pointer' : 'hover:bg-transparent')}
                   onClick={open ? () => go('account') : undefined}
                 >
                   <TableCell className="font-medium">
                     {open ? (
-                      <button type="button" className="rounded-sm text-left outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50" onClick={() => go('account')}>
+                      <button type="button" className="rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" onClick={e => { e.stopPropagation(); go('account') }}>
                         {r.name}
                       </button>
                     ) : r.name}
                     <span className="block text-xs font-normal text-muted-foreground">{r.ind} · {r.seg}</span>
                   </TableCell>
                   <TableCell>{r.stage}</TableCell>
-                  <TableCell><HealthBar value={r.health} /></TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={open ? -1 : 0} className="inline-flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"><HealthBar value={r.health} /></span>
+                      </TooltipTrigger>
+                      <TooltipContent>Health {r.health} of 100 · {BAND_LABEL[bandOf(r.health)]}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{money(r.carr)}</TableCell>
-                  <TableCell className={cn('text-right tabular-nums', rr.days <= 60 && 'text-bad')}>{rr.t}</TableCell>
+                  <TableCell className={cn('text-right tabular-nums', rr.days <= 60 && 'text-bad')}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={open ? -1 : 0} className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{rr.t}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Renews {fmtDate(r.renew)}</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell>{open && <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />}</TableCell>
                 </TableRow>
               )

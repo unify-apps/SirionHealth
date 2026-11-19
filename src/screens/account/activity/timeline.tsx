@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
-import { CAT_LABEL, CH_NAME, type Cat, type Channel, type Item } from './model'
+import { CAT_LABEL, CH_NAME, type Touch, type Cat, type Channel, type Item } from './model'
 import { dayISO, ymLong } from './shared'
 
 export const CH_ICON: Record<Channel, typeof Mail> = {
@@ -22,7 +22,7 @@ const dayShort = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', mo
 const dayMon = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace('Sept', 'Sep')
 const STEP = 15
 
-export function Timeline({ items, snapshot }: { items: Item[]; snapshot: string[] }) {
+export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[] }) {
   const [cat, setCat] = useState<'all' | Cat>('all')
   const [chs, setChs] = useState<Set<Channel>>(new Set())
   const [shown, setShown] = useState(STEP)
@@ -44,8 +44,8 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: string[
   const show = (i: Item) => { setOpen(i); setSheetOpen(true) }
 
   return (
-    <div className="grid gap-1">
-      <div className="flex flex-wrap items-center gap-2 pb-2">
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup type="single" variant="outline" size="sm" value={cat} onValueChange={v => { if (v) { setCat(v as typeof cat); setShown(STEP) } }} aria-label="Filter activity" className="flex-wrap">
           {(['all', 'risk', 'positive', 'general'] as const).map(c => (
             <ToggleGroupItem key={c} value={c}>
@@ -54,13 +54,23 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: string[
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <div className="ml-auto flex items-center gap-0.5">
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+        {snapshot.map(t => {
+          const I = t.kind === 'email' ? Mail : CalendarDays
+          return (
+            <Tip key={t.kind} tip={`Last ${t.kind} with the customer: ${dayMon(t.date)}`}>
+              <span tabIndex={0} className="hidden items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:inline-flex">
+                <I className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                <span className="text-muted-foreground">Last {t.kind}</span><span className="tabular-nums">{dayShort(t.date)}</span>
+              </span>
+            </Tip>
+          )
+        })}
         <DropdownMenu>
           <Tip tip={chs.size ? `${chs.size} channel${chs.size > 1 ? 's' : ''}` : 'Filter by channel'}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative" aria-label={chs.size ? `Channels, ${chs.size} selected` : 'Filter by channel'}>
-              <Filter />
-              {chs.size > 0 && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-signal" aria-hidden="true" />}
+            <Button variant="ghost" size="sm" className={cn(chs.size > 0 && 'text-foreground')}>
+              <Filter />{chs.size ? `${chs.size} channel${chs.size > 1 ? 's' : ''}` : 'All channels'}
             </Button>
           </DropdownMenuTrigger>
           </Tip>
@@ -86,18 +96,17 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: string[
 
       <section aria-label="Upcoming">
         <ListGroupHeader count={up.length} className="top-23">Upcoming</ListGroupHeader>
-        {up.length ? up.map(i => <Row key={i.id} i={i} onOpen={show} />) : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
+        {up.length ? <div className="grid gap-1">{up.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
       </section>
 
-      {snapshot.length > 0 && <p className="px-2 pt-2 text-xs text-muted-foreground">{snapshot.join(' · ')}</p>}
       {months.length ? months.map(([ym, rows]) => (
         <section key={ym} aria-label={ymLong(ym)}>
           <ListGroupHeader count={rows.length} className="top-23">{ymLong(ym)}</ListGroupHeader>
-          {rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}
+          <div className="grid gap-1">{rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div>
         </section>
       )) : <Empty title="No past activity" sub="Nothing in this filter." className="py-6" />}
       {past.length > shown && (
-        <Button variant="outline" size="sm" className="mx-auto mt-3" onClick={() => setShown(s => s + STEP)}>
+        <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
           Show {Math.min(STEP, past.length - shown)} more of {past.length - shown}
         </Button>
       )}
@@ -112,7 +121,7 @@ function Row({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
   const people = i.who.filter(w => !i.title.includes(w)).slice(0, 2)
   const hollow = i.kind === 'goal' || i.kind === 'end'
   return (
-    <ListRow icon={CH_ICON[i.ch]} onClick={() => onOpen(i)} aria-haspopup="dialog"
+    <ListRow size="lg" icon={CH_ICON[i.ch]} onClick={() => onOpen(i)} aria-haspopup="dialog"
       aria-label={`${i.title}, ${CH_NAME[i.ch]}, ${dayMon(i.date)}, ${CAT_LABEL[i.cat]}`}
       title={i.title}
       meta={<span className="tabular-nums">{dayShort(i.date)} · {CH_NAME[i.ch]}{people.length ? ` · ${people.join(', ')}` : ''}</span>}

@@ -1,6 +1,6 @@
 import { CalendarClock, DollarSign, LifeBuoy, MessageSquare, TrendingUp, Users, type LucideIcon } from 'lucide-react'
-import { bandOf, bandText } from '@/components/health'
-import { Meter } from '@/components/page'
+import { bandOf } from '@/components/health'
+import { Meter, MeterValue, Tip } from '@/components/page'
 import { cn } from '@/lib/utils'
 import type { Area, AreaKey, Input } from './model'
 
@@ -26,17 +26,13 @@ export function InputRow({ input, showArea = false }: { input: Input; showArea?:
   const b = bandOf(input.score)
   const why = missing ? `${input.reason}. Left out of the average and the drivers.` : input.reason
   return (
-    <li className="flex min-h-11 items-center gap-3 py-1.5">
+    <li className="flex min-h-13 items-center gap-6 py-2">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{input.name}{showArea && <span className="ml-2 text-xs text-muted-foreground">{input.areaName}</span>}</p>
-        <p className="truncate text-xs text-muted-foreground" title={why}>{why}</p>
+        <Tip tip={why}><p tabIndex={0} className="mt-0.5 truncate rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{why}</p></Tip>
       </div>
-      {missing
-        ? <span className="shrink-0 text-xs text-muted-foreground">No data</span>
-        : <span className="flex shrink-0 items-center gap-2">
-            <ScoreBar score={input.score} className="w-12" />
-            <span className={cn('w-7 text-right text-sm font-medium tabular-nums', bandText[b])}>{input.score}</span>
-          </span>}
+      <MeterValue value={input.score} tone={missing || b === 'none' ? undefined : b} label={input.name}
+        tip={missing ? 'No data: left out of the average' : `${input.name}: ${input.score} of 100`} className="shrink-0" />
     </li>
   )
 }

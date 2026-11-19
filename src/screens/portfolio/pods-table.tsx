@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Users } from 'lucide-react'
 import { HealthBar } from '@/components/health'
-import { Meter, SortHead, stickyCol } from '@/components/page'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { BlockHeader, Meter, SortHead, stickyCol, stickyColStatic } from '@/components/page'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -57,23 +57,17 @@ export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters
     setSort(s => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'name' ? 1 : -1 }))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Pods
-          {refreshing && status === 'ready' && <Loader2 className="size-3.5 animate-spin text-muted-foreground motion-reduce:animate-none" aria-label="Updating" />}
-        </CardTitle>
-        <CardDescription>
-          Sorted by {sortLabel.toLowerCase()}{sort.dir === 1 ? ', ascending' : ''}.
-        </CardDescription>
-      </CardHeader>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={Users} title="Pods" count={status === 'ready' ? list.length : undefined}
+        sub={`Sorted by ${sortLabel.toLowerCase()}${sort.dir === 1 ? ', ascending' : ''}`}
+        actions={refreshing && status === 'ready' ? <Loader2 className="size-3.5 animate-spin text-muted-foreground motion-reduce:animate-none" aria-label="Updating" /> : undefined} />
       <CardContent className={cn('px-0 transition-opacity duration-200', refreshing && 'opacity-55')}>
         {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton cols={7} /></>}
         {status === 'error' && (
-          <WidgetError className="mx-4" title="Pod data didn't load" sub="The CS roster service timed out after 20 seconds. Other sections are up to date." onRetry={onRetry} />
+          <WidgetError className="m-5" title="Pod data didn't load" sub="The CS roster service timed out after 20 seconds. Other sections are up to date." onRetry={onRetry} />
         )}
         {status === 'ready' && list.length === 0 && (
-          <EmptyState className="mx-4" title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" onAction={onClearFilters} />
+          <EmptyState className="m-5" title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" onAction={onClearFilters} />
         )}
         {status === 'ready' && list.length > 0 && (
           <Table aria-label="Pods" className="min-w-[720px]">
@@ -87,8 +81,8 @@ export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters
             </TableHeader>
             <TableBody>
               {list.map(p => (
-                <TableRow key={p.name} className="[&>td]:h-11">
-                  <TableCell className={stickyCol}>
+                <TableRow key={p.name} className="hover:bg-transparent [&>td]:h-11">
+                  <TableCell className={stickyColStatic}>
                     <span className="font-medium">{p.name}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{p.region}</span>
                   </TableCell>

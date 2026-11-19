@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ClockCheck, Loader2 } from 'lucide-react'
 import { HealthPill } from '@/components/health'
-import { PageHeader, SectionTitle } from '@/components/page'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { BlockHeader, ListRow, MeterValue, PageHeader, SectionTitle } from '@/components/page'
+import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { go } from '@/lib/route'
 import {
@@ -54,13 +54,8 @@ const RULES: { title: string; rule: string; demo: React.ReactNode }[] = [
     title: 'Missing metric',
     rule: 'A metric the source does not provide shows “No data” and is left out of averages and risk drivers. Never −1, “-” or undefined.',
     demo: (
-      <div className="flex items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm">SLA compliance</p>
-          <p className="text-xs text-muted-foreground">Freshservice does not report SLA for this account</p>
-        </div>
-        <span className="text-sm text-muted-foreground">No data</span>
-      </div>
+      <ListRow icon={ClockCheck} title="SLA compliance" meta="Freshservice does not report SLA for this account"
+        right={<MeterValue value={null} label="SLA compliance" />} className="px-0" />
     ),
   },
   {
@@ -147,14 +142,12 @@ export function StatesScreen() {
       <SectionTitle title="Rules" />
       <div className="grid gap-4 md:grid-cols-2">
         {RULES.map(r => (
-          <Card key={r.title}>
-            <CardHeader>
-              <CardTitle className="text-sm">{r.title}</CardTitle>
-              <p className="text-xs text-muted-foreground">{r.rule}</p>
-            </CardHeader>
-            <CardContent>
+          <Card key={r.title} className="gap-0 py-0">
+            <BlockHeader title={r.title} />
+            <div className="grid gap-4 p-5">
+              <p className="max-w-[65ch] text-xs text-muted-foreground">{r.rule}</p>
               <div className="rounded-lg border border-hairline p-4">{r.demo}</div>
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>
@@ -162,16 +155,16 @@ export function StatesScreen() {
       <SectionTitle title="By widget" />
       <div className="grid gap-4">
         {WIDGETS.map(w => (
-          <Card key={w.name}>
-            <CardHeader><CardTitle className="text-sm">{w.name}</CardTitle></CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-3">
+          <Card key={w.name} className="gap-0 py-0">
+            <BlockHeader title={w.name} />
+            <div className="grid gap-4 p-5 lg:grid-cols-3">
               {([['Loading', w.loading], ['Empty', w.empty], ['Error', w.error]] as const).map(([label, node]) => (
                 <div key={label} className="grid content-start gap-2">
                   <span className="text-xs text-muted-foreground">{label}</span>
                   <div className="min-w-0">{node}</div>
                 </div>
               ))}
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>

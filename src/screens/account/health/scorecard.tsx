@@ -45,7 +45,7 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
           <Table aria-label={`Inputs${area === 'all' ? '' : ' in ' + shortArea(data.areas.find(a => a.key === area)!.name)}`}>
             <TableHeader>
               <TableRow>
-                <TableHead className={cn(sheetSticky, 'pl-6')}>Input</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-popover pl-6">Input</TableHead>
                 <TableHead>Why this score</TableHead>
                 <TableHead className="text-right">Score</TableHead>
                 <TableHead>Band</TableHead>

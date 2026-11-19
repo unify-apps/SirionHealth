@@ -13,7 +13,7 @@ export function ActivitySheet({ item, onOpenChange }: { item: ActivityItem | nul
   const st = item ? ACT_STATUS[item.kind] : undefined
   return (
     <Sheet open={!!item} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 overflow-y-auto">
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-4xl">
         {item && (
           <>
             <SheetHeader className="sticky top-0 z-10 border-b border-hairline bg-popover px-6 py-4 pr-14">

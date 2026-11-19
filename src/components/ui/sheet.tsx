@@ -3,6 +3,7 @@ import { cn } from "cn"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { XIcon } from "lucide-react"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -67,17 +68,17 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close data-slot="sheet-close" asChild>
-            <Button
-              variant="ghost"
-              className="absolute top-3 right-3"
-              size="icon-sm"
-            >
-              <XIcon
-              />
-              <span className="sr-only">Close</span>
-            </Button>
-          </SheetPrimitive.Close>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SheetPrimitive.Close data-slot="sheet-close" asChild>
+                <Button variant="ghost" className="absolute top-3 right-3 z-20" size="icon-sm">
+                  <XIcon />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </SheetPrimitive.Close>
+            </TooltipTrigger>
+            <TooltipContent side="left">Close <kbd className="ml-1 text-[10px] opacity-70">Esc</kbd></TooltipContent>
+          </Tooltip>
         )}
       </SheetPrimitive.Content>
     </SheetPortal>

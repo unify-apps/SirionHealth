@@ -1,3 +1,4 @@
+import { CircleAlert, Database, HeartPulse, LifeBuoy, TrendingUp, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, SectionTitle } from '@/components/page'
 import { TrendChart } from './health/charts'
@@ -35,15 +36,15 @@ export function AdoptionTab() {
       <div className="flex flex-col gap-3">
         <StatGrid rows={d.adopt} />
         <div className="grid gap-3 lg:grid-cols-2">
-          <ChartCard title="Repository by type" sub={`${fmt(repoTotal)} records`}>
+          <ChartCard icon={Database} title="Repository by type" sub={`${fmt(repoTotal)} records`}>
             <SplitBar parts={d.repository} unit="records" label="Repository records by type" />
           </ChartCard>
-          <ChartCard title="Monthly active users over time">
+          <ChartCard icon={Users} title="Monthly active users over time">
             <Empty title="No monthly history"
               sub="AHI's scored record holds only this month's value, 222 users against a 12-month average of 215. The source has not sent a monthly series yet." />
           </ChartCard>
         </div>
-        <ChartCard title="Adoption score over time" sub={range}>
+        <ChartCard icon={TrendingUp} title="Adoption score over time" sub={range}>
           {d.months.length ? <TrendChart months={d.months} area="adoption" name="Product adoption" />
             : <Empty title="No scored months" />}
         </ChartCard>
@@ -53,14 +54,14 @@ export function AdoptionTab() {
       <div className="flex flex-col gap-3">
         <StatGrid rows={d.support} />
         <div className="grid gap-3 lg:grid-cols-2">
-          <ChartCard title="By priority" sub={`${fmt(ticketTotal)} tickets`}>
+          <ChartCard icon={CircleAlert} title="By priority" sub={`${fmt(ticketTotal)} tickets`}>
             <SplitBar parts={d.priority} unit="tickets" label="Tickets by priority" ordinal="desc" />
           </ChartCard>
-          <ChartCard title="Ticket themes" sub={`Top ${d.themes.length} of ${d.themeCount}`}>
+          <ChartCard icon={LifeBuoy} title="Ticket themes" count={d.themes.length} sub={`Top ${d.themes.length} of ${d.themeCount}`}>
             <ThemeBars themes={d.themes} />
           </ChartCard>
         </div>
-        <ChartCard title="Support score over time" sub={range}>
+        <ChartCard icon={HeartPulse} title="Support score over time" sub={range}>
           {d.months.length ? <TrendChart months={d.months} area="support" name="Support and enhancement requests" />
             : <Empty title="No scored months" />}
         </ChartCard>

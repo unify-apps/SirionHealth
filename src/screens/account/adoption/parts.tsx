@@ -1,20 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { LucideIcon } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import { BarList } from '@/components/charts'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Stat, Empty, Meter } from '@/components/page'
+import { BlockHeader, Stat, Empty, Meter } from '@/components/page'
 import { cn } from '@/lib/utils'
 import type { StatRow } from './model'
 
-export function ChartCard({ title, sub, children, className }: {
-  title: string; sub?: React.ReactNode; children: React.ReactNode; className?: string
+export function ChartCard({ title, sub, icon, count, children, className }: {
+  title: string; sub?: React.ReactNode; icon?: LucideIcon; count?: React.ReactNode; children: React.ReactNode; className?: string
 }) {
   return (
-    <Card className={cn('gap-4', className)}>
-      <CardHeader className="gap-0.5">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {sub && <CardDescription className="text-xs">{sub}</CardDescription>}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
+    <Card className={cn('gap-0 py-0', className)}>
+      <BlockHeader icon={icon} title={title} count={count} sub={sub} />
+      <div className="p-5">{children}</div>
     </Card>
   )
 }
@@ -48,9 +46,9 @@ export function ThemeBars({ themes }: { themes: { name: string; tickets: number 
 
 export function ChartSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn('gap-4', className)} aria-hidden="true">
-      <CardHeader className="gap-1.5"><Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-72 max-w-full" /></CardHeader>
-      <CardContent><Skeleton className="h-48 w-full" /></CardContent>
+    <Card className={cn('gap-0 py-0', className)} aria-hidden="true">
+      <div className="flex min-h-12 items-center gap-2 border-b border-hairline px-5"><Skeleton className="size-4" /><Skeleton className="h-4 w-48" /></div>
+      <div className="p-5"><Skeleton className="h-48 w-full" /></div>
     </Card>
   )
 }

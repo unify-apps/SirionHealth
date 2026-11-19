@@ -126,10 +126,10 @@ export function DonutSkeleton() {
 
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="grid" aria-hidden="true">
+    <div className="grid gap-1" aria-hidden="true">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex min-h-11 items-center gap-3 px-2 py-1.5">
-          <Skeleton className="size-7 rounded-full" />
+        <div key={i} className="flex min-h-13 items-center gap-3 px-2 py-2">
+          <Skeleton className="size-8 rounded-full" />
           <div className="grid flex-1 gap-1.5"><Skeleton className="h-3 w-1/2" /><Skeleton className="h-3 w-1/3" /></div>
           <Skeleton className="h-3 w-12" />
         </div>

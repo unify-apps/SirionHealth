@@ -2,11 +2,12 @@
    Ported from renderSummary, openRef, renderCLM, renderRunway and the #s-summary markup. */
 import { useState } from 'react'
 import {
-  CalendarDays, ChevronRight, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
+  Activity, CalendarClock, CalendarDays, ChevronRight, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { BlockHeader } from '@/components/page'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -37,9 +38,11 @@ export function OverviewTab() {
       )}
 
       <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-28">
-        <SectionHead id="h-runway" title="Renewal runway"
-          tip="Monthly health since May 2025, when the model flagged it, and the events around it. Select an event for its evidence." />
-        <Card className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></Card>
+        <Card className="gap-0 py-0">
+          <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
+            sub="Monthly health since May 2025 · select an event for its evidence" />
+          <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
+        </Card>
       </section>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -149,7 +152,8 @@ function Brief() {
   const ready = w.status === 'ready' && !!w.data?.length
   return (
     <section aria-labelledby="h-brief">
-      <SectionHead id="h-brief" title="Account brief" actions={ready && (
+      <Card className="gap-0 py-0">
+      <BlockHeader icon={FileText} title={<span id="h-brief">Account brief</span>} actions={ready && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-xs" aria-label="Copy brief" onClick={() => copyBrief(w.data!)}
@@ -160,7 +164,7 @@ function Brief() {
           <TooltipContent>Copy brief</TooltipContent>
         </Tooltip>
       )} />
-      <Card className="px-5 py-4">
+      <div className="px-5 py-4">
         <WidgetBody w={w} what="the account brief" isEmpty={d => d.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
           skeleton={<div className="grid gap-5 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
           {d => (
@@ -177,6 +181,7 @@ function Brief() {
             </>
           )}
         </WidgetBody>
+      </div>
       </Card>
     </section>
   )
@@ -194,8 +199,9 @@ function ListCard({ title, items, tone, onArea }: {
 }) {
   const w = useWidget(() => items)
   return (
-    <Card className="gap-0 px-5 py-4">
-      <h3 className="mb-1 text-sm font-medium">{title}</h3>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={tone === 'good' ? CircleCheck : CircleAlert} title={title} count={w.status === 'ready' ? w.data!.length : undefined} />
+      <div className="px-5 py-2">
       <WidgetBody w={w} what={title.toLowerCase()} isEmpty={d => d.length === 0}
         empty={{ title: tone === 'good' ? 'Nothing stands out yet' : 'Nothing needs attention' }}
         skeleton={listSkeleton(3)}>
@@ -209,6 +215,7 @@ function ListCard({ title, items, tone, onArea }: {
           </ul>
         )}
       </WidgetBody>
+      </div>
     </Card>
   )
 }
@@ -228,15 +235,13 @@ function RecentActivity() {
     return { top: all.slice(0, 5), total: all.length }
   })
   return (
-    <Card className="gap-0 px-5 py-4">
-      <div className="mb-1 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium">Recent activity</h3>
-        {w.status === 'ready' && w.data!.total > 0 && (
-          <Button variant="outline" size="sm" className="rounded-full" onClick={() => showTab('activity')}>
-            View all {w.data!.total} <ChevronRight />
-          </Button>
-        )}
-      </div>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={Activity} title="Recent activity" actions={w.status === 'ready' && w.data!.total > 0 && (
+        <Button variant="outline" size="sm" className="rounded-full" onClick={() => showTab('activity')}>
+          View all {w.data!.total} <ChevronRight />
+        </Button>
+      )} />
+      <div className="px-5 py-2">
       <WidgetBody w={w} what="recent activity" isEmpty={d => d.total === 0} empty={{ title: 'No activity yet' }} skeleton={listSkeleton(5)}>
         {d => (
           <ul>
@@ -248,6 +253,7 @@ function RecentActivity() {
           </ul>
         )}
       </WidgetBody>
+      </div>
       <ActivitySheet item={open} onOpenChange={o => !o && setOpen(null)} />
     </Card>
   )
@@ -259,8 +265,9 @@ const CLM_ICON = [FileText, FileSignature, FileX]
 function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
   const w = useWidget(() => CLM)
   return (
-    <Card className="gap-0 px-5 py-4">
-      <h3 className="mb-1 text-sm font-medium">Order forms</h3>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={FileSignature} title="Order forms" />
+      <div className="px-5 py-2">
       <WidgetBody w={w} what="order forms" isEmpty={d => d.length === 0} empty={{ title: 'No order forms' }} skeleton={listSkeleton(3)}>
         {d => (
           <ul>
@@ -273,6 +280,7 @@ function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
           </ul>
         )}
       </WidgetBody>
+      </div>
     </Card>
   )
 }

@@ -1,6 +1,7 @@
-import { isValidElement } from 'react'
+import { isValidElement, useState } from 'react'
 import { ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -12,13 +13,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
  */
 export function PageHeader({ eyebrow, title, sub, actions, lead }: {
   eyebrow?: string; title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode
-  /** optional element before the title, e.g. an account monogram */
+  /** before the title: a string renders a monogram as tall as the title + meta lines; or pass any element */
   lead?: React.ReactNode
 }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-5">
       <div className="flex min-w-0 items-center gap-3">
-        {lead}
+        {typeof lead === 'string'
+          ? <span aria-hidden="true" className="grid size-[52px] shrink-0 place-items-center rounded-full bg-muted text-base font-medium text-foreground">{lead}</span>
+          : lead}
         <div className="min-w-0">
           {eyebrow && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
           <h1 className="truncate text-2xl leading-tight font-normal tracking-[-0.02em]">{title}</h1>
@@ -27,6 +30,27 @@ export function PageHeader({ eyebrow, title, sub, actions, lead }: {
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
+  )
+}
+
+/**
+ * Header for a card/block: icon + title (+ count) on the left, actions on the right, hairline under it.
+ * Use as the first child of a Card with py-0 / gap-0 so the rule spans the card.
+ */
+export function BlockHeader({ icon: Icon, title, count, sub, actions, className }: {
+  icon?: LucideIcon; title: React.ReactNode; count?: React.ReactNode; sub?: React.ReactNode
+  actions?: React.ReactNode; className?: string
+}) {
+  return (
+    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-3', className)}>
+      <div className="flex min-w-0 items-center gap-2">
+        {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+        <h3 className="truncate text-sm font-medium text-foreground">{title}</h3>
+        {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
+        {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
+      </div>
+      {actions && <div className="ml-auto flex items-center gap-1.5">{actions}</div>}
+    </div>
   )
 }
 
@@ -155,9 +179,11 @@ export function Meter({ value, max = 100, tone, fill, label, showValue, tip: tip
 
 /** Compact list row (≈44–52px): 28px neutral icon circle or avatar, one-line title, one muted meta line,
  *  right slot for a status dot/pill or number. Becomes a button when it has an onClick. */
-export function ListRow({ icon, title, meta, right, onClick, className, ...aria }: {
-  /** a lucide component (shown in a 28px neutral circle) or a ready node such as an avatar */
+export function ListRow({ icon, title, meta, right, onClick, size = 'lg', className, ...aria }: {
+  /** a lucide component (shown in a 28px neutral circle, 32px when size="lg") or a ready node such as an avatar */
   icon?: IconLike
+  /** lg (default) ≈52px rows with a 32px icon circle; md ≈44px for dense menus. Stack rows with `grid gap-1`. */
+  size?: 'md' | 'lg'
   title: React.ReactNode; meta?: React.ReactNode; right?: React.ReactNode
   onClick?: () => void; className?: string
   'aria-label'?: string; 'aria-haspopup'?: 'dialog'
@@ -165,24 +191,69 @@ export function ListRow({ icon, title, meta, right, onClick, className, ...aria 
   const body = (
     <>
       {icon != null && (isIconComponent(icon)
-        ? <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted"><IconSlot icon={icon} /></span>
+        ? <span className={cn('grid shrink-0 place-items-center rounded-full bg-muted', size === 'lg' ? 'size-8' : 'size-7')}><IconSlot icon={icon} /></span>
         : icon)}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{title}</span>
         {meta && (!onClick && typeof meta === 'string'
-          ? <Tip tip={meta}><span tabIndex={0} className="block truncate rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{meta}</span></Tip>
-          : <span className="block truncate text-xs text-muted-foreground">{meta}</span>)}
+          ? <Tip tip={meta}><span tabIndex={0} className={cn('block truncate rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50', size === 'lg' && 'mt-0.5')}>{meta}</span></Tip>
+          : <span className={cn('block truncate text-xs text-muted-foreground', size === 'lg' && 'mt-0.5')}>{meta}</span>)}
       </span>
-      {right != null && <span className="flex shrink-0 items-center gap-2 text-xs">{right}</span>}
+      {right != null && <span className="ml-3 flex shrink-0 items-center gap-3 text-xs">{right}</span>}
     </>
   )
-  const cls = cn('flex min-h-11 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left', className)
+  const cls = cn('flex w-full items-center gap-3 rounded-lg px-2 text-left', size === 'lg' ? 'min-h-13 py-2' : 'min-h-11 py-1.5', className)
   if (!onClick) return <div className={cls}>{body}</div>
   return (
     <button type="button" onClick={onClick} {...aria}
       className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring')}>
       {body}
     </button>
+  )
+}
+
+/** Right side of a two-sided row: a fixed 120px meter and the value in a fixed 48px right-aligned column (fits "No data" on one line), so values line up. */
+export function MeterValue({ value, max = 100, tone, label, tip, display, className }: {
+  value: number | null | undefined; max?: number; tone?: 'good' | 'warn' | 'bad'
+  label?: string; tip?: React.ReactNode; display?: React.ReactNode; className?: string
+}) {
+  return (
+    <span className={cn('flex items-center gap-3', className)}>
+      <Meter value={value} max={max} tone={tone} label={label} tip={tip} className="hidden w-[120px] sm:block" />
+      <span className={cn('w-12 text-right text-sm font-medium whitespace-nowrap tabular-nums', tone === 'good' ? 'text-good' : tone === 'warn' ? 'text-warn' : tone === 'bad' ? 'text-bad' : 'text-foreground')}>
+        {display ?? (value == null ? <span className="text-xs font-normal text-muted-foreground">No data</span> : value)}
+      </span>
+    </span>
+  )
+}
+
+/** A long list in two columns on desktop: 32px apart with a hairline between them; one column on phones.
+ *  Pass the rows (each already an <li>). The first half fills the left column. */
+export function ListColumns({ children, label, className }: { children: React.ReactNode[]; label?: string; className?: string }) {
+  const half = Math.ceil(children.length / 2)
+  return (
+    <div className={cn('grid gap-x-8 gap-y-1 md:grid-cols-2', className)} aria-label={label} role={label ? 'group' : undefined}>
+      <ul className="grid content-start gap-1">{children.slice(0, half)}</ul>
+      <ul className="relative grid content-start gap-1 md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-hairline">{children.slice(half)}</ul>
+    </div>
+  )
+}
+
+/** Shows the first `n` items of a long list, then a "Show N more" outline pill. */
+export function MoreList<T>({ items, n = 3, render, className, noun = 'more' }: {
+  items: T[]; n?: number; render: (item: T, i: number) => React.ReactNode; className?: string; noun?: string
+}) {
+  const [all, setAll] = useState(false)
+  const shown = all ? items : items.slice(0, n)
+  return (
+    <>
+      <ul className={className}>{shown.map(render)}</ul>
+      {items.length > n && (
+        <Button variant="outline" size="sm" className="mt-3 rounded-full" aria-expanded={all} onClick={() => setAll(v => !v)}>
+          {all ? 'Show less' : `Show ${items.length - n} ${noun}`}
+        </Button>
+      )}
+    </>
   )
 }
 
@@ -214,6 +285,8 @@ export function Tip({ tip, children, side }: { tip?: React.ReactNode; children: 
 
 /** First column stays put on horizontal scroll. Its background follows the row hover tint. */
 export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--accent)_60%,var(--card))]'
+/** Sticky first column for tables whose rows aren't clickable: no hover tint. */
+export const stickyColStatic = 'sticky left-0 z-10 bg-card'
 
 /** Sortable header: the whole cell is the button; the sort icon shows on hover/focus or when active. */
 export function SortHead({ children, active, dir, onSort, numeric, sticky, title, className }: {
@@ -223,7 +296,7 @@ export function SortHead({ children, active, dir, onSort, numeric, sticky, title
   const I = active ? (dir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown
   return (
     <TableHead aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={cn('p-0 first:pl-0 last:pr-0', numeric && 'text-right', sticky && stickyCol, className)}>
+      className={cn('p-0 first:pl-0 last:pr-0', numeric && 'text-right', sticky && stickyColStatic, className)}>
       <Tip tip={title}><button type="button" onClick={onSort}
         className={cn('group/sort flex h-9 w-full items-center gap-1 px-3 text-xs font-medium outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
           '[th:first-child_&]:pl-4 [th:last-child_&]:pr-4', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>

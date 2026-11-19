@@ -52,7 +52,8 @@ export interface Item {
   id: string; date: Date; kind: EventKind; cat: Cat; key: boolean; title: string; desc: string; src: string; ch: Channel
   who: string[]; internal: string[]; external: [string, string][]; tickets: string[]; record: [string, string] | null; fromSummary: boolean
 }
-export interface ActivityData { items: Item[]; snapshot: string[]; ev: Evidence[] }
+export interface Touch { kind: 'meeting' | 'email'; date: Date }
+export interface ActivityData { items: Item[]; snapshot: Touch[]; ev: Evidence[] }
 
 export function loadActivity(): ActivityData {
   const ev = evidence(), dated = ev.filter(v => v.date), used = new Set<Evidence>(), idx = peopleIndex()
@@ -81,7 +82,7 @@ export function loadActivity(): ActivityData {
     src: 'Monthly summary, ' + ymLabel(v.ym), ch: jrChannel(v.text, ''), who: v.who, ...split(v.who), tickets: v.tickets, record: null, fromSummary: true,
   }))
   const snapshot = events.filter(e => /engagement snapshot/.test(e[3]))
-    .map(e => `${/email/i.test(e[2]) ? 'Last email' : 'Last meeting'} ${new Date(e[0] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`)
+    .map(e => ({ kind: /email/i.test(e[2]) ? 'email' : 'meeting', date: new Date(e[0] + 'T00:00:00') }) as Touch)
   return { items, snapshot, ev }
 }
 
@@ -104,7 +105,7 @@ export function rowText(i: Item) {
 }
 
 /* ---- timeline to renewal: one dot per month, May 2025 to the Dec 2026 renewal ---- */
-export interface JourneyMonth { ym: string; state: 'neg' | 'pos' | 'quiet' | 'now' | 'up'; health: number | null; events: string[] }
+export interface JourneyMonth { ym: string; state: 'neg' | 'pos' | 'quiet' | 'now' | 'up'; health: number | null; events: string[]; neg: number; pos: number }
 export function journey(): JourneyMonth[] {
   const fl = taFlags() as { ym: string; final: number }[], by = Object.fromEntries(fl.map(f => [f.ym, f.final]))
   const nowYm = dayISO(TODAY).slice(0, 7), out: JourneyMonth[] = []
@@ -112,7 +113,7 @@ export function journey(): JourneyMonth[] {
   for (let m = new Date(2025, 4, 1); m <= new Date(2026, 11, 30); m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
     const ym = dayISO(m).slice(0, 7), ev = events.filter(e => e[0].startsWith(ym) && e[1] !== 'end' && !/engagement snapshot/.test(e[3]))
     const state = ym === nowYm ? 'now' : ym > nowYm ? 'up' : ev.some(e => e[1] === 'neg') ? 'neg' : ev.some(e => e[1] === 'pos') ? 'pos' : 'quiet'
-    out.push({ ym, state, health: by[ym] ?? null, events: ev.map(e => e[2]) })
+    out.push({ ym, state, health: by[ym] ?? null, events: ev.map(e => e[2]), neg: ev.filter(e => e[1] === 'neg' || e[1] === 'flag').length, pos: ev.filter(e => e[1] === 'pos').length })
   }
   return out
 }

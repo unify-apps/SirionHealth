@@ -32,7 +32,7 @@ export function AccountScreen() {
           <TabsList variant="line" className="h-11 w-full justify-start gap-1 overflow-x-auto rounded-none p-0 [scrollbar-width:none]">
             {TABS.map(t => (
               <TabsTrigger key={t.id} value={t.id}
-                className="h-11 flex-none gap-2 rounded-none px-3 text-muted-foreground hover:text-foreground data-active:text-foreground group-data-horizontal/tabs:after:bottom-0 after:h-0.5 after:rounded-full after:bg-signal">
+                className="h-11 flex-none gap-2 rounded-none border-0 px-3 text-muted-foreground transition-colors hover:text-foreground focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:bg-accent/60 data-active:text-foreground group-data-horizontal/tabs:after:bottom-0 after:h-0.5 after:rounded-full after:bg-signal">
                 <t.icon />{t.label}
               </TabsTrigger>
             ))}

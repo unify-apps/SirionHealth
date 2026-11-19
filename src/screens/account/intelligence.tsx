@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleSlash, Newspaper } from 'lucide-react'
-import { Empty, Fact, ListRow, Meter, SectionTitle, SheetColumns, sheetHeaderCls } from '@/components/page'
-import { bandOf, bandText } from '@/components/health'
+import { BlockHeader, Empty, Fact, ListColumns, ListRow, Meter, MeterValue, SectionTitle, SheetColumns, sheetHeaderCls } from '@/components/page'
+import { BAND_LABEL, bandOf } from '@/components/health'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { ErrorState, useLoad } from './activity/shared'
 import { AREA_ICON } from './health/parts'
 import type { AreaKey } from './health/model'
@@ -37,50 +36,44 @@ export function IntelligenceTab() {
 function Internal({ data }: { data: IntelData }) {
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <InputList title="Strongest inputs" icon={ArrowUpRight} items={data.strongest} />
         <InputList title="Weakest inputs" icon={ArrowDownRight} items={data.weakest} />
       </div>
-      <Card className="gap-1 px-3 py-4">
-        <h3 className="flex items-center gap-2 px-2 pb-1 text-sm font-medium">
-          <CircleSlash className="size-4 text-muted-foreground" aria-hidden="true" />
-          Not scored <span className="font-normal tabular-nums text-muted-foreground">{data.unscored.length}</span>
-        </h3>
+      <Card className="gap-0 py-0">
+        <BlockHeader icon={CircleSlash} title="Not scored" count={data.unscored.length} />
         {data.unscored.length ? (
-          <ul className="grid gap-x-4 sm:grid-cols-2">
+          <ListColumns label="Inputs with no score" className="px-2 py-2">
             {data.unscored.map(u => (
               <li key={u.area + u.name}>
                 <ListRow icon={AREA_ICON[u.area as AreaKey]} title={u.name} meta={`${u.areaName} · ${u.note}`}
-                  right={<span className="text-muted-foreground">No data</span>} />
+                  right={<MeterValue value={null} label={`${u.name} score`} />} />
               </li>
             ))}
-          </ul>
-        ) : <p className="px-2 text-muted-foreground">Every input has a score.</p>}
+          </ListColumns>
+        ) : <p className="p-5 text-muted-foreground">Every input has a score.</p>}
       </Card>
     </div>
   )
 }
 
-function InputList({ title, icon: I, items }: { title: string; icon: typeof ArrowUpRight; items: Input[] }) {
+function InputList({ title, icon, items }: { title: string; icon: typeof ArrowUpRight; items: Input[] }) {
   return (
-    <Card className="gap-1 px-3 py-4">
-      <h3 className="flex items-center gap-2 px-2 pb-1 text-sm font-medium"><I className="size-4 text-muted-foreground" aria-hidden="true" />{title}</h3>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={icon} title={title} count={items.length} />
       {items.length ? (
-        <ul className="grid">
+        <ul className="grid gap-1 px-2 py-2">
           {items.map(x => {
             const b = bandOf(x.v)
             return (
               <li key={x.area + x.name}>
                 <ListRow icon={AREA_ICON[x.area as AreaKey]} title={x.name} meta={`${x.areaName} · ${x.note}`}
-                  right={<>
-                    <Meter value={x.v} tone={b === 'none' ? undefined : b} label={`${x.name} score`} className="hidden w-14 sm:block" />
-                    <span className={cn('w-7 text-right text-sm tabular-nums font-medium', bandText[b])}>{x.v}</span>
-                  </>} />
+                  right={<MeterValue value={x.v} tone={b === 'none' ? undefined : b} label={`${x.name} score`} tip={`${x.name}: ${x.v} of 100, ${BAND_LABEL[b].toLowerCase()}`} />} />
               </li>
             )
           })}
         </ul>
-      ) : <Empty title="No scored inputs" />}
+      ) : <Empty title="No scored inputs" className="m-5" />}
     </Card>
   )
 }
@@ -96,8 +89,9 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
   const news = base.news[0]
   if (!themes.length) return <Empty title="No news found" sub="Nothing public about Transamerica or Aegon this year." />
   return (
-    <Card className="gap-0 px-3 py-3">
-      <ul className="grid">
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={Newspaper} title="Public news" count={themes.length} sub="Relevance to the renewal, 0 to 100" />
+      <ul className="grid gap-1 px-2 py-2">
         {themes.map(t => {
           const latest = t.events.find(e => e.date) ?? t.events[0]
           return (
@@ -105,11 +99,8 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
               <ListRow icon={Newspaper} title={t.title} onClick={() => { setOpen(t); setSheetOpen(true) }} aria-haspopup="dialog"
                 aria-label={`${t.title}${t.relevance == null ? ', no events' : `, relevance ${t.relevance} of 100`}. Open`}
                 meta={latest ? <>{latest.date && <span className="tabular-nums">{latest.date.replace(', 2026', '')} · </span>}{latest.text}</> : 'No events'}
-                right={t.relevance == null ? <span className="text-muted-foreground">No events</span> : (
-                  <span className="inline-flex items-center gap-2">
-                    <Meter value={t.relevance} label={`${t.title} relevance`} tip={`Relevance to the renewal: ${t.relevance} of 100`} className="hidden w-14 sm:block" />
-                    <span className="w-6 text-right tabular-nums text-foreground">{t.relevance}</span>
-                  </span>
+                right={t.relevance == null ? <MeterValue value={null} display={<span className="text-xs font-normal text-muted-foreground">None</span>} /> : (
+                  <MeterValue value={t.relevance} label={`${t.title} relevance`} tip={`Relevance to the renewal: ${t.relevance} of 100`} />
                 )} />
             </li>
           )
@@ -173,31 +164,33 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
 }
 
 const RowSkel = () => (
-  <div className="flex min-h-11 items-center gap-3 px-2 py-1.5">
-    <Skeleton className="size-7 rounded-full" />
+  <div className="flex min-h-13 items-center gap-3 px-2 py-2">
+    <Skeleton className="size-8 rounded-full" />
     <div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-2/5" /><Skeleton className="h-3 w-3/5" /></div>
-    <Skeleton className="h-1.5 w-14" />
+    <Skeleton className="ml-3 hidden h-1.5 w-[120px] sm:block" /><Skeleton className="h-3.5 w-10" />
   </div>
 )
+const HeadSkel = () => <div className="flex min-h-12 items-center gap-2 border-b border-hairline px-5"><Skeleton className="size-4" /><Skeleton className="h-4 w-32" /></div>
 function InternalSkeleton() {
   return (
     <div className="grid gap-4" aria-busy="true" aria-label="Loading inputs">
       <div className="grid gap-4 md:grid-cols-2">
         {[0, 1].map(c => (
-          <Card key={c} className="gap-1 px-3 py-4">
-            <Skeleton className="mx-2 mb-1 h-4 w-32" />
-            {[0, 1, 2, 3].map(i => <RowSkel key={i} />)}
+          <Card key={c} className="gap-0 py-0">
+            <HeadSkel />
+            <div className="grid gap-1 px-2 py-2">{[0, 1, 2, 3].map(i => <RowSkel key={i} />)}</div>
           </Card>
         ))}
       </div>
-      <Card className="gap-1 px-3 py-4"><Skeleton className="mx-2 mb-1 h-4 w-24" /><div className="grid sm:grid-cols-2">{[0, 1, 2, 3].map(i => <RowSkel key={i} />)}</div></Card>
+      <Card className="gap-0 py-0"><HeadSkel /><div className="grid gap-x-8 gap-y-1 px-2 py-2 md:grid-cols-2">{[0, 1, 2, 3].map(i => <RowSkel key={i} />)}</div></Card>
     </div>
   )
 }
 function NewsSkeleton() {
   return (
-    <Card className="gap-0 px-3 py-3" aria-busy="true" aria-label="Loading news">
-      {[0, 1, 2, 3, 4].map(i => <RowSkel key={i} />)}
+    <Card className="gap-0 py-0" aria-busy="true" aria-label="Loading news">
+      <HeadSkel />
+      <div className="grid gap-1 px-2 py-2">{[0, 1, 2, 3, 4].map(i => <RowSkel key={i} />)}</div>
     </Card>
   )
 }

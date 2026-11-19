@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Search, Table2, UserCheck, Users, X } from 'lucide-react'
-import { Empty, ListRow, SectionTitle, stickyCol, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { BlockHeader, Empty, ListRow, SectionTitle, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
@@ -57,9 +57,10 @@ function Stakeholders({ base }: { base: Base }) {
     <div className="grid gap-4">
       <Attention rows={rows} orbit={orbit} onOpen={setOpenKey} />
       <Card className="gap-0 py-0">
+        <BlockHeader icon={Users} title="People" count={audience === 'customer' ? rows.length : internal.length} actions={views} />
         {audience === 'customer'
-          ? <CustomerTable views={views} rows={rows} orbit={orbit} max={max} months={base.months} onOpen={setOpenKey} />
-          : <InternalTable views={views} rows={internal} />}
+          ? <CustomerTable rows={rows} orbit={orbit} max={max} months={base.months} onOpen={setOpenKey} />
+          : <InternalTable rows={internal} />}
       </Card>
       <PersonSheet row={open} ev={base.ev} months={base.months} max={max} onOpenChange={o => { if (!o) setOpenKey(null) }} />
     </div>
@@ -87,23 +88,20 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <Card className="gap-2 px-3 py-4">
-        <h3 className="flex items-center gap-2 px-2 text-sm font-medium">
-          <AlertTriangle className="size-4 text-muted-foreground" aria-hidden="true" />Needs attention
-          <span className="font-normal tabular-nums text-muted-foreground">{items.length + (sugg.length ? 1 : 0)}</span>
-        </h3>
+      <Card className="gap-0 py-0">
+        <BlockHeader icon={AlertTriangle} title="Needs attention" count={items.length + sugg.length} />
         {items.length || sugg.length ? (
-          <ul className="grid">
+          <ul className="grid gap-1 px-2 py-2">
             {items.map(it => (
               <li key={it.key}>
-                <ListRow icon={<Avatar name={it.name} className="size-7" />} title={it.name} meta={it.meta} onClick={() => onOpen(it.key)}
+                <ListRow icon={<Avatar name={it.name} />} title={it.name} meta={it.meta} onClick={() => onOpen(it.key)}
                   aria-haspopup="dialog" aria-label={`${it.name}: ${it.why}. ${it.meta}. Open detail`}
                   right={<span className="inline-flex items-center gap-1.5"><span className={cn('size-1.5 rounded-full', it.dot)} aria-hidden="true" />{it.why}</span>} />
               </li>
             ))}
             {sugg.length > 0 && (
-              <li className="flex items-start gap-3 px-2 py-1.5">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted"><UserCheck className="size-4 text-muted-foreground" aria-hidden="true" /></span>
+              <li className="flex items-start gap-3 px-2 py-2">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted"><UserCheck className="size-4 text-muted-foreground" aria-hidden="true" /></span>
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{sugg.length} role{sugg.length === 1 ? '' : 's'} to confirm</p>
                   <p className="mt-1 flex flex-wrap gap-1.5">
@@ -117,14 +115,12 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
               </li>
             )}
           </ul>
-        ) : <Empty title="Nothing needs attention" sub="Every tagged role is active and confirmed." className="py-6" />}
+        ) : <Empty title="Nothing needs attention" sub="Every tagged role is active and confirmed." className="m-5 py-6" />}
       </Card>
-      <Card className="gap-3 px-5 py-4">
-        <div className="flex items-center gap-2">
-          <Users className="size-4 text-muted-foreground" aria-hidden="true" />
-          <h3 className="text-sm font-medium">Coverage</h3>
-          <InfoTip>Key people by when AHI's monthly summaries last named them. Key people are tagged, inferred, departed, or named twice or more.</InfoTip>
-        </div>
+      <Card className="gap-0 py-0">
+        <BlockHeader icon={Users} title="Coverage" count={active30 + active90 + quiet}
+          actions={<InfoTip>Key people by when AHI's monthly summaries last named them. Key people are tagged, inferred, departed, or named twice or more.</InfoTip>} />
+        <div className="grid gap-3 p-5">
         <div className="flex items-baseline gap-2">
           <span className={cn('text-2xl font-normal tabular-nums', active30 + active90 <= 1 && 'text-warn')}>{active30 + active90}</span>
           <span className="text-xs text-muted-foreground">{active30 + active90 <= 1 ? 'active in 90 days · single-threaded' : 'active in 90 days'}</span>
@@ -140,14 +136,15 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
             </li>
           ))}
         </ul>
+        </div>
       </Card>
     </div>
   )
 }
 
 /* ---- customer contacts: search, persona filter, sort, table or orbit, pager, CSV ---- */
-function CustomerTable({ views, rows, orbit, max, months, onOpen }: {
-  views: React.ReactNode; rows: StakeRow[]; orbit: ReturnType<typeof orbitPeople>; max: number; months: string[]; onOpen: (k: string) => void
+function CustomerTable({ rows, orbit, max, months, onOpen }: {
+  rows: StakeRow[]; orbit: ReturnType<typeof orbitPeople>; max: number; months: string[]; onOpen: (k: string) => void
 }) {
   const [view, setView] = useState<'table' | 'orbit'>('table')
   const [filter, setFilter] = useState<Filter>('all')
@@ -168,17 +165,16 @@ function CustomerTable({ views, rows, orbit, max, months, onOpen }: {
 
   return (
     <>
-      {/* one toolbar row: whose people left; search, persona, sort, view, export right. On phones search drops below. */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 lg:flex-nowrap">
-        <div className="order-1 min-w-0 flex-1 overflow-x-auto">{views}</div>
+      {/* one toolbar row: search left; persona, sort, view, export right */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap">
         {view === 'table' && (
-          <InputGroup className="order-3 w-full transition-[width] duration-200 lg:order-2 lg:w-[200px] lg:focus-within:w-64">
+          <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
             <InputGroupAddon><Search /></InputGroupAddon>
             <InputGroupInput type="search" value={q} onChange={e => { setQ(e.target.value); reset() }} placeholder="Search people" aria-label="Search stakeholders" />
             {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => { setQ(''); reset() }}><X /></InputGroupButton></InputGroupAddon>}
           </InputGroup>
         )}
-        <div className="order-2 flex shrink-0 items-center gap-0.5 lg:order-3">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
           {view === 'table' && (
             <>
               <Select value={filter} onValueChange={v => { setFilter(v as Filter); reset() }}>
@@ -231,7 +227,7 @@ function CustomerTable({ views, rows, orbit, max, months, onOpen }: {
           <Table aria-label="Stakeholders">
             <TableHeader>
               <TableRow>
-                <TableHead className={stickyCol}>Contact</TableHead>
+                <TableHead className={stickyColStatic}>Contact</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Engagement</TableHead>
                 <TableHead>Tone</TableHead>
@@ -304,7 +300,7 @@ function CustomerTable({ views, rows, orbit, max, months, onOpen }: {
 
 /* ---- Sirion, UnifyApps, partners and system senders: kept apart from customer contacts ---- */
 const GROUPS = ['all', 'Sirion', 'UnifyApps', 'Partner', 'System sender'] as const
-function InternalTable({ views, rows }: { views: React.ReactNode; rows: InternalRow[] }) {
+function InternalTable({ rows }: { rows: InternalRow[] }) {
   const [g, setG] = useState<(typeof GROUPS)[number]>('all')
   const [q, setQ] = useState('')
   const s = q.trim().toLowerCase()
@@ -312,14 +308,13 @@ function InternalTable({ views, rows }: { views: React.ReactNode; rows: Internal
   const groupLabel = (k: (typeof GROUPS)[number]) => k === 'all' ? 'All groups' : k === 'Partner' ? 'Partners' : k === 'System sender' ? 'System senders' : k
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 lg:flex-nowrap">
-        <div className="order-1 min-w-0 flex-1 overflow-x-auto">{views}</div>
-        <InputGroup className="order-3 w-full transition-[width] duration-200 lg:order-2 lg:w-[200px] lg:focus-within:w-64">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap">
+        <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
           <InputGroupAddon><Search /></InputGroupAddon>
           <InputGroupInput type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search people" aria-label="Search Sirion and vendor people" />
           {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
         </InputGroup>
-        <div className="order-2 flex shrink-0 items-center gap-0.5 lg:order-3">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <Select value={g} onValueChange={v => setG(v as typeof g)}>
             <Tip tip="Filter by group">
               <SelectTrigger size="sm" className="w-auto gap-1.5 border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent" aria-label="Filter by group">
@@ -336,13 +331,13 @@ function InternalTable({ views, rows }: { views: React.ReactNode; rows: Internal
       <Table aria-label="Sirion and vendor people">
         <TableHeader>
           <TableRow>
-            <TableHead className={stickyCol}>Name</TableHead><TableHead>Company</TableHead><TableHead>Seen in</TableHead><TableHead className="text-right">Named in summaries</TableHead>
+            <TableHead className={stickyColStatic}>Name</TableHead><TableHead>Company</TableHead><TableHead>Seen in</TableHead><TableHead className="text-right">Named in summaries</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {list.length ? list.map(r => (
-            <TableRow key={r.key} className="[&>td]:h-11 [&>td]:py-1.5">
-              <TableCell className={cn(stickyCol, 'max-w-80')}>
+            <TableRow key={r.key} className="hover:bg-transparent [&>td]:h-11 [&>td]:py-1.5">
+              <TableCell className={cn(stickyColStatic, 'max-w-80')}>
                 <span className="flex min-w-48 items-center gap-2">
                   <Avatar name={r.name} className="size-5 text-[10px]" />
                   <span className="shrink-0 font-medium">{r.name}</span>

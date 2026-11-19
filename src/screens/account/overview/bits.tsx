@@ -26,7 +26,7 @@ export const GLOSSARY: Record<string, string> = {
   TFC: 'Termination for convenience',
 }
 
-/** A term with a definition: dotted underline, tooltip on hover and keyboard focus.
+/** A term with a definition: tooltip on hover and keyboard focus, no underline.
  *  `focusable={false}` inside a button or another trigger (hover still works). */
 export function Term({ children, tip, focusable = true, className }: {
   children: React.ReactNode; tip?: React.ReactNode; focusable?: boolean; className?: string
@@ -37,7 +37,7 @@ export function Term({ children, tip, focusable = true, className }: {
     <Tooltip>
       <TooltipTrigger asChild>
         <span tabIndex={focusable ? 0 : undefined}
-          className={cn('cursor-help rounded-sm underline decoration-muted-foreground/50 decoration-dotted underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}>
+          className={cn('cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}>
           {children}
         </span>
       </TooltipTrigger>

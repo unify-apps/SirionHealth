@@ -265,7 +265,7 @@ type Msg = { id: number; who: 'me'; text: string } | { id: number; who: 'bot'; t
 
 function Chips({ onAsk, disabled }: { onAsk: (q: string) => void; disabled: boolean }) {
   return (
-    <ul className="-mx-2 mt-2 grid" aria-label="Suggested questions">
+    <ul className="-mx-2 mt-2 grid gap-1" aria-label="Suggested questions">
       {SUGGEST.map(([q, I]) => (
         <li key={q}><ListRow icon={I} title={<span className="font-normal">{q}</span>} onClick={disabled ? undefined : () => onAsk(q)} className={disabled ? 'opacity-50' : undefined} /></li>
       ))}

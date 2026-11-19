@@ -43,6 +43,11 @@ export const yAxisProps = { tickLine: false, axisLine: false, tickMargin: 8, wid
 /** Threshold reference line: dashed 3 3. Pair with `refLabel` for an optional label. */
 export const thresholdLine = { strokeDasharray: '3 3', ifOverflow: 'extendDomain' } as const
 export const refLabel = (value: string, position: 'insideTopLeft' | 'insideBottomLeft' | 'top' = 'insideTopLeft') => ({ value, position })
+/** Threshold label at the right end, just above its line, with a card-coloured halo so a crossing line stays legible. */
+const endLabel = (value: string) => ({
+  value, position: 'insideTopRight' as const, offset: 4, fontSize: 10,
+  stroke: 'var(--card)', strokeWidth: 3, paintOrder: 'stroke' as const, strokeLinejoin: 'round' as const,
+})
 /** Hover dot on a line or area; its ring takes the card colour from CSS. */
 export const activeDotProps = { r: 4 } as const
 /** 2px line, no resting dots. */
@@ -80,8 +85,8 @@ export function ScoreTrend({ data, name, thresholds = true, compact = false, cla
         {!compact && <CartesianGrid {...gridProps} />}
         <XAxis dataKey="tick" {...xAxisProps} minTickGap={24} hide={compact} />
         <YAxis domain={[0, 100]} ticks={thresholds ? [0, 40, 70, 100] : [0, 50, 100]} {...yAxisProps} hide={compact} />
-        {thresholds && <ReferenceLine y={70} {...thresholdLine} label={compact ? undefined : refLabel('Watch below 70')} />}
-        {thresholds && <ReferenceLine y={40} {...thresholdLine} label={compact ? undefined : refLabel('At risk below 40')} />}
+        {thresholds && <ReferenceLine y={70} {...thresholdLine} label={compact ? undefined : endLabel('Watch below 70')} />}
+        {thresholds && <ReferenceLine y={40} {...thresholdLine} label={compact ? undefined : endLabel('At risk below 40')} />}
         <ChartTooltip content={
           <ChartTooltipContent labelFormatter={(_, p) => p?.[0]?.payload?.label}
             formatter={v => {
@@ -191,9 +196,13 @@ export type Slice = { key: string; label: string; value: number }
 
 /** shadcn "pie donut with text": a donut with a figure in the centre (the total, unless `center` says otherwise),
  *  2px surface gaps between slices and a legend with each slice's value and share. */
-export function Donut({ data, colors, center, format = fmtNum, label, className }: {
+export function Donut({ data, colors, center, format = fmtNum, label, legend = true, compact = false, className }: {
   data: Slice[]; colors?: string[]; center?: { value: React.ReactNode; label: string }
-  format?: (v: number) => string; label: string; className?: string
+  format?: (v: number) => string; label: string
+  /** false when the caller draws its own legend next to the donut */
+  legend?: boolean
+  /** ~140px donut for a donut-plus-list layout */
+  compact?: boolean; className?: string
 }) {
   const total = data.reduce((a, d) => a + d.value, 0)
   const color = (i: number) => colors?.[i] ?? seriesColor(i)
@@ -211,7 +220,7 @@ export function Donut({ data, colors, center, format = fmtNum, label, className 
   const mid = center ?? { value: format(total), label: 'total' }
   return (
     <ChartContainer config={config} role="img" aria-label={label}
-      className={cn('aspect-auto h-[232px] w-full', chartFocus,
+      className={cn('aspect-auto', compact ? 'size-[140px]' : 'h-[232px] w-full', chartFocus,
         '[&_.recharts-pie-sector]:transition-opacity [&_.recharts-pie-sector:hover]:opacity-80', className)}>
       <PieChart>
         <ChartTooltip content={<ChartTooltipContent nameKey="key" hideLabel formatter={(v, _n, item) => {
@@ -225,7 +234,7 @@ export function Donut({ data, colors, center, format = fmtNum, label, className 
             </div>
           )
         }} />} />
-        <Pie data={rows} dataKey="value" nameKey="key" innerRadius={54} outerRadius={74} stroke="var(--card)" strokeWidth={2}
+        <Pie data={rows} dataKey="value" nameKey="key" innerRadius={compact ? 48 : 54} outerRadius={compact ? 68 : 74} stroke="var(--card)" strokeWidth={2}
           animationDuration={ANIM_MS}>
           <Label content={({ viewBox }) => {
             if (!viewBox || !('cx' in viewBox)) return null
@@ -238,7 +247,7 @@ export function Donut({ data, colors, center, format = fmtNum, label, className 
             )
           }} />
         </Pie>
-        {data.length >= 2 && <ChartLegend content={<ChartLegendContent nameKey="key" className="flex-wrap gap-x-4 gap-y-1.5" />} />}
+        {legend && data.length >= 2 && <ChartLegend content={<ChartLegendContent nameKey="key" className="flex-wrap gap-x-4 gap-y-1.5" />} />}
       </PieChart>
     </ChartContainer>
   )
@@ -321,14 +330,17 @@ export function SplitBar({ parts, label, unit, format = fmtNum, colors, ordinal,
  *  (`bandBg[band]` for a health score, `bg-chart-1` otherwise). Show the number next to it.
  *  `tip` adds a tooltip with the exact value and what it is; the bar then takes keyboard focus unless
  *  `focusable={false}` (use that when the meter sits inside a button or another tooltip trigger). */
-export function Meter({ value, max = 100, fill = 'bg-chart-1', min = 0, tip, label, focusable = true, className }: {
+export function Meter({ value, max = 100, fill = 'bg-chart-1', min = 0, tip, label, focusable = true, delay, className }: {
   value: number | null | undefined; max?: number; fill?: string; min?: number
-  tip?: React.ReactNode; label?: string; focusable?: boolean; className?: string
+  tip?: React.ReactNode; label?: string; focusable?: boolean
+  /** ms before a width change animates, for staggered rows */
+  delay?: number; className?: string
 }) {
   const pct = value == null || !max ? 0 : Math.min(100, Math.max(min, (value / max) * 100))
   const bar = (
     <span className={cn('block h-1 overflow-hidden rounded-full bg-chart-5', className)} aria-hidden="true">
-      {value != null && <span className={cn('block h-full rounded-full transition-opacity group-hover/meter:opacity-80', fill)} style={{ width: `${pct}%` }} />}
+      {value != null && <span className={cn('block h-full rounded-full transition-[width,opacity] duration-700 ease-out group-hover/meter:opacity-80 motion-reduce:transition-none', fill)}
+        style={{ width: `${pct}%`, transitionDelay: delay ? `${delay}ms, 0ms` : undefined }} />}
     </span>
   )
   if (!tip) return bar

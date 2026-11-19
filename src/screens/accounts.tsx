@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, ChevronDown, Columns3, DollarSign, HeartPulse, ListFilter, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
+import { AlertTriangle, Building2, ChevronDown, Columns3, DollarSign, HeartPulse, ListFilter, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
 import { money, TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
 import { go } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
-import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
+import { BlockHeader, Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -129,9 +129,7 @@ export function AccountsScreen() {
       )}
 
       <Card className="min-w-0 gap-0 py-0">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 pt-4 sm:px-5">
-          <h2 className="text-base font-medium">Accounts</h2>
-        </div>
+        <BlockHeader icon={Building2} title="Accounts" count={status === 'ready' ? list.length : undefined} />
 
         {status === 'error' ? (
           <div className="p-4 sm:p-5">
