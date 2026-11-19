@@ -1,0 +1,7 @@
+# serve only the built app
+src/
+data-capture/
+tools/
+README.md
+build.sh
+dev.sh

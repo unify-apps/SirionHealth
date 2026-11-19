@@ -1,0 +1,8 @@
+.DS_Store
+.vercel
+node_modules/
+.impeccable/
+
+# internal only: vendor screenshots and session notes
+shots/
+.sessions/
