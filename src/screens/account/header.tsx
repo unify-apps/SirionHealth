@@ -108,7 +108,7 @@ export function AccountHeader() {
         lead="TA"
         title="TransAmerica"
         sub="Financial services · Enterprise · North America · BAU"
-        actions={<><DateRangeMenu /><Button variant="ghost" size="sm" onClick={() => setHow(true)}>How scores work</Button></>}
+        actions={<DateRangeMenu />}
       />
 
       <Card className="gap-0 py-0">
@@ -149,15 +149,16 @@ function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l:
   const b = bandOf(score.final)
   return (
     <section aria-labelledby="h-health" className="flex flex-col gap-2 p-5 md:col-span-4 lg:col-span-3">
-      <ZoneLabel id="h-health" icon={HeartPulse}>Health</ZoneLabel>
+      <ZoneLabel id="h-health" icon={HeartPulse}
+        right={<Button variant="ghost" size="xs" className="-my-1 -mr-2 text-muted-foreground" onClick={onHow}>How scores work</Button>}>Health</ZoneLabel>
       <div className="flex flex-1 flex-col items-center justify-center gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" onClick={onHow}
               onPointerEnter={() => onHl('areas')} onPointerLeave={() => onHl(null)} onFocus={() => onHl('areas')} onBlur={() => onHl(null)}
               aria-label={`Health ${score.final} of 100: weighted ${score.weighted} minus a ${score.cap}-point renewal cap. See how scores work`}
-              className={cn('shrink-0 rounded-full p-1 transition-[background-color,box-shadow] duration-200 hover:bg-accent/60', focusRing,
-                hl === 'ring' && 'bg-accent/60 shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_25%,transparent)]')}>
+              className={cn('grid aspect-square shrink-0 place-items-center rounded-full p-1 leading-none transition-shadow duration-200 hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_20%,transparent)]', focusRing,
+                hl === 'ring' && 'shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_25%,transparent)]')}>
               <ScoreRing value={score.final} />
             </button>
           </TooltipTrigger>

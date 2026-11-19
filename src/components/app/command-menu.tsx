@@ -22,7 +22,7 @@ export function CommandMenu({ open, onOpenChange }: { open: boolean; onOpenChang
     .filter(r => r.name !== 'TransAmerica').sort((a, b) => a.name.localeCompare(b.name))
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="Find an account" description="Search accounts and pages">
+    <CommandDialog open={open} onOpenChange={onOpenChange} title="Find an account" description="Search accounts and pages" className="sm:max-w-2xl [&_[cmdk-list]]:max-h-[60vh]">
       <Command>
       <CommandInput placeholder="Find an account or page…" />
       <CommandList>

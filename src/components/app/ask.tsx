@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import { Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { VoiceOrb, type VoiceOrbState } from '@/components/assistant-ui/elements/voice'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AREAS, daysBetween, monthEnd, money, rel, ROWS, T, TA_EVENTS, TA_EXAMPLE, TA_RECORD, taEpisode, taEvidence, taMonths, taPeople, TODAY } from '@/data/legacy'
 import { go, type Route } from '@/lib/route'
 
@@ -331,28 +333,46 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
     input.current?.focus()
   }
 
+  // the orb shows what the assistant is doing: idle, listening while open, connecting while it composes
+  const orb: VoiceOrbState = busy ? 'connecting' : open ? 'listening' : 'idle'
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full gap-0 p-0 data-[side=right]:sm:max-w-md"
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverAnchor asChild>
+        <div className="fixed right-5 bottom-5 z-40">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" onClick={() => onOpenChange(!open)} aria-label={open ? 'Close Ask' : 'Ask about an account'} aria-expanded={open}
+                className="grid size-14 place-items-center rounded-full bg-card shadow-(--shadow-panel) ring-1 ring-hairline outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring active:scale-95">
+                <VoiceOrb state={orb} variant="violet" className="size-11" />
+              </button>
+            </TooltipTrigger>
+            {!open && <TooltipContent side="left">Ask about an account</TooltipContent>}
+          </Tooltip>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        side="top" align="end" sideOffset={12}
+        className="flex h-[min(640px,calc(100vh-7rem))] w-[min(420px,calc(100vw-2.5rem))] flex-col gap-0 overflow-hidden rounded-2xl p-0 shadow-(--shadow-panel)"
         onOpenAutoFocus={e => { e.preventDefault(); input.current?.focus() }}
+        aria-label="Ask"
       >
-        <SheetHeader className="flex-row items-center gap-2 border-b border-hairline py-3 pr-12 pl-5">
-          <SheetTitle className="text-base font-medium">Ask</SheetTitle>
+        <div className="flex items-center gap-2 border-b border-hairline py-2.5 pr-2 pl-4">
+          <VoiceOrb state={orb} variant="violet" className="size-6" />
+          <h2 className="text-sm font-medium">Ask</h2>
           <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">TransAmerica</span>
-          <SheetDescription className="sr-only">Answers from TransAmerica's AHI record, order forms, monthly summaries and public news</SheetDescription>
           <Tip tip="New chat">
             <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={reset} disabled={!msgs.length} aria-label="New chat">
               <SquarePen aria-hidden="true" />
             </Button>
           </Tip>
-        </SheetHeader>
+        </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5" aria-live="polite" aria-label="Conversation">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4" aria-live="polite" aria-label="Conversation">
           <div className="grid content-start gap-6 text-sm leading-relaxed">
             {!msgs.length && (
               <div>
+                <VoiceOrb state={orb} variant="violet" className="mb-3 size-12" />
                 <p className="text-muted-foreground">Ask about TransAmerica's health, renewal, people or your book.</p>
                 <Chips onAsk={send} disabled={busy} />
               </div>
@@ -420,7 +440,7 @@ export function AskPanel({ open, onOpenChange }: { open: boolean; onOpenChange: 
             </InputGroupAddon>
           </InputGroup>
         </form>
-      </SheetContent>
-    </Sheet>
+      </PopoverContent>
+    </Popover>
   )
 }

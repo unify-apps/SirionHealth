@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChartColumn, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, LayoutList, MessageSquareText, Moon, Search, Sun, Shapes } from 'lucide-react'
+import { ChartColumn, PanelLeftClose, PanelLeftOpen, ChevronsUpDown, LayoutList, MessageSquareText, Moon, Search, Sun } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -22,7 +22,6 @@ const WORKSPACE: NavItem[] = [
   { route: 'accounts', label: 'My accounts', icon: LayoutList },
   { route: 'portfolio', label: 'Portfolio', icon: ChartColumn },
 ]
-const REFERENCE: NavItem[] = [{ route: 'states', label: 'States', icon: Shapes }]
 
 /** Navigate and, on phones, close the sidebar sheet. */
 function useNav() {
@@ -85,15 +84,10 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         <SidebarGroup className="pb-0">
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="hover:bg-sidebar-accent/50">
+              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="border border-sidebar-border bg-background text-muted-foreground shadow-xs hover:bg-background hover:text-foreground">
                 <Search /><span>Search</span>
               </SidebarMenuButton>
               <SidebarMenuBadge><Kbd className="h-5 text-[10px]">⌘K</Kbd></SidebarMenuBadge>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Ask about an account" onClick={onAsk} className="hover:bg-sidebar-accent/50">
-                <MessageSquareText /><span>Ask</span>
-              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
@@ -110,7 +104,7 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-        <NavGroup label="Reference" items={REFERENCE} active={active} />
+        {/* States page hidden for now; route stays reachable at #states */}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
