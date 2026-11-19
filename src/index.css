@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --color-good: var(--good);
+    --color-good-soft: var(--good-soft);
+    --color-warn: var(--warn);
+    --color-warn-soft: var(--warn-soft);
+    --color-bad: var(--bad);
+    --color-bad-soft: var(--bad-soft);
+    --color-signal: var(--signal);
+    --color-signal-soft: var(--signal-soft);
+    --color-ai: var(--ai);
+    --color-ai-soft: var(--ai-soft);
+    --color-surface-2: var(--surface-2);
+    --color-hairline: var(--hairline);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Theme: "Default" style reference (DESIGN Default.md).
+ * Dark is the signature: void canvas -> graphite cards -> charcoal nested, 0.5px white-alpha hairlines,
+ * bone (#f2f2f2) primary pills, signal blue only for active/links/rings, green/amber/red mean health only.
+ * Light is the same system inverted for daylight use.
+ */
+:root {
+    --radius: 0.75rem; /* cards 12px; buttons/pills ~10px via radius-md */
+    --background: #f7f7f8;
+    --foreground: #0b0c0e;
+    --card: #ffffff;
+    --card-foreground: #0b0c0e;
+    --popover: #ffffff;
+    --popover-foreground: #0b0c0e;
+    --primary: #131416;
+    --primary-foreground: #f2f2f2;
+    --secondary: rgb(11 12 14 / 0.05);
+    --secondary-foreground: #0b0c0e;
+    --muted: #f1f1f2;
+    --muted-foreground: #63636b;
+    --accent: rgb(11 12 14 / 0.05);
+    --accent-foreground: #0b0c0e;
+    --destructive: #dc2626;
+    --border: rgb(11 12 14 / 0.1);
+    --hairline: rgb(11 12 14 / 0.08);
+    --input: rgb(11 12 14 / 0.12);
+    --ring: #3b82f6;
+    --surface-2: #f4f4f5;
+    --signal: #2563eb;
+    --signal-soft: rgb(59 130 246 / 0.1);
+    --good: #15803d;
+    --good-soft: rgb(34 197 94 / 0.12);
+    --warn: #b45309;
+    --warn-soft: rgb(234 88 12 / 0.1);
+    --bad: #dc2626;
+    --bad-soft: rgb(248 113 113 / 0.14);
+    --ai: #4f46e5;
+    --ai-soft: rgb(79 70 229 / 0.08);
+    --chart-1: #3b82f6;
+    --chart-2: #60a5fa;
+    --chart-3: #71717a;
+    --chart-4: #9d9e9f;
+    --chart-5: #314ef0;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #0b0c0e;
+    --sidebar-primary: #2563eb;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgb(11 12 14 / 0.05);
+    --sidebar-accent-foreground: #0b0c0e;
+    --sidebar-border: rgb(11 12 14 / 0.08);
+    --sidebar-ring: #3b82f6;
+    --shadow-card: 0 0 0 0.5px rgb(11 12 14 / 0.08), 0 1px 2px rgb(11 12 14 / 0.04);
+    --shadow-panel: 0 0 0 0.5px rgb(11 12 14 / 0.08), 0 16px 36px rgb(11 12 14 / 0.12);
+}
+
+.dark {
+    --background: #0b0c0e;          /* void */
+    --foreground: #ffffff;          /* snow */
+    --card: #131416;                /* graphite */
+    --card-foreground: #ffffff;
+    --popover: #131416;
+    --popover-foreground: #ffffff;
+    --primary: #f2f2f2;             /* bone pill */
+    --primary-foreground: #333333;  /* ink */
+    --secondary: rgb(255 255 255 / 0.05);
+    --secondary-foreground: #ffffff;
+    --muted: #1f1f21;               /* charcoal */
+    --muted-foreground: #858687;    /* fog */
+    --accent: rgb(255 255 255 / 0.06);
+    --accent-foreground: #ffffff;
+    --destructive: #f87171;
+    --border: rgb(255 255 255 / 0.08);
+    --hairline: rgb(255 255 255 / 0.07);
+    --input: rgb(255 255 255 / 0.1);
+    --ring: #93c5fd;
+    --surface-2: #1f1f21;
+    --signal: #60a5fa;
+    --signal-soft: rgb(59 130 246 / 0.14);
+    --good: #4ade80;
+    --good-soft: rgb(74 222 128 / 0.1);
+    --warn: #f59e0b;
+    --warn-soft: rgb(245 158 11 / 0.1);
+    --bad: #f87171;
+    --bad-soft: rgb(248 113 113 / 0.1);
+    --ai: #a5b4fc;
+    --ai-soft: rgb(129 140 248 / 0.1);
+    --chart-1: #3b82f6;
+    --chart-2: #93c5fd;
+    --chart-3: #71717a;
+    --chart-4: #cececf;
+    --chart-5: #314ef0;
+    --sidebar: #0b0c0e;
+    --sidebar-foreground: #cececf;
+    --sidebar-primary: #3b82f6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgb(255 255 255 / 0.06);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgb(255 255 255 / 0.07);
+    --sidebar-ring: #93c5fd;
+    --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 0 0 0.5px rgb(255 255 255 / 0.07);
+    --shadow-panel: inset 0 1px 0 rgb(255 255 255 / 0.09), 0 0 0 0.5px rgb(255 255 255 / 0.07), 0 16px 36px rgb(0 0 0 / 0.4);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+    }
+  html {
+    @apply font-sans;
+    font-feature-settings: "ss01" on, "ss03" on, "cv11" on;
+    -webkit-font-smoothing: antialiased;
+    }
+  body {
+    font-size: 14px;
+    letter-spacing: -0.012em;
+    font-variant-numeric: tabular-nums;
+    }
+  h1, h2, h3 { font-weight: 450; letter-spacing: -0.02em; text-wrap: balance; }
+}
