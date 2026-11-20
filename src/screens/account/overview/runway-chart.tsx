@@ -26,11 +26,11 @@ const cfg = {
 } satisfies ChartConfig
 
 // the axis runs from the first scored month (May 2025 at the earliest) to a week past the renewal, Jan 2027 at the least
-const T0 = +new Date(2025, 4, 1), T1 = Math.max(+new Date(2027, 0, 6), +RENEWAL + 7 * 864e5)
+export const T0 = +new Date(2025, 4, 1), T1 = Math.max(+new Date(2027, 0, 6), +RENEWAL + 7 * 864e5)
 /** Left edge for a range: the start of the month the range begins in, never before the first scored month. */
-const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
+export const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
 
-type Row = { t: number; health?: number; proj?: number; month?: Month; ev?: number; event?: KeyEvent }
+export type Row = { t: number; health?: number; proj?: number; month?: Month; ev?: number; event?: KeyEvent }
 
 /** Where a month's score sits on the time axis: mid-month, so it lines up under its month and inside its flagged band.
  *  (The record dates each score at month end, which drew May's point under June.) */
@@ -48,7 +48,7 @@ function healthAt(t: number): number {
   return pts[pts.length - 1][1]
 }
 
-function buildRows(): Row[] {
+export function buildRows(): Row[] {
   if (!months.length) return []
   const map = new Map<number, Row>()
   const at = (t: number) => map.get(t) ?? (map.set(t, { t }), map.get(t)!)
@@ -61,7 +61,7 @@ function buildRows(): Row[] {
 }
 
 /** Flagged months merged into continuous bands. */
-function flaggedBands(): [number, number][] {
+export function flaggedBands(): [number, number][] {
   const out: [number, number][] = []
   months.filter(m => m.model).forEach(m => {
     const x1 = +new Date(m.date.getFullYear(), m.date.getMonth(), 1), x2 = +new Date(m.date.getFullYear(), m.date.getMonth() + 1, 1)
@@ -73,7 +73,7 @@ function flaggedBands(): [number, number][] {
 }
 
 /** Month ticks from t0; every month on short ranges, every third on long ones. */
-const ticksFrom = (t0: number) => { const out: number[] = [], step = T1 - t0 < 200 * 864e5 ? 1 : 3; for (let d = new Date(t0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + step, 1)) out.push(+d); return out }
+export const ticksFrom = (t0: number) => { const out: number[] = [], step = T1 - t0 < 200 * 864e5 ? 1 : 3; for (let d = new Date(t0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + step, 1)) out.push(+d); return out }
 
 /** Event markers, at most 8px: risk is a filled dot, positive a ring, everything else a small neutral dot. */
 const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: number }> = {
@@ -145,7 +145,7 @@ const Plot = memo(function Plot({ rows: all, t0, onEvent }: { rows: Row[]; t0: n
   )
 })
 
-function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; payload: Row; onEvent: (e: KeyEvent) => void }) {
+export function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; payload: Row; onEvent: (e: KeyEvent) => void }) {
   const e = payload.event
   if (!e || cx == null) return null
   const s = EV_STYLE[e.kind]
@@ -159,7 +159,7 @@ function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; paylo
   )
 }
 
-function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
+export function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
   const row = payload?.[0]?.payload
   if (!active || !row) return null
   return (
@@ -223,7 +223,7 @@ function Statement({ e, on }: { e: Evidence; on: Date }) {
   )
 }
 
-function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
+export function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
   const event = useKept(live)
   const related = event ? eventEvidence(event) : []
   return (

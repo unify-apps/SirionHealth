@@ -1,0 +1,107 @@
+/* Option G · Ledger. Every rule is scoped to html[data-layout="ledger"]. */
+
+/* Area scale colours: neutral where the band says nothing, amber and red only where it signals. */
+html[data-layout="ledger"] [data-ledger] {
+  --ledger-fill: color-mix(in oklab, var(--foreground) 55%, transparent);
+  --ledger-gap: color-mix(in oklab, var(--foreground) 30%, transparent);
+  --ledger-mark: color-mix(in oklab, var(--foreground) 70%, transparent);
+  --ledger-track: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --ledger-70: color-mix(in oklab, var(--good) 45%, transparent);
+  --ledger-hover-bg: color-mix(in srgb, var(--background), var(--foreground) 3.5%);
+}
+html.dark[data-layout="ledger"] [data-ledger] {
+  --ledger-fill: color-mix(in oklab, var(--foreground) 60%, transparent);
+  --ledger-gap: color-mix(in oklab, var(--foreground) 35%, transparent);
+  --ledger-mark: color-mix(in oklab, var(--foreground) 75%, transparent);
+  --ledger-track: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --ledger-70: color-mix(in oklab, var(--good) 50%, transparent);
+  --ledger-hover-bg: color-mix(in srgb, var(--background), var(--foreground) 5%);
+}
+
+/* Figures: Geist Mono's zero is slashed and has no plain alternate, so figures here use the sans face. */
+html[data-layout="ledger"] [data-ledger] .num { font-family: var(--font-sans); letter-spacing: -0.02em; }
+
+/* The gap between now and the baseline: a fine diagonal hatch in currentColor. */
+html[data-layout="ledger"] .ledger-gap {
+  background: repeating-linear-gradient(-45deg, currentColor 0 1.5px, transparent 1.5px 4px);
+}
+
+/* ---------- area ledger columns: name | shared scale | score | change | chevron ---------- */
+html[data-layout="ledger"] .ledger-areas-grid {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) 2.25rem 2.75rem 1rem;
+  column-gap: 1.25rem;
+}
+@container (min-width: 64rem) {
+  html[data-layout="ledger"] .ledger-areas-grid { grid-template-columns: 9rem minmax(0, 1fr) 2.5rem 3rem 1rem; column-gap: 1.5rem; }
+}
+
+/* Recharts areas draw in with a clip animation that headless captures (and throttled background tabs) never
+   advance, which left the runway as dots only; show the lines at once in this layout. */
+html[data-layout="ledger"] [data-ledger] [clip-path^="url(#animationClipPath"] { clip-path: none; }
+
+/* ---------- row hover: a wash that bleeds past the column, so text stays on the column line ---------- */
+html[data-layout="ledger"] .ledger-row { position: relative; }
+html[data-layout="ledger"] .ledger-row::before {
+  content: ""; position: absolute; inset: 1px -0.75rem; border-radius: 6px; background: transparent; transition: background-color 150ms;
+  pointer-events: none; z-index: -1;
+}
+html[data-layout="ledger"] .ledger-row:hover::before { background: var(--hover); }
+html[data-layout="ledger"] .ledger-row { isolation: isolate; }
+
+/* ---------- recent activity: date | title | who | signal ---------- */
+html[data-layout="ledger"] .ledger-activity { grid-template-columns: 5.5rem minmax(0, 1fr) 6rem; }
+html[data-layout="ledger"] .ledger-activity .ledger-who { display: none; }
+@media (min-width: 1100px) {
+  /* right clearance so the floating Ask button never sits on the signal column */
+  html[data-layout="ledger"] .ledger-activity { grid-template-columns: 5.5rem minmax(0, 1fr) 11rem 6rem; padding-right: 3.75rem; }
+  html[data-layout="ledger"] .ledger-activity .ledger-who { display: block; }
+}
+
+/* ---------- other tabs: ruled and cardless. Every card loses its box and sits on the page; its own padding is pulled
+   back into the gutter so its content lines up with the page column, and a hairline on top separates sections. ---------- */
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) { padding-bottom: 5rem; }
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"]:not(.group):not(button) {
+  position: relative; background: transparent; box-shadow: none; border: 0; border-radius: 0; min-width: 0;
+}
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"]:not(.group):not(button)::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--hairline); pointer-events: none;
+}
+/* the tab rule already opens the first section; cards nested in cards lose the rule too, so there is one rule per section */
+html[data-layout="ledger"] [data-ledger-panel] > :first-child > [data-slot="card"]::before,
+html[data-layout="ledger"] [data-ledger-panel] > [data-slot="card"]:first-child::before { display: none; }
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"] [data-slot="card"]:not(.group):not(button)::before { display: none; }
+/* clickable cards (news themes and the like): ruled entries, a rule on top and no frame; hover washes the entry */
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]):not([data-ledger-panel="health"]) .group[data-slot="card"],
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) button[data-slot="card"] {
+  background: transparent; box-shadow: none; border-radius: 0; border-top: 1px solid var(--hairline); padding-inline: 0;
+}
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]):not([data-ledger-panel="health"]) .group[data-slot="card"]:hover,
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) button[data-slot="card"]:hover { background: var(--hover); box-shadow: none; }
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .grid:has(> .group[data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .bg-surface-2:not([data-slot="badge"]) { background-color: transparent; }
+
+/* Health: the six area cards become ruled ledger rows (name | score and change | trend | weakest input). */
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid:has(> .group[data-slot="card"]) {
+  display: block; border-top: 1px solid var(--hairline);
+}
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] {
+  display: grid; grid-template-columns: minmax(0, 17rem) 9rem minmax(0, 1fr) minmax(0, 21rem);
+  align-items: center; column-gap: 2rem; padding: 0.75rem 0;
+  border-radius: 0; box-shadow: none; background: transparent; border-bottom: 1px solid var(--hairline);
+}
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"]:hover { background: var(--hover); box-shadow: none; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > p { margin: 0; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > div:first-child > svg:last-child { display: none; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] h3 { font-size: 15px; font-weight: 400; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] button::after { border-radius: 0; }
+@media (max-width: 1180px) {
+  html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] { grid-template-columns: minmax(0, 14rem) 8rem minmax(0, 1fr) minmax(0, 17rem); column-gap: 1.25rem; }
+}
+
+/* Tables (Stakeholders): no grey header bar, plain sentence-case labels over a hairline. */
+/* (the header fill is an !important utility in a layer, so swap the colour it reads instead of fighting it) */
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="table-header"] { --surface-2: var(--card); }
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="table-header"] th {
+  text-transform: none; letter-spacing: normal; font-weight: 400; font-size: 12px;
+}

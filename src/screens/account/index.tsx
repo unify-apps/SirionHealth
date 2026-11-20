@@ -14,6 +14,9 @@ import { useFlags } from '@/lib/dev-flags'
 import { HeaderSheets } from './overview/how-sheet'
 import { RailLayout } from './layouts/rail'
 import { BriefLayout } from './layouts/brief'
+import { MastheadLayout } from './layouts/masthead'
+import { RunwayLayout } from './layouts/runway'
+import { LedgerLayout } from './layouts/ledger'
 
 export const TABS = [
   { id: 'overview', label: 'Summary', icon: FileText, C: OverviewTab },
@@ -47,6 +50,9 @@ export function AccountScreen() {
   const { layout } = useFlags()
   if (layout === 'rail') return <RailLayout />
   if (layout === 'brief') return <BriefLayout />
+  if (layout === 'masthead') return <MastheadLayout />
+  if (layout === 'runway') return <RunwayLayout />
+  if (layout === 'ledger') return <LedgerLayout />
   return <CurrentLayout tabsFirst={layout === 'tabsfirst'} />
 }
 

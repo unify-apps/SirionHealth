@@ -61,7 +61,7 @@ export function OverviewTab() {
 }
 
 /* ---------- citations: every source goes after its sentence's full stop ---------- */
-function Cited({ text }: { text: string }) {
+export function Cited({ text }: { text: string }) {
   const sentences = text.split(/(?<=[.!?])\s+/)
   return (
     <>
@@ -228,7 +228,7 @@ const CH_ICON: Record<Channel, LucideIcon> = {
   teams: MessageSquare, call: Phone, note: StickyNote,
 }
 
-function RecentActivity() {
+export function RecentActivity() {
   const range = useRange()
   const w = useWidget(() => {
     const from = rangeStart(range)

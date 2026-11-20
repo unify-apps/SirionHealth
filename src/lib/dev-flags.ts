@@ -8,12 +8,15 @@ export const FLAGS: { id: Flag; label: string; hint: string }[] = [
 ]
 
 /** Account detail page layout options. 'tabsfirst' is the default; the rest are kept for comparison. */
-export type Layout = 'current' | 'rail' | 'brief' | 'tabsfirst'
+export type Layout = 'current' | 'rail' | 'brief' | 'tabsfirst' | 'masthead' | 'runway' | 'ledger'
 export const LAYOUTS: { id: Layout; label: string; hint: string }[] = [
   { id: 'current', label: 'Previous', hint: 'Verdict card and KPIs above pill tabs' },
   { id: 'rail', label: 'A · Record + rail', hint: 'Sticky left rail holds the account facts; content and tabs on the right' },
   { id: 'brief', label: 'B · Briefing', hint: 'One long read, no tabs: chapters with a sticky contents list' },
   { id: 'tabsfirst', label: 'D · Tabs first (default)', hint: 'Segmented tabs under the title; verdict and KPIs live in Summary' },
+  { id: 'masthead', label: 'E · Masthead', hint: 'One big score and verdict sentence on an open page; ruled sections, no cards' },
+  { id: 'runway', label: 'F · Runway', hint: 'The renewal runway chart is the hero, with the countdown at its end' },
+  { id: 'ledger', label: 'G · Ledger', hint: 'A score strip over dense rows with inline bars; everything scans in lines' },
 ]
 
 const KEY = (f: string) => `sah-flag-${f}`

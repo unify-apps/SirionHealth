@@ -1,0 +1,88 @@
+/* Detail page option "Runway" (?layout=runway). Every rule here must be scoped under html[data-layout="runway"]. */
+
+html[data-layout="runway"] [data-runway] {
+  /* the line is ink but lighter than the headline, so the verdict stays first */
+  --rw-line: color-mix(in oklab, var(--foreground) 62%, var(--background));
+}
+
+/* ---------- runway chart ---------- */
+html[data-layout="runway"] [data-runway] .rw-ref { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+html[data-layout="runway"] [data-runway] .rw-flag { z-index: 2; border-radius: 4px; outline: none; cursor: pointer; }
+html[data-layout="runway"] [data-runway] .rw-flag:hover span:last-child { color: var(--foreground); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--foreground) 30%, transparent); text-underline-offset: 3px; }
+html[data-layout="runway"] [data-runway] .rw-flag:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+
+html[data-layout="runway"] [data-runway] .rw-surface:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 60%, transparent); }
+
+/* event markers: risk a filled dot, positive a ring, the commitment target a small ink square */
+html[data-layout="runway"] [data-runway] .rw-mark { z-index: 3; }
+html[data-layout="runway"] [data-runway] .rw-mark > span {
+  display: block; width: 9px; height: 9px; border-radius: 999px; box-sizing: border-box;
+  background: var(--bad); box-shadow: 0 0 0 2px var(--background);
+  transition: transform 150ms ease-out;
+}
+html[data-layout="runway"] [data-runway] .rw-mark[data-tone="pos"] > span { background: var(--background); border: 2px solid var(--good); }
+html[data-layout="runway"] [data-runway] .rw-mark[data-tone="goal"] > span { width: 8px; height: 8px; border-radius: 1px; background: var(--foreground); transform: rotate(45deg); }
+html[data-layout="runway"] [data-runway] .rw-mark[data-compact] > span { width: 6px; height: 6px; }
+/* events the chart does not label stay on the line as small grey marks; only the labelled ones carry colour */
+html[data-layout="runway"] [data-runway] .rw-mark[data-quiet] > span { width: 7px; height: 7px; background: color-mix(in oklab, var(--muted-foreground) 70%, var(--background)); }
+html[data-layout="runway"] [data-runway] .rw-mark[data-quiet][data-tone="pos"] > span { background: var(--background); border-color: color-mix(in oklab, var(--muted-foreground) 70%, var(--background)); }
+html[data-layout="runway"] [data-runway] .rw-mark:hover > span { transform: scale(1.35); }
+html[data-layout="runway"] [data-runway] .rw-mark[data-tone="goal"]:hover > span { transform: rotate(45deg) scale(1.35); }
+html[data-layout="runway"] [data-runway] .rw-mark:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+@media (prefers-reduced-motion: reduce) {
+  html[data-layout="runway"] [data-runway] .rw-mark > span { transition: none; }
+}
+
+/* ---------- tab bar: sits on the page; once docked it takes the page colour and a rule ---------- */
+html[data-layout="runway"] [data-runway] .rw-tabs { border-bottom: 1px solid var(--hairline); background: var(--background); }
+html[data-layout="runway"] [data-runway] .rw-tabs.is-docked { background: color-mix(in oklab, var(--background) 92%, transparent); backdrop-filter: blur(12px); }
+
+/* ---------- Summary: the reused widgets lose their boxes and read as ruled sections ---------- */
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] {
+  background: transparent; box-shadow: none; border-radius: 0; overflow: visible; padding-block: 0;
+}
+/* the widget's own title row becomes the section title: no icon, no inset */
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] > div:first-child { padding: 0 0 0.25rem; min-height: 0; }
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] > div:first-child > div:first-child > svg { display: none; }
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] > div:first-child h3 { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] > div:nth-child(2) { padding-inline: 0; }
+/* list rows: the icon stays as a quiet glyph, without the tinted circle */
+html[data-layout="runway"] [data-rw-summary] li > :is(button, div) > span.rounded-full.bg-muted:first-child { display: none; }
+/* rows ruled, like a ledger */
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] ul > li + li { border-top: 1px solid var(--hairline); }
+html[data-layout="runway"] [data-rw-summary] [data-slot="card"] ul > li > :is(button, div) { min-height: 3.25rem; }
+/* the brief's definition rows keep their rules; the first one sits flush */
+html[data-layout="runway"] [data-rw-summary] dl > div:first-child { padding-top: 0.5rem; }
+
+/* the facts rail: rows ruled, and order-form details wrap instead of cutting off */
+html[data-layout="runway"] [data-rw-summary] .rw-rail ul > li + li { border-top: 1px solid var(--hairline); }
+html[data-layout="runway"] [data-rw-summary] .rw-rail [data-slot="card"] .truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+html[data-layout="runway"] [data-rw-summary] .rw-rail [data-slot="card"] li > :is(button, div) > span.rounded-full.bg-muted:first-child { display: none; }
+
+/* ---------- other tabs under this chrome: no boxes. Every card becomes a ruled section on the page column ---------- */
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] {
+  position: relative; background: transparent; box-shadow: none; border: 0; border-top: 1px solid var(--hairline);
+  border-radius: 0; overflow: visible; padding-inline: 0;
+}
+/* the card's own inset goes: its header, body and tables sit on the page column, inside the gutters */
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"]:not(.group):not(button) > :not(table) { padding-inline: 0; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"] { min-width: 0; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] { min-width: 0; max-width: 100%; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] [data-slot="table-container"] { overflow-x: auto; max-width: 100%; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] :is(thead, thead tr, th) { background: transparent !important; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] :is(th, td):first-child { padding-left: 0; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] :is(th, td):last-child { padding-right: 0; }
+/* cards side by side: an open gutter between the columns, and list rows keep clear of it */
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) .grid:has(> [data-slot="card"]) { column-gap: 3rem; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) .grid > [data-slot="card"] li > :is(button, div) { padding-right: 1rem; }
+/* clickable cards (health areas, news themes) are cells in a ruled grid with a hover wash */
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) :is(.group, button)[data-slot="card"] { transition: background-color 150ms; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) :is(.group, button)[data-slot="card"]:hover { background: var(--hover); box-shadow: none; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) .grid:has(> :is(.group, button)[data-slot="card"]) { column-gap: 2rem; row-gap: 0.5rem; }
+html[data-layout="runway"] [data-runway] [role="tabpanel"]:not([id$="-content-overview"]) [data-slot="card"] h3 { font-size: 16px; font-weight: 500; }
+/* the Activity tab's health ribbon repeats the runway above it */
+html[data-layout="runway"] [data-runway] [id$="-content-activity"] [data-slot="card"]:has(> div:first-child .lucide-calendar-clock) { display: none; }
+
+/* recharts areas reveal through an animated clip; on this page they show at once (the hero carries the motion) */
+html[data-layout="runway"] [data-runway] [role="tabpanel"] [clip-path^="url(#animationClipPath"] { clip-path: none; }
