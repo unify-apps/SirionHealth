@@ -265,17 +265,6 @@ export function MeterValue({ value, max = 100, tone, label, tip, display, classN
   )
 }
 
-/** A long list in two columns on desktop: 32px apart with a hairline between them; one column on phones.
- *  Pass the rows (each already an <li>). The first half fills the left column. */
-export function ListColumns({ children, label, className }: { children: React.ReactNode[]; label?: string; className?: string }) {
-  const half = Math.ceil(children.length / 2)
-  return (
-    <div className={cn('grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-1 md:grid-cols-2', className)} aria-label={label} role={label ? 'group' : undefined}>
-      <ul className="grid grid-cols-[minmax(0,1fr)] content-start gap-1">{children.slice(0, half)}</ul>
-      <ul className="relative grid grid-cols-[minmax(0,1fr)] content-start gap-1 md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-hairline">{children.slice(half)}</ul>
-    </div>
-  )
-}
 
 /** Shows the first `n` items of a long list, then a "Show N more" outline pill. */
 export function MoreList<T>({ items, n = 3, render, className, noun = 'more' }: {

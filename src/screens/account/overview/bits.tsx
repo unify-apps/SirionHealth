@@ -156,9 +156,6 @@ export function InfoTip({ text, className }: { text: React.ReactNode; className?
 }
 
 /** Provenance as one plain muted word: scored by a model or by rules. */
-export function SourceTag({ kind, className }: { kind: 'ai' | 'rule'; className?: string }) {
-  return <span className={cn('text-xs text-muted-foreground', className)}>{kind === 'ai' ? 'AI-scored' : 'Rule'}</span>
-}
 
 /* ---------- widget states ---------- */
 export type WidgetState<T> = { status: 'loading' | 'ready' | 'error'; data?: T; error?: string; retry: () => void }

@@ -29,10 +29,6 @@ export function loadIntel() {
       return m ? { date: `${m[1]}, 2026`, text: m[2] } : { date: null, text: e }
     }),
   }))
-  return {
-    strongest: [...inputs].sort((a, b) => b.v - a.v).slice(0, 4),
-    weakest: [...inputs].sort((a, b) => a.v - b.v).slice(0, 4),
-    unscored, news,
-  }
+  return { news }
 }
 export type IntelData = ReturnType<typeof loadIntel>
