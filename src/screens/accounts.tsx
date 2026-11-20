@@ -203,17 +203,18 @@ export function AccountsScreen() {
         </div>
       )}
 
-      <Card className="min-w-0 gap-0 py-0">
-        {status === 'error' ? (
+      {status === 'error' ? (
+        <Card className="min-w-0 gap-0 py-0">
           <div className="p-4 sm:p-5">
             <Empty title="Couldn't load your accounts" sub="The account list didn't respond. Your filters are kept; try again." />
             <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={retry}><RotateCcw />Try again</Button></div>
           </div>
-        ) : (
-          <>
+        </Card>
+      ) : (
+        <div className="grid min-w-0 gap-3">
             {/* one toolbar row: saved views left ("More" last); search, Filter, Columns, Reset right; all 32px.
                 On phones the views scroll and search drops below. */}
-            <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 lg:flex-nowrap">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto max-sm:basis-full">
                 <ToggleGroup type="single" variant="outline" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
                   onValueChange={v => v && setView(v as ViewId)}>
@@ -284,13 +285,14 @@ export function AccountsScreen() {
             </div>
 
             {nFilters > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 sm:px-5" role="group" aria-label="Active filters">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Active filters">
                 <FilterChips value={filters} onChange={changeFilters} />
                 <Button variant="ghost" size="sm" onClick={() => changeFilters(NO_FILTERS)}>Clear all</Button>
               </div>
             )}
 
-            <div className="border-t border-hairline">
+            <Card className="min-w-0 gap-0 py-0">
+            <div>
               {status === 'loading' ? <TableSkeleton /> : !data.length ? (
                 <div className="p-4 sm:p-5"><Empty title="No accounts in your book yet" sub="Accounts assigned to you will appear here with their health and renewal." /></div>
               ) : !list.length ? (
@@ -397,9 +399,9 @@ export function AccountsScreen() {
                 <span aria-live="polite">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
               </TableFooterBar>
             )}
-          </>
-        )}
-      </Card>
+            </Card>
+        </div>
+      )}
 
     </div>
   )

@@ -338,7 +338,7 @@ export function SortHead({ children, active, dir, onSort, numeric, sticky, title
     <TableHead aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={cn('p-0 first:pl-0 last:pr-0', numeric && 'text-right', sticky && stickyColStatic, className)}>
       <Tip tip={title}><button type="button" onClick={onSort}
-        className={cn('group/sort flex h-9 w-full items-center gap-1 px-3 text-xs font-medium outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
+        className={cn('group/sort flex h-9 w-full items-center gap-1 px-3 text-[11px] font-normal uppercase tracking-[0.06em] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
           '[th:first-child_&]:pl-4 [th:last-child_&]:pr-4', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>
         {children}
         <I className={cn('size-3 shrink-0', !active && 'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true" />
