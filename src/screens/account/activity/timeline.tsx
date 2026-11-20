@@ -193,7 +193,7 @@ function ItemSheet({ item: live, onOpenChange, pager }: { item: Item | null; onO
                   </section>
                 ) : (
                   <section className="grid gap-1.5">
-                    <h3 className="text-xs text-muted-foreground">What was said</h3>
+                    <h3 className="text-xs text-muted-foreground">What Was Said</h3>
                     {item.desc ? <p className="leading-relaxed text-pretty">{item.desc}</p> : <p className="text-muted-foreground">No statement recorded.</p>}
                   </section>
                 )}

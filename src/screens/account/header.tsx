@@ -176,13 +176,17 @@ export function AccountHeader() {
       <Card data-block className="gap-0 py-0">
         <WidgetBody w={w} what="the health verdict" skeleton={<VerdictSkeleton />}>
           {d => (
-            <>
-              <Verdict d={d} onHow={() => openSheet('how')} />
-              <div className="grid divide-y divide-hairline border-t border-hairline lg:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] lg:divide-x lg:divide-y-0">
+            // two columns: the health and why (score, verdict, areas) | what to do about it (next step, renewal)
+            <div className="grid divide-y divide-hairline lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:divide-x lg:divide-y-0">
+              <div className="min-w-0">
+                <Verdict d={d} onHow={() => openSheet('how')} />
                 <AreasZone d={d} onArea={openArea} />
+              </div>
+              <div className="flex min-w-0 flex-col divide-y divide-hairline">
+                <NextStep next={d.next} />
                 <RenewalZone />
               </div>
-            </>
+            </div>
           )}
         </WidgetBody>
       </Card>
@@ -198,11 +202,11 @@ export function AccountHeader() {
 function Verdict({ d, onHow }: { d: ReturnType<typeof buildVerdict>; onHow: () => void }) {
   const b = bandOf(score.final)
   return (
-    <section aria-labelledby="h-verdict" className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-6">
+    <section aria-labelledby="h-verdict" className="flex flex-col gap-4 px-5 pt-5 pb-2 md:flex-row md:items-center md:gap-5">
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" onClick={onHow} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how scores work`}
-            className={cn('shrink-0 self-start rounded-full md:self-center', focusRing)}>
+            className={cn('grid size-[72px] shrink-0 place-items-center self-start rounded-full leading-none md:self-center', focusRing)}>
             <ScoreRing value={score.final} size={72} stroke={5} />
           </button>
         </TooltipTrigger>
@@ -217,32 +221,32 @@ function Verdict({ d, onHow }: { d: ReturnType<typeof buildVerdict>; onHow: () =
           How the score works
         </button>
       </div>
-      {d.next && (() => {
-        // "Get a signed renewal commitment by Nov 26": the action, and its due date as its own line with days left
-        const m = / by ([A-Z][a-z]{2} \d{1,2})$/.exec(d.next)
-        const action = m ? d.next.slice(0, m.index) : d.next
-        const due = m ? new Date(`${m[1]} ${TODAY.getFullYear()}`) : null
-        const left = due ? Math.round((+due - +TODAY) / 864e5) : null
-        return (
-          <div className="flex items-start gap-3 rounded-lg border border-hairline p-4 md:w-80 md:shrink-0">
-            <ListChecks className="mt-0.5 size-4 shrink-0 text-signal" aria-hidden="true" />
-            <div className="grid min-w-0 gap-1">
-              <p className="text-xs text-muted-foreground">Next Step</p>
-              <p className="text-sm font-medium leading-snug">{action}</p>
-              {due && <p className={cn('text-xs tabular-nums', left != null && left <= 7 ? 'text-bad' : 'text-muted-foreground')}>Due {m![1]}{left != null && ` · ${left < 0 ? `${-left} days late` : left === 0 ? 'today' : `in ${left} days`}`}</p>}
-            </div>
-          </div>
-        )
-      })()}
     </section>
   )
 }
 
 /* ---------- areas: name and score, the colour carries the band; falls since last month in red ---------- */
+/* ---------- next step: the action and when it is due ---------- */
+function NextStep({ next }: { next: string }) {
+  if (!next) return null
+  // "Get a signed renewal commitment by Nov 26": the action, and its due date as its own line with days left
+  const m = / by ([A-Z][a-z]{2} \d{1,2})$/.exec(next)
+  const action = m ? next.slice(0, m.index) : next
+  const due = m ? new Date(`${m[1]} ${TODAY.getFullYear()}`) : null
+  const left = due ? Math.round((+due - +TODAY) / 864e5) : null
+  return (
+    <section aria-labelledby="h-next" className="flex flex-col gap-3 p-5">
+      <ZoneLabel id="h-next" icon={ListChecks}>Next Step</ZoneLabel>
+      <p className="text-base font-medium leading-snug">{action}</p>
+      {due && <p className={cn('text-xs tabular-nums', left != null && left <= 7 ? 'text-bad' : 'text-muted-foreground')}>Due {m![1]}{left != null && ` · ${left < 0 ? `${-left} days late` : left === 0 ? 'today' : `in ${left} days`}`}</p>}
+    </section>
+  )
+}
+
 function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void }) {
   return (
     <section aria-labelledby="h-areas" className="flex min-w-0 flex-col gap-2 p-5 pb-3">
-      <ZoneLabel id="h-areas" icon={Layers} right={<span>Change since {d.since}</span>}>Area scores</ZoneLabel>
+      <ZoneLabel id="h-areas" icon={Layers}>Area Scores<span className="ml-1 text-muted-foreground/80">· change since {d.since}</span></ZoneLabel>
       <ul className="-mx-3 grid grid-cols-3 gap-1 xl:grid-cols-6">
         {d.areas.map(a => {
           const b: Band = bandOf(a.v)

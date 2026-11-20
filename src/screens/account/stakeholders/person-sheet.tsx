@@ -135,7 +135,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange, pager }: {
 
                 {!row.news && (
                   <section className="grid gap-3 border-t border-hairline pt-5">
-                    <h3 className="flex items-baseline gap-2 text-sm font-medium">Statements naming {row.name.split(' ')[0]}<span className="text-xs font-normal tabular-nums text-muted-foreground">{said.length}</span></h3>
+                    <h3 className="flex items-baseline gap-2 text-sm font-medium">Statements Naming {row.name.split(' ')[0]}<span className="text-xs font-normal tabular-nums text-muted-foreground">{said.length}</span></h3>
                     {said.length ? (
                       <>
                         <ul className="divide-y divide-hairline">{shown.map((e, i) => <Statement key={i} e={e} />)}</ul>

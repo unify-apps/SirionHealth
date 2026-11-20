@@ -60,7 +60,7 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
         })() : lead}
         <div className="min-w-0">
           {eyebrow && !compact && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
-          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{title}</h1>
+          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
           {(compact ? compactSub ?? sub : sub) && <p className={cn('truncate text-muted-foreground', ease, compact ? 'text-xs' : 'mt-0.5 text-sm')}>{compact ? compactSub ?? sub : sub}</p>}
         </div>
       </div>

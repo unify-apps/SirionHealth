@@ -6,6 +6,7 @@ import {
   AlertTriangle, ArrowRight, CalendarClock, ChevronDown, DollarSign, Info, LifeBuoy, MessageSquare, TrendingUp, Users, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -218,7 +219,7 @@ export function SectionHead({ title, tip, open, onToggle, actions, id }: {
 }) {
   return (
     <div className="mb-3 mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 first:mt-0">
-      <h2 id={id} className="flex items-center gap-1.5 text-base font-medium">{title}{tip && <InfoTip text={tip} />}</h2>
+      <h2 id={id} className="flex items-center gap-1.5 text-base font-medium">{tc(title)}{tip && <InfoTip text={tip} />}</h2>
       {onToggle && (
         <Tooltip>
           <TooltipTrigger asChild>

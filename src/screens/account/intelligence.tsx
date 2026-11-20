@@ -101,7 +101,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                 }>
                   {open.why && (
                     <section className="grid gap-1.5">
-                      <h3 className="text-xs text-muted-foreground">Why it matters</h3>
+                      <h3 className="text-xs text-muted-foreground">Why It Matters</h3>
                       <p className="leading-relaxed text-pretty">{open.why}</p>
                     </section>
                   )}
