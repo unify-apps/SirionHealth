@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { activityCounts, journey, loadActivity, sentimentMonths, withRoles, type ActivityData, type JourneyMonth } from './activity/model'
-import { HealthRibbon, SentimentMonths } from './activity/sentiment'
+import { HealthRibbon, RibbonLegend, SentimentMonths } from './activity/sentiment'
 import { ErrorState, useLoad } from './activity/shared'
 import { Timeline } from './activity/timeline'
 import { useRoles } from './stakeholders/store'
@@ -38,8 +38,8 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
   return (
     <>
       <Card className="gap-0 py-0">
-        <BlockHeader icon={CalendarClock} title="Timeline to renewal" sub={`${months.length} months`} />
-        <div className="p-5"><HealthRibbon months={months} renewal={{ label: 'Renewal $330K', date: new Date(2026, 11, 30) }} /></div>
+        <BlockHeader icon={CalendarClock} title="Health to renewal" actions={<RibbonLegend />} />
+        <div className="px-5 pt-4 pb-3"><HealthRibbon months={months} renewal={{ label: 'Renewal $330K', date: new Date(2026, 11, 30) }} /></div>
       </Card>
       <TabsContent value={view} className="grid">
       {/* overflow-visible: the card's default overflow-hidden would stop the month headers sticking */}

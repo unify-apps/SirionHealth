@@ -11,8 +11,13 @@ export interface Person {
 }
 export interface NewsPerson { name: string; title: string; org: string; suggested: string; basis: string; source: string }
 
-export const ROLE_OPTS = ['Executive sponsor', 'Champion', 'Decision maker', 'Influencer', 'Technical owner', 'IT and security contact',
-  'System administrator', 'Key user', 'Procurement', 'Legal', 'Former champion', 'Left the role'] as const
+export const ROLE_OPTS = ['Executive Sponsor', 'Champion', 'Decision Maker', 'Influencer', 'Technical Owner', 'IT and Security Contact',
+  'System Administrator', 'Key User', 'Procurement', 'Legal', 'Former Champion', 'Left the Role'] as const
+
+/** Role names read as titles everywhere ("Key User", "IT and Security Contact"), whatever casing the source or a saved choice used. */
+const SMALL = new Set(['and', 'or', 'of', 'the', 'to', 'in', 'for'])
+export const roleCase = (s: string | null | undefined) => !s ? '' : s.split(/(\s+|\/)/).map((w, i) =>
+  /^(it|cxo|vp|cio|cfo|ceo|cto|hr)$/i.test(w) ? w.toUpperCase() : i > 0 && SMALL.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)).join('')
 
 /** Summary statements are written by AI with long month names ("on October 21"); show them in the app's one format ("on Oct 21"). */
 const LONG_DATE = /\b(January|February|March|April|June|July|August|September|October|November|December) (?=\d{1,2}\b)/g
@@ -80,16 +85,16 @@ export function stakeRows(b: Base, st: RoleState): StakeRow[] {
     const said = b.ev.filter(e => e.who.includes(p.name)), pos = said.filter(e => e.kind === 'pos').length, neg = said.length - pos
     const tone: Tone = !said.length ? 'none' : pos && !neg ? 'pos' : neg && !pos ? 'neg' : 'mix'
     const months = b.months.map(ym => said.filter(e => e.ym === ym).length)
-    const tagLabel = (p.tagged || '').replace(' / CXO', '')
-    const gap: [GapLevel, string] = p.email === SPONSOR_EMAIL ? ['warn', `Executive sponsor last named ${last ? fmtDY(last) : 'never'}; no executive contact this month (12-month average 11)`]
+    const tagLabel = roleCase((p.tagged || '').replace(' / CXO', ''))
+    const gap: [GapLevel, string] = p.email === SPONSOR_EMAIL ? ['warn', `Executive Sponsor last named ${last ? fmtDY(last) : 'never'}; no executive contact this month (12-month average 11)`]
       : p.tagged && !isGone(p.tagged) && (days == null || days > 90) ? ['warn', `Tagged ${tagLabel} but ${days == null ? 'never named in a summary' : 'not named since ' + fmtDY(last!)}`]
       : gone || (p.tagged && isGone(p.tagged)) ? ['warn', 'Left the role: hand over the relationship']
       : p.suggested && !conf && !mine ? ['info', `Suggested from ${p.mentions} summar${p.mentions === 1 ? 'y' : 'ies'}; confirm the role`]
       : days != null && days <= 30 ? ['ok', `Active: named ${said.filter(e => e.ym >= '2026-08').length} times in the last 3 months`]
       : p.mentions ? ['info', `Named in ${p.mentions} summar${p.mentions === 1 ? 'y' : 'ies'}`] : ['none', 'Contact card only']
     return {
-      key: p.email, name: p.name, title: p.title, org: p.org, email: p.email, sources: p.sources, kind, label, source,
-      aiRole: p.suggested && !p.tagged && !gone ? shortRole(p.suggested) : null, basis: p.basis, confidence: p.confidence,
+      key: p.email, name: p.name, title: p.title, org: p.org, email: p.email, sources: p.sources, kind, label: roleCase(label), source,
+      aiRole: p.suggested && !p.tagged && !gone ? roleCase(shortRole(p.suggested)) : null, basis: p.basis, confidence: p.confidence,
       eng, tone, pos, neg, months, mentions: p.mentions, gap, days, last, sen: seniority(p.title), news: null,
     }
   })
@@ -97,7 +102,7 @@ export function stakeRows(b: Base, st: RoleState): StakeRow[] {
     const key = 'news:' + n.name, mine = st.roles[key], conf = !!st.confirmed[key]
     rows.push({
       key, name: n.name, title: n.title, org: n.org, email: null, sources: [], kind: mine ? (isGone(mine) ? 'departed' : 'tagged') : 'suggested',
-      label: mine || n.suggested, source: mine ? 'mine' : conf ? 'confirmed' : 'news', aiRole: n.suggested, basis: n.basis, confidence: null,
+      label: roleCase(mine || n.suggested), source: mine ? 'mine' : conf ? 'confirmed' : 'news', aiRole: roleCase(n.suggested), basis: n.basis, confidence: null,
       eng: 'none', tone: 'none', pos: 0, neg: 0, months: b.months.map(() => 0), mentions: 0,
       gap: ['warn', `From public news (${n.source}); not in the account's contacts yet`], days: null, last: null, sen: seniority(n.title), news: n,
     })

@@ -125,7 +125,7 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
       )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
       {past.length > shown && (
         <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
-          Show {Math.min(STEP, past.length - shown)} more · {past.length - shown} earlier {dirty ? 'matching not shown' : 'not shown'}
+          Show {Math.min(STEP, past.length - shown)} more
         </Button>
       )}
 
