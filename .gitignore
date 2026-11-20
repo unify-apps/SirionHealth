@@ -6,3 +6,6 @@ node_modules/
 # internal only: vendor screenshots and session notes
 shots/
 .sessions/
+
+dist
+*.local
