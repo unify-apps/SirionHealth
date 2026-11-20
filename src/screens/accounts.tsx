@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, Ban, CalendarClock, CircleCheck, Columns3, Copy, ExternalLink, HeartPulse, RotateCcw, Search, TrendingDown, TrendingUp, X, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Ban, CalendarClock, CircleCheck, Columns3, Copy, ExternalLink, HeartPulse, RotateCcw, TrendingDown, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
@@ -8,19 +8,19 @@ import { cn } from '@/lib/utils'
 import { titleCase } from '@/lib/text'
 import { openAccount } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
-import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
+import { Empty, HeaderFacts, Meter, PageHeader, SEGMENTED, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  DEFAULT_HIDDEN, filterCount, FIRST_DIR, NO_FILTERS, OPTIONAL_COLS, OWNER, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
+  DEFAULT_HIDDEN, filterCount, FIRST_DIR, NO_FILTERS, OPTIONAL_COLS, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
   type Category, type ColId, type FilterState, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
@@ -132,23 +132,17 @@ export function AccountsScreen() {
 
   const show = (c: ColId) => !hidden.has(c)
   const viewLabel = VIEWS.find(v => v.id === view)!.label
-  const sortHead = (k: SortKey, children: React.ReactNode, opts: { numeric?: boolean; sticky?: boolean; tip?: string } = {}) => (
-    <SortHead key={k} active={!priority && sortKey === k} dir={sortDir} onSort={() => sortBy(k)} numeric={opts.numeric} sticky={opts.sticky} title={opts.tip}>{children}</SortHead>
+  // the table is table-fixed: column widths (`w`) come from the header, not the rows shown, so switching views never
+  // shifts columns; "Why it's here" has no width and takes what is left
+  const sortHead = (k: SortKey, children: React.ReactNode, opts: { numeric?: boolean; sticky?: boolean; tip?: string; w?: string } = {}) => (
+    <SortHead key={k} active={!priority && sortKey === k} dir={sortDir} onSort={() => sortBy(k)} numeric={opts.numeric} sticky={opts.sticky} title={opts.tip} className={opts.w}>{children}</SortHead>
   )
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts" sub={`${OWNER}'s book · as of ${today}`}
+      <PageHeader title="My accounts" sub={`Updated ${today}`}
         actions={status === 'ready' && (
-          // the book's size as two small facts in the KPI label style, so it reads with the title instead of floating alone
-          <dl className="flex items-center divide-x divide-hairline rounded-md border border-hairline">
-            {[['Accounts', String(data.length)], ['Total ARR', money(sum.arr)]].map(([k, v]) => (
-              <div key={k} className="grid gap-0.5 px-4 py-2">
-                <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{k}</dt>
-                <dd className="num text-base leading-none font-medium">{v}</dd>
-              </div>
-            ))}
-          </dl>
+          <HeaderFacts items={[['accounts', data.length], ['total ARR', money(sum.arr)]]} />
         )} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
@@ -191,10 +185,10 @@ export function AccountsScreen() {
                 On phones the views scroll and search drops below. */}
             <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto max-sm:basis-full">
-                <ToggleGroup type="single" variant="outline" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
-                  onValueChange={v => v && setView(v as ViewId)}>
+                <ToggleGroup type="single" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
+                  onValueChange={v => v && setView(v as ViewId)} className={SEGMENTED.group}>
                   {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
-                    <ToggleGroupItem key={v.id} value={v.id} className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">
+                    <ToggleGroupItem key={v.id} value={v.id} className={SEGMENTED.item}>
                       {v.band && (
                         <Tooltip>
                           <TooltipTrigger asChild><span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" /></TooltipTrigger>
@@ -216,12 +210,7 @@ export function AccountsScreen() {
               </div>
 
               <div className="order-2 ml-auto flex shrink-0 items-center gap-2">
-                <InputGroup className="hidden h-8 w-[200px] transition-[width] duration-200 focus-within:w-64 sm:flex">
-                  <InputGroupAddon><Search /></InputGroupAddon>
-                  <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
-                    value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
-                  {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
-                </InputGroup>
+                <SearchBox value={q} onChange={setQ} placeholder="Search accounts" />
                 <AccountFilter value={filters} onChange={changeFilters} rows={data} buttonRef={filterBtn} />
                 <DropdownMenu>
                   <Tooltip>
@@ -251,12 +240,6 @@ export function AccountsScreen() {
                 {dirty && <Button variant="ghost" onClick={reset}><RotateCcw />Reset</Button>}
               </div>
 
-              {/* phones: search on its own row */}
-              <InputGroup className="order-3 h-8 w-full sm:hidden">
-                <InputGroupAddon><Search /></InputGroupAddon>
-                <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
-                  value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
-              </InputGroup>
             </div>
 
             {nFilters > 0 && (
@@ -277,19 +260,19 @@ export function AccountsScreen() {
                   <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={reset}><RotateCcw />Reset search and filters</Button></div>
                 </div>
               ) : (
-                <Table aria-label="Accounts" className="min-w-[760px]">
+                <Table aria-label="Accounts" className="min-w-[960px] table-fixed">
                   <TableHeader>
                     <TableRow>
-                      {sortHead('name', 'Account', { sticky: true })}
-                      <TableHead>Category</TableHead>
-                      {sortHead('health', 'Health')}
-                      {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date' })}
-                      {sortHead('carr', 'ARR', { tip: 'Contracted annual recurring revenue (CARR)' })}
-                      {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover' })}
+                      {sortHead('name', 'Account', { sticky: true, w: 'w-[17rem]' })}
+                      <TableHead className="w-[9.5rem]">Category</TableHead>
+                      {sortHead('health', 'Health', { w: 'w-[6rem]' })}
+                      {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date', w: 'w-[13rem]' })}
+                      {sortHead('carr', 'ARR', { tip: 'Contracted annual recurring revenue (CARR)', w: 'w-[7rem]' })}
+                      {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover', w: 'w-[6rem]' })}
                       <TableHead>Why it's here</TableHead>
-                      {show('stage') && <TableHead>Stage</TableHead>}
-                      {show('repo') && sortHead('repo', 'Repository', { numeric: true })}
-                      {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought' })}
+                      {show('stage') && <TableHead className="w-[10rem]">Stage</TableHead>}
+                      {show('repo') && sortHead('repo', 'Repository', { numeric: true, w: 'w-[8rem]' })}
+                      {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought', w: 'w-[8rem]' })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -302,7 +285,7 @@ export function AccountsScreen() {
                           className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:py-2"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
-                          <TableCell className={cn(stickyCol, 'max-w-72')}>
+                          <TableCell className={stickyCol}>
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate font-medium">{r.name}</span>
                               <span className="truncate text-xs text-muted-foreground">{r.ind}</span>
@@ -350,7 +333,8 @@ export function AccountsScreen() {
             </div>
             {status === 'ready' && list.length > 0 && (
               <TableFooterBar shown={list.length} total={data.length}>
-                <span aria-live="polite">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
+                {/* sort order is announced to screen readers only; the header arrows show it on screen */}
+                <span aria-live="polite" className="sr-only">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
               </TableFooterBar>
             )}
             </Card>

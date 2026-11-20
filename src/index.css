@@ -79,28 +79,28 @@
  */
 :root {
     --radius: 0.5rem;
-    --background: #ffffff;
+    --background: #fffdfa;          /* warm white: a touch of cream, not pure #fff */
     --foreground: #0b1821;
-    --card: #ffffff;
+    --card: #fffdfa;
     --card-foreground: #0b1821;
-    --popover: #ffffff;
+    --popover: #fffdfa;
     --popover-foreground: #0b1821;
     --primary: #92429f;             /* Sirion plum */
     --primary-foreground: #ffffff;
-    --secondary: #e7eff0;           /* Sirion mist */
+    --secondary: #f0ede7;           /* warm mist (was teal-tinted #e7eff0) */
     --secondary-foreground: #0b1821;
-    --muted: #e7eff0;
-    --muted-foreground: #4d565d;
-    --accent: #e7eff0;
+    --muted: #f0ede7;
+    --muted-foreground: #57524b;
+    --accent: #f0ede7;
     --accent-foreground: #0b1821;
     --destructive: #c62f4a;
-    --border: #d3e1e3;
-    --hairline: rgb(13 94 104 / 0.12);
-    --input: #c5d9dc;
+    --border: #e3ded5;
+    --hairline: rgb(70 50 20 / 0.11);
+    --input: #d9d3c8;
     --ring: #5d939a;
-    --surface-2: #f4f6f7;          /* also the fill of secondary cards (see Card tiers below) */
+    --surface-2: #f8f6f2;          /* also the fill of secondary cards (see Card tiers below) */
     /* row and card hover: a neutral wash, not the teal-tinted accent */
-    --hover: rgb(11 24 33 / 0.035);
+    --hover: rgb(60 40 10 / 0.035);
     --signal: #0d5e68;              /* Sirion teal: active, links, focus */
     --signal-soft: rgb(13 94 104 / 0.08);
     --good: #1f7a4d;
@@ -130,8 +130,8 @@
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: rgb(255 255 255 / 0.08);
     --sidebar-ring: #7cc3ca;
-    --shadow-card: 0 0 0 1px rgb(13 94 104 / 0.12);
-    --shadow-panel: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 16px 36px rgb(11 24 33 / 0.14);
+    --shadow-card: 0 0 0 1px rgb(70 50 20 / 0.11);
+    --shadow-panel: 0 0 0 0.5px rgb(70 50 20 / 0.14), 0 16px 36px rgb(40 28 10 / 0.12);
 }
 
 .dark {
@@ -249,15 +249,15 @@ html[data-flat] [data-account] .grid:has(> [data-slot="card"]:not([data-block]):
    bg-background and the tiles' bg-card both pick it up.
    --------------------------------------------------------------------------------------------------------------- */
 html[data-layout="rail"] body:has([data-account]) {
-  --background: #ffffff;
-  --card: #f3f5f6;
-  --muted: #e6ebec;
-  --surface-2: #e6ebec;
-  --secondary: #e6ebec;
-  --accent: #e9eef0;
-  --hover: rgb(11 24 33 / 0.04);
-  --hairline: rgb(11 24 33 / 0.07);
-  --shadow-card: none;
+  --background: #fffdfa;
+  --card: #f8f6f2;
+  --muted: #efece6;
+  --surface-2: #efece6;
+  --secondary: #efece6;
+  --accent: #f0ede7;
+  --hover: rgb(60 40 10 / 0.04);
+  --hairline: rgb(70 50 20 / 0.08);
+  --shadow-card: 0 0 0 1px rgb(70 50 20 / 0.10);
 }
 html.dark[data-layout="rail"] body:has([data-account]) {
   --background: #07090a;
@@ -268,10 +268,10 @@ html.dark[data-layout="rail"] body:has([data-account]) {
   --accent: rgb(255 255 255 / 0.06);
   --hover: rgb(255 255 255 / 0.04);
   --hairline: rgb(255 255 255 / 0.07);
-  --shadow-card: none;
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.08);
 }
 
 /* Card tiers, app-wide: a main surface (Card with data-block: verdict, charts, tables, timelines) is white with a
-   hairline; every other card (lists, brief, KPI tiles, reading sections) is a light grey fill with no line, so weight
-   follows importance. Layout options that recolour the page (rail) set their own --card and win. */
-[data-slot="card"]:not([data-block]) { background: var(--surface-2); box-shadow: none; }
+   hairline; every other card (lists, brief, KPI tiles, reading sections) is a light grey fill with the same hairline,
+   so weight follows importance. Layout options that recolour the page (rail) set their own --card and win. */
+[data-slot="card"]:not([data-block]) { background: var(--surface-2); box-shadow: var(--shadow-card); }

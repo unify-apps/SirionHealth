@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Search, Table2, UserCheck, Users, X } from 'lucide-react'
-import { BlockHeader, Empty, ListRow, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Table2, UserCheck, Users } from 'lucide-react'
+import { BlockHeader, Empty, ListRow, SEGMENTED, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -59,9 +59,9 @@ function Stakeholders({ base }: { base: Base }) {
   const pager = listPager(pagerKeys, open?.key, k => k, k => openSheet('person', k, { replace: true }), 'person')
   // whose people: the saved views on the left of each table's toolbar
   const views = (
-    <ToggleGroup type="single" size="sm" variant="outline" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className="shrink-0">
-      <ToggleGroupItem value="customer" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
-      <ToggleGroupItem value="internal" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
+    <ToggleGroup type="single" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className={cn(SEGMENTED.group, 'shrink-0')}>
+      <ToggleGroupItem value="customer" className={SEGMENTED.item}>Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
+      <ToggleGroupItem value="internal" className={SEGMENTED.item}>Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
     </ToggleGroup>
   )
 
@@ -201,22 +201,16 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
 
   return (
     <>
-      {/* one toolbar row: search left; persona, sort, view, export right */}
+      {/* one toolbar row, same controls as My accounts: lead (customer / vendor) left; search, persona, sort, view, export right */}
       <div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:p-5">
         {lead}
-        {view === 'table' && (
-          <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
-            <InputGroupAddon><Search /></InputGroupAddon>
-            <InputGroupInput type="search" value={q} onChange={e => { setQ(e.target.value); reset() }} placeholder="Search people" aria-label="Search stakeholders" />
-            {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => { setQ(''); reset() }}><X /></InputGroupButton></InputGroupAddon>}
-          </InputGroup>
-        )}
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {view === 'table' && (
             <>
+              <SearchBox value={q} onChange={v => { setQ(v); reset() }} placeholder="Search people" label="Search stakeholders" />
               <Select value={filter} onValueChange={v => { setFilter(v as Filter); reset() }}>
                 <Tip tip="Filter by persona">
-                  <SelectTrigger size="sm" className="relative w-auto gap-1.5 border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent" aria-label="Filter by persona">
+                  <SelectTrigger className="relative w-auto gap-1.5" aria-label="Filter by persona">
                     <ListFilter className="text-muted-foreground" />
                     <span className="hidden sm:inline">{filter === 'all' ? 'All personas' : KIND_LABEL[filter]}</span>
                     {filter !== 'all' && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-signal sm:hidden" aria-hidden="true" />}
@@ -230,7 +224,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               </Select>
               <Select value={sort} onValueChange={v => { setSort(v as SortKey); reset() }}>
                 <Tip tip={`Sort: ${SORTS[sort][0]}`}>
-                  <SelectTrigger size="sm" className="w-auto border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort stakeholders">
+                  <SelectTrigger className="size-8 justify-center p-0 [&>svg:last-child]:hidden" aria-label="Sort stakeholders">
                     <ArrowUpDown className="text-muted-foreground" />
                   </SelectTrigger>
                 </Tip>
@@ -240,17 +234,18 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               </Select>
             </>
           )}
-          <ToggleGroup type="single" size="sm" value={view} onValueChange={v => v && setView(v as typeof view)} aria-label="View">
-            <Tip tip="Table"><ToggleGroupItem value="table" aria-label="Table"><Table2 /></ToggleGroupItem></Tip>
-            <Tip tip="Relationship orbit"><ToggleGroupItem value="orbit" aria-label="Relationship orbit"><Network /></ToggleGroupItem></Tip>
+          {/* table / orbit is a choice of view, so a segmented toggle like Needs me / All */}
+          <ToggleGroup type="single" spacing={0} value={view} onValueChange={v => v && setView(v as typeof view)} aria-label="View" className={SEGMENTED.group}>
+            <Tip tip="Table"><ToggleGroupItem value="table" aria-label="Table" className={SEGMENTED.icon}><Table2 /></ToggleGroupItem></Tip>
+            <Tip tip="Relationship orbit"><ToggleGroupItem value="orbit" aria-label="Relationship orbit" className={SEGMENTED.icon}><Network /></ToggleGroupItem></Tip>
           </ToggleGroup>
           <Tip tip="Export CSV">
-            <Button variant="ghost" size="icon" aria-label="Export CSV" disabled={!list.length}
+            <Button variant="outline" size="icon" aria-label="Export CSV" disabled={!list.length}
               onClick={() => { download(`${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv`, toCsv(list)); toast.success(`Exported ${list.length} contact${list.length === 1 ? '' : 's'}`, { description: `${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv` }) }}>
               <Download />
             </Button>
           </Tip>
-          {dirty && <Button variant="ghost" size="sm" onClick={resetAll}><RotateCcw />Reset</Button>}
+          {dirty && <Button variant="ghost" onClick={resetAll}><RotateCcw />Reset</Button>}
         </div>
       </div>
 
@@ -350,17 +345,14 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
   const groupLabel = (k: (typeof GROUPS)[number]) => k === 'all' ? 'All groups' : k === 'Partner' ? 'Partners' : k === 'System sender' ? 'System senders' : k
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap">
+      {/* same toolbar shape and height as the customer table, so switching never moves the table */}
+      <div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:p-5">
         {lead}
-        <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
-          <InputGroupAddon><Search /></InputGroupAddon>
-          <InputGroupInput type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search people" aria-label="Search Sirion and vendor people" />
-          {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
-        </InputGroup>
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <SearchBox value={q} onChange={setQ} placeholder="Search people" label="Search Sirion and vendor people" />
           <Select value={g} onValueChange={v => setG(v as typeof g)}>
             <Tip tip="Filter by group">
-              <SelectTrigger size="sm" className="w-auto gap-1.5 border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent" aria-label="Filter by group">
+              <SelectTrigger className="w-auto gap-1.5" aria-label="Filter by group">
                 <ListFilter className="text-muted-foreground" /><span className="hidden sm:inline">{groupLabel(g)}</span>
               </SelectTrigger>
             </Tip>
@@ -368,7 +360,7 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
               {GROUPS.map(k => <SelectItem key={k} value={k}>{groupLabel(k)} <Count n={rows.filter(r => k === 'all' || r.group === k).length} /></SelectItem>)}
             </SelectContent>
           </Select>
-          {(q || g !== 'all') && <Button variant="ghost" size="sm" onClick={() => { setQ(''); setG('all'); toast('Filters reset') }}><RotateCcw />Reset</Button>}
+          {(q || g !== 'all') && <Button variant="ghost" onClick={() => { setQ(''); setG('all'); toast('Filters reset') }}><RotateCcw />Reset</Button>}
         </div>
       </div>
       <Table aria-label="Sirion and vendor people">

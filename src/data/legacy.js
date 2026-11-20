@@ -4,29 +4,31 @@
 import { ACCOUNT_ID, MOCK_ACCOUNTS } from './mock-accounts.js';
 const TODAY = new Date(2026,10,19);
 // 25 real rows from the live AHI account list (ahiDashboardTable), 19 Nov 2026
+// prototype: AbbVie, ATO (health) and American Equity, Altria, Breitling, Asian Paints (renewal) are moved into
+// "Needs me" for a fuller worklist; the rest are as captured
 const ROWS = [
  ["ACT Commodities Group B.V.","Consulting","SMB","Implementation",52,175.9,null,null,0,"2029-05-31",0],
  ["AIA","Insurance","Enterprise","BAU",62,180,94,94,4500,"2029-07-31",15],
  ["ASM","Manufacturing","Enterprise","Implementation",79,240,120,100,526,"2030-09-29",15],
  ["AT&S","Manufacturing","Enterprise","Implementation",65,189,100,100,0,"2031-01-31",0],
- ["ATO","Government","Enterprise","BAU",49,550,100,100,28,"2028-04-30",22],
- ["AbbVie","Health & Life Science","Enterprise","BAU",42,251.3,45,45,162324,"2027-06-30",18],
+ ["ATO","Government","Enterprise","BAU",38,550,100,100,28,"2028-04-30",22],
+ ["AbbVie","Health & Life Science","Enterprise","BAU",36,251.3,45,45,162324,"2027-06-30",18],
  ["Abellio","Transportation","Enterprise","BAU",43,121.3,100,100,156,"2026-09-30",1],
  ["Achmea","Financial services","Enterprise","Implementation",77,405.2,100,100,0,"2028-11-29",0],
  ["Al Ghurair Investments","Food & beverage","Enterprise","Implementation",56,95,null,null,30,"2031-06-09",37],
  ["Allego","Automotive","SMB","BAU",62,89,100,100,1040,"2029-09-30",8],
  ["Almarai","Food & beverage","Enterprise","Implementation",72,90,100,100,618,"2028-06-29",14],
- ["Altria","Consumer goods","Enterprise","BAU",62,196.5,106,100,37584,"2027-09-10",46],
- ["American Equity","Financial services","Enterprise","BAU",44,126,100,100,4114,"2027-04-28",1],
+ ["Altria","Consumer goods","Enterprise","BAU",62,196.5,106,100,37584,"2027-01-15",46],
+ ["American Equity","Financial services","Enterprise","BAU",44,126,100,100,4114,"2027-01-31",1],
  ["Amgen","Health & Life Science","Enterprise","BAU",48,1400,100,100,73640,"2028-03-30",3],
  ["Amprion","Energy & utilities","Enterprise","Implementation",74,689.1,100,100,6030,"2028-02-29",0],
  ["Amrest","Food & beverage","Enterprise","BAU",62,218.7,109,100,6520,"2029-08-31",16],
  ["Apollo","Financial services","Enterprise","BAU",35,231.3,103,100,0,"2027-08-18",null],
- ["Asian Paints","Manufacturing","Enterprise","BAU",66,150.5,100,100,27142,"2027-02-28",46],
+ ["Asian Paints","Manufacturing","Enterprise","BAU",66,150.5,100,100,27142,"2026-12-15",46],
  ["Axia Women's Health","Health & Life Science","SMB","Churned this FY",1,0,0,0,1878,"2027-03-22",null],
  ["Bayer AG","Health & Life Science","Enterprise","Implementation",81,1500,107,100,94,"2027-12-15",0],
  ["Boston Scientific","Manufacturing","Enterprise","BAU + Implementation",33,597.5,100,100,19970,"2027-02-28",2],
- ["Breitling","Manufacturing","Enterprise","BAU",46,42.1,100,100,1860,"2028-04-14",19],
+ ["Breitling","Manufacturing","Enterprise","BAU",46,42.1,100,100,1860,"2026-11-05",19],
  ["Ashurst","Consulting","Mid market","BAU + Implementation",67,404.4,100,100,1584,"2027-03-08",null],
  ["Avista Corporation","Energy & utilities","Enterprise","BAU",70,191,100,100,36060,"2029-09-30",45],
  ["TransAmerica","Financial services","Enterprise","BAU",50,330,100,100,3461,"2026-12-30",111]

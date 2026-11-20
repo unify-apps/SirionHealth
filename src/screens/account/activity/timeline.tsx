@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { CalendarDays, FileText, Filter, RotateCcw, Search, X, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
-import { Empty, Fact, Tip, ListGroupHeader, ListRow, SheetBody } from '@/components/page'
+import { CalendarDays, FileText, Filter, RotateCcw, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
+import { Empty, Fact, Tip, ListGroupHeader, ListRow, SEGMENTED, SheetBody } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { RecordSheet, RecordSheetBody, RecordSheetHeader, TicketChip, listPager, useKept, type RecordSheetPager } from '@/components/app/record-sheet'
 import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -56,25 +56,20 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup type="single" variant="outline" size="sm" value={cat} onValueChange={v => { if (v) { setCat(v as typeof cat); setShown(STEP) } }} aria-label="Filter activity" className="flex-wrap">
+        <ToggleGroup type="single" spacing={0} value={cat} onValueChange={v => { if (v) { setCat(v as typeof cat); setShown(STEP) } }} aria-label="Filter activity" className={cn(SEGMENTED.group, 'flex-wrap')}>
           {(['all', 'risk', 'positive', 'general'] as const).map(c => (
-            <ToggleGroupItem key={c} value={c}>
+            <ToggleGroupItem key={c} value={c} className={SEGMENTED.item}>
               {c !== 'all' && <span className={cn('size-1.5 rounded-full', CAT_DOT[c])} aria-hidden="true" />}
               {c === 'all' ? 'All' : CAT_LABEL[c]} <span className="tabular-nums text-muted-foreground">{count(c)}</span>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <div className="ml-auto flex flex-wrap items-center gap-1">
-        <InputGroup className="h-8 w-44 transition-[width] duration-200 focus-within:w-60 sm:w-52">
-          <InputGroupAddon><Search /></InputGroupAddon>
-          <InputGroupInput type="search" placeholder="Search activity" aria-label="Search activity by title, text, person or ticket" autoComplete="off"
-            value={q} onChange={e => { setQ(e.target.value); setShown(STEP) }} />
-          {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => { setQ(''); setShown(STEP) }}><X /></InputGroupButton></InputGroupAddon>}
-        </InputGroup>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <SearchBox value={q} onChange={v => { setQ(v); setShown(STEP) }} placeholder="Search activity" label="Search activity by title, text, person or ticket" />
         <DropdownMenu>
           <Tip tip={chs.size ? `${chs.size} channel${chs.size > 1 ? 's' : ''}` : 'Filter by channel'}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className={cn(chs.size > 0 && 'text-foreground')}>
+            <Button variant="outline" className={cn(chs.size > 0 && 'text-foreground')}>
               <Filter />{chs.size ? `${chs.size} channel${chs.size > 1 ? 's' : ''}` : 'All channels'}
             </Button>
           </DropdownMenuTrigger>
@@ -94,7 +89,7 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
           </DropdownMenuContent>
         </DropdownMenu>
         {dirty && (
-          <Button variant="ghost" size="sm" onClick={() => { setCat('all'); setChs(new Set()); setQ(''); setShown(STEP); toast('Filters reset') }}><RotateCcw />Reset</Button>
+          <Button variant="ghost" onClick={() => { setCat('all'); setChs(new Set()); setQ(''); setShown(STEP); toast('Filters reset') }}><RotateCcw />Reset</Button>
         )}
         </div>
       </div>

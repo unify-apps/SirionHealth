@@ -6,7 +6,7 @@ import { Term } from './account/overview/bits'
 import { Meter, Sparkline } from '@/components/charts'
 import { openSheet } from '@/lib/route'
 import { cn } from '@/lib/utils'
-import { PageHeader, Stat } from '@/components/page'
+import { HeaderFacts, PageHeader, Stat } from '@/components/page'
 import { KpiSkeleton, LoadingLabel, WidgetError, useWidget } from './states/widget-states'
 import { AS_OF, moneyK, plural, regionOf } from './portfolio/data'
 import { ScopeMenu, ScopeProvider, useScope } from './portfolio/scope'
@@ -51,11 +51,12 @@ function Portfolio() {
     <div className="flex flex-col">
       <PageHeader
         title="Portfolio"
-        sub={[
-          scope.kind === 'pod' ? `${scope.name} · ${regionOf(scope.name)}` : scope.kind === 'region' ? `${scope.name} · ${plural(S.pods.length, 'pod')}` : plural(S.pods.length, 'pod'),
-          plural(S.book.accounts, 'account'), `as of ${AS_OF}`,
-        ].join(' · ')}
-        actions={<ScopeMenu />}
+        sub={`Updated ${AS_OF}`}
+        actions={<>
+          {/* the scope's size beside its picker; a pod shows its region instead of a pod count */}
+          <HeaderFacts items={[scope.kind === 'pod' ? ['region', regionOf(scope.name)] : ['pods', S.pods.length], ['accounts', S.book.accounts]]} />
+          <ScopeMenu />
+        </>}
       />
 
       <BandSplit status={split.status} onRetry={split.retry} />

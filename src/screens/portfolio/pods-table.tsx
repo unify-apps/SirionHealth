@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, Search, Users } from 'lucide-react'
+import { ChevronRight, Users } from 'lucide-react'
 import { BlockHeader, SortHead, stickyCol } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -95,11 +96,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
         sub={`Sorted by ${sortLabel.replace(/^(?!CARR|ARR|GRR)([A-Z])/, c => c.toLowerCase())}${sort.dir === 1 ? ', ascending' : ''}`}
         actions={controls && status === 'ready' ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="flex h-8 w-44 items-center gap-2 rounded-md border border-input px-2 focus-within:ring-2 focus-within:ring-ring">
-              <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search pods" aria-label="Search pods"
-                className="h-full w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
-            </label>
+            <SearchBox value={q} onChange={setQ} placeholder="Search pods" />
           </div>
         ) : undefined} />
       <CardContent className="px-0">

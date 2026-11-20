@@ -28,7 +28,8 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
   return (
     <header className={cn(ease, compact ? 'py-2' : 'pb-5')}>
       <div className={cn('grid', ease, compact ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100', !back && 'md:hidden')} inert={compact}>
-        <div className="overflow-hidden">
+        {/* -mx-2/px-2: the clip box runs 8px past the column, so the back link's hover fill (pulled left by -ml-1.5) isn't cut */}
+        <div className="-mx-2 overflow-hidden px-2">
           <div className="mb-3 flex items-center gap-2">
             <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
             {back && (
@@ -67,6 +68,29 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </header>
+  )
+}
+
+/** Segmented toggle (ToggleGroup type="single" spacing={0}): a grey track, the selected option a raised thumb. */
+export const SEGMENTED = {
+  group: 'gap-0.5 rounded-lg bg-muted p-0.5',
+  item: 'h-7 gap-1.5 rounded-md! border-0 px-3! text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(40_28_10/0.08),0_0_0_1px_rgb(70_50_20/0.08)]',
+  /** icon-only items. Keyed on aria-checked, not data-state: a Tooltip trigger wrapped round the item overwrites data-state */
+  icon: 'size-7 rounded-md! border-0 p-0! text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_2px_rgb(40_28_10/0.08),0_0_0_1px_rgb(70_50_20/0.08)]',
+}
+
+/** A page's size as plain inline facts beside the title: "25 accounts · $8.5M total ARR". Value first, label muted. */
+export function HeaderFacts({ items }: { items: [string, React.ReactNode][] }) {
+  return (
+    <dl className="flex h-8 items-center gap-3 text-sm">
+      {items.map(([k, v], i) => (
+        <div key={k} className="flex items-baseline gap-1.5">
+          {i > 0 && <span aria-hidden="true" className="mr-1.5 text-muted-foreground/60">·</span>}
+          <dd className="order-1 font-medium tabular-nums">{v}</dd>
+          <dt className="order-2 text-muted-foreground">{k}</dt>
+        </div>
+      ))}
+    </dl>
   )
 }
 
