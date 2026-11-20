@@ -107,30 +107,47 @@ function buildVerdict(r: Range) {
 /** Shrinks the sticky page header once its sentinel scrolls off, and publishes the header height as --account-hdr
  *  so the tab strip can stick right under it. */
 function useStickyHeader() {
-  const sentinel = useRef<HTMLDivElement>(null), bar = useRef<HTMLDivElement>(null)
+  const sentinel = useRef<HTMLDivElement>(null), bar = useRef<HTMLDivElement>(null), spacer = useRef<HTMLDivElement>(null)
   const [compact, setCompact] = useState(false)
   useEffect(() => {
-    const s = sentinel.current, b = bar.current
-    if (!s || !b) return
-    const io = new IntersectionObserver(([e]) => setCompact(!e.isIntersecting && e.boundingClientRect.top < 0))
-    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--account-hdr', `${b.offsetHeight}px`))
-    io.observe(s); ro.observe(b)
-    return () => { io.disconnect(); ro.disconnect(); document.documentElement.style.removeProperty('--account-hdr') }
+    const b = bar.current, sp = spacer.current
+    if (!b || !sp) return
+    // the header shrinks in place; a spacer under it grows by the same amount on every frame of the transition, so the
+    // content below never moves. Without it the page jumped as the header shrank, which also toggled compact back.
+    let full = 0
+    const ro = new ResizeObserver(() => {
+      full = Math.max(full, b.offsetHeight)
+      sp.style.height = `${full - b.offsetHeight}px`
+      document.documentElement.style.setProperty('--account-hdr', `${b.offsetHeight}px`)
+    })
+    ro.observe(b)
+    // hysteresis: shrink past 24px of scroll, grow back only near the top
+    const onScroll = () => {
+      const y = window.scrollY || document.documentElement.scrollTop
+      setCompact(c => (c ? y > 4 : y > 24))
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { ro.disconnect(); window.removeEventListener('scroll', onScroll); document.documentElement.style.removeProperty('--account-hdr') }
   }, [])
-  return { sentinel, bar, compact }
+  return { sentinel, bar, spacer, compact }
 }
 
 /** The page header, sticky for the whole account page: shrinks once the page scrolls; the tab strip sticks under it.
  *  Rendered by the screen (not inside AccountHeader) because a sticky element only sticks within its parent. */
 export function StickyPageHeader({ joined = false }: { joined?: boolean }) {
-  const { sentinel, bar, compact } = useStickyHeader()
+  const { sentinel, bar, spacer, compact } = useStickyHeader()
   const b = bandOf(score.final)
   return (
     <>
       <div ref={sentinel} aria-hidden="true" className="pointer-events-none h-0" />
-      <div ref={bar} className={cn(FULL_BLEED, 'sticky top-0 z-30', compact && 'before:bg-background/90 before:backdrop-blur-md',
-        // a hairline under the shrunk header until the tab strip docks under it and takes over the rule
-        compact && !joined && 'after:pointer-events-none after:absolute after:bottom-0 after:-inset-x-[100vmax] after:h-px after:bg-hairline')}>
+      <div ref={bar} className={cn(FULL_BLEED, 'sticky top-0 z-30',
+        // background and hairline always rendered, faded in by opacity, so shrinking and docking never jump
+        'before:bg-background/90 before:backdrop-blur-md before:opacity-0 before:transition-opacity before:duration-300',
+        'after:pointer-events-none after:absolute after:bottom-0 after:-inset-x-[100vmax] after:h-px after:bg-hairline after:opacity-0 after:transition-opacity after:duration-300',
+        compact && 'before:opacity-100',
+        // the hairline shows under the shrunk header until the tab strip docks under it and takes over the rule
+        compact && !joined && 'after:opacity-100')}>
         <PageHeader
           compact={compact}
           back={{ label: 'My accounts', onClick: () => go('accounts') }}
@@ -141,6 +158,7 @@ export function StickyPageHeader({ joined = false }: { joined?: boolean }) {
           actions={<DateRangeMenu />}
         />
       </div>
+      <div ref={spacer} aria-hidden="true" />
     </>
   )
 }
@@ -155,7 +173,7 @@ export function AccountHeader() {
   return (
     <header className="flex flex-col gap-4">
 
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         <WidgetBody w={w} what="the health verdict" skeleton={<VerdictSkeleton />}>
           {d => (
             <>
@@ -286,7 +304,7 @@ function Metrics() {
   return (
     <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {items.map(k => (
-        <Card key={k.label} className="gap-1 p-5">
+        <Card key={k.label} data-block className="gap-1 p-5">
           <Tooltip>
             <TooltipTrigger asChild>
               <span tabIndex={0} className={cn('flex items-center gap-1.5 self-start rounded-sm text-xs text-muted-foreground', focusRing)}>

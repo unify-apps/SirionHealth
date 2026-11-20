@@ -8,9 +8,10 @@ import { HealthRing } from '@/components/health'
 import { SirionLogo, SirionMark } from './logo'
 import { CommandMenu } from './command-menu'
 import { AskPanel } from './ask'
+import { DevToolbar } from './dev-toolbar'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu,
-  SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, useSidebar,
+  SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, useSidebar,
 } from '@/components/ui/sidebar'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -84,7 +85,7 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         <SidebarGroup className="pb-0">
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="border border-sidebar-border bg-background text-muted-foreground shadow-xs hover:bg-background hover:text-foreground">
+              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="border border-sidebar-border bg-white/6 text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-accent-foreground">
                 <Search /><span>Search</span>
               </SidebarMenuButton>
               <SidebarMenuBadge><Kbd className="h-5 text-[10px]">⌘K</Kbd></SidebarMenuBadge>
@@ -92,6 +93,8 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
           </SidebarMenu>
         </SidebarGroup>
         <NavGroup label="Workspace" items={WORKSPACE} active={active} />
+        {/* collapsed, the "Recent" label hides; a short rule keeps the recent accounts apart from the pages */}
+        <SidebarSeparator className="mx-auto hidden w-6 group-data-[collapsible=icon]:block" />
         <SidebarGroup>
           <SidebarGroupLabel>Recent</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
@@ -191,6 +194,8 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
         <CommandMenu open={cmd} onOpenChange={setCmd} />
         <AskPanel open={ask} onOpenChange={setAsk} />
         <main className="mx-auto w-full max-w-[1280px] px-4 pt-6 pb-10 sm:px-6 lg:px-8">{children}</main>
+        {/* floats bottom-right, stacked above the Ask orb, clear of the side nav and the page content */}
+        <div className="fixed right-5 bottom-24 z-40"><DevToolbar /></div>
       </SidebarInset>
     </SidebarProvider>
   )

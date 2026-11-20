@@ -48,7 +48,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
           const r = t.relevance!
           return (
             <li key={t.title}>
-              <button type="button" onClick={() => openSheet('news', t.title)} aria-haspopup="dialog" aria-label={`${t.title}, ${relLabel(r).toLowerCase()} relevance. Open`}
+              <button type="button" data-slot="card" onClick={() => openSheet('news', t.title)} aria-haspopup="dialog" aria-label={`${t.title}, ${relLabel(r).toLowerCase()} relevance. Open`}
                 className="group flex h-full w-full flex-col gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card) transition-shadow hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_14%,transparent),0_4px_14px_rgb(11_24_33/0.07)] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                 <span className="flex items-center gap-2">
                   <span className="flex-1 truncate text-sm font-medium">{t.title}</span>

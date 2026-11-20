@@ -43,7 +43,7 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
       </Card>
       <TabsContent value={view} className="grid">
       {/* overflow-visible: the card's default overflow-hidden would stop the month headers sticking */}
-      <Card className="gap-0 overflow-visible py-0">
+      <Card data-block className="gap-0 overflow-visible py-0">
         {view === 'timeline' ? (
           <>
             <BlockHeader icon={ActivityIcon} title="Timeline" count={counts.total} sub={`${counts.past} to date · ${counts.upcoming} upcoming`} />

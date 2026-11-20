@@ -119,14 +119,14 @@
     --chart-seq-4: #005f6a;
     --chart-grid: rgb(13 94 104 / 0.1);
     --chart-axis: #6b777d;
-    --sidebar: #fafcfc;             /* shadcn-style sidebar: follows the theme, hairline edge */
-    --sidebar-foreground: #33424a;
-    --sidebar-primary: #0d5e68;
+    --sidebar: #0b3a41;             /* brand: deep Sirion teal in both themes */
+    --sidebar-foreground: #b9d3d6;
+    --sidebar-primary: #2aa7b2;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: rgb(13 94 104 / 0.07);
-    --sidebar-accent-foreground: #0b1821;
-    --sidebar-border: rgb(13 94 104 / 0.1);
-    --sidebar-ring: #5d939a;
+    --sidebar-accent: rgb(255 255 255 / 0.09);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgb(255 255 255 / 0.08);
+    --sidebar-ring: #7cc3ca;
     --shadow-card: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 1px 2px rgb(11 24 33 / 0.04);
     --shadow-panel: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 16px 36px rgb(11 24 33 / 0.14);
 }
@@ -220,3 +220,18 @@
   [data-slot="chart"] .recharts-dot, [data-slot="chart"] .recharts-active-dot circle { stroke: var(--card); stroke-width: 2px; }
 }
 
+
+/* Design option "Flat detail page" (dev toolbar): fewer blocks, not none, and no grouping.
+   Kept as blocks: main surfaces (data-block: verdict, runway chart, adoption areas, activity timeline, people table,
+   needs attention, coverage) and clickable cards (health areas, news themes).
+   Flat: the lighter reading sections (metrics, account brief, strengths and risks, recent activity, order forms,
+   health ribbon) drop their box and sit on the page, aligned to the page column. */
+html[data-flat] [data-account] [role="tabpanel"] { row-gap: 2.5rem; }
+html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) {
+  background: transparent; box-shadow: none; border-radius: 0; overflow: visible; margin-inline: -1.25rem;
+  padding-block: 0 !important; /* no box, so no box padding: the gap between sections is the only vertical space */
+}
+html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) > :first-child { padding-top: 0 !important; }
+html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) > :last-child { padding-bottom: 0 !important; }
+html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) h3 { font-size: 1rem; font-weight: 500; }
+html[data-flat] [data-account] .grid:has(> [data-slot="card"]:not([data-block]):not(.group)) { column-gap: 2.5rem; }

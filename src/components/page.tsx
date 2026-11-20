@@ -24,7 +24,7 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
   /** meta line shown in the compact form instead of `sub` */
   compactSub?: React.ReactNode
 }) {
-  const ease = 'transition-all duration-200 ease-out motion-reduce:transition-none'
+  const ease = 'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none'
   return (
     <header className={cn(ease, compact ? 'py-2' : 'pb-5')}>
       <div className={cn('grid', ease, compact ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100', !back && 'md:hidden')} inert={compact}>

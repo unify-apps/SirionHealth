@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Search, Table2, UserCheck, Users, X } from 'lucide-react'
-import { BlockHeader, Empty, ListRow, SectionTitle, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { BlockHeader, Empty, ListRow, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
@@ -34,7 +34,6 @@ export function StakeholdersTab() {
   const load = useLoad(loadBase, undefined, 'stakeholders')
   return (
     <div>
-      <SectionTitle title="Stakeholders" />
       {load.status === 'loading' && <StakeSkeleton />}
       {load.status === 'error' && <ErrorState what="stakeholders" onRetry={load.retry} />}
       {load.status === 'ready' && <Stakeholders base={load.data} />}
@@ -68,7 +67,7 @@ function Stakeholders({ base }: { base: Base }) {
   return (
     <div className="grid gap-4">
       <Attention rows={rows} orbit={orbit} onOpen={setOpenKey} />
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         {audience === 'customer'
           ? <CustomerTable lead={views} rows={rows} orbit={orbit} max={max} months={base.months} onOpen={setOpenKey} />
           : <InternalTable lead={views} rows={internal} />}
@@ -99,7 +98,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         <BlockHeader icon={AlertTriangle} title="Needs attention"
           actions={<span className="text-xs tabular-nums text-muted-foreground">{items.length} {items.length === 1 ? 'person' : 'people'} · {sugg.length} role {sugg.length === 1 ? 'review' : 'reviews'}</span>} />
         {items.length || sugg.length ? (
@@ -129,7 +128,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
           </ul>
         ) : <Empty title="Nothing needs attention" sub="Every tagged role is active and confirmed." className="m-5 py-6" />}
       </Card>
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         <BlockHeader icon={Users} title="Coverage"
           actions={<><span className="text-xs tabular-nums text-muted-foreground">{active30 + active90 + quiet} named stakeholders</span><InfoTip>Key people by when the monthly summaries last named them. Key people are tagged, suggested, departed, or named twice or more.</InfoTip></>} />
         <div className="grid gap-3 p-5">

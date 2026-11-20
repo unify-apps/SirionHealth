@@ -44,7 +44,7 @@ export function OverviewTab() {
       )}
 
       <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-40">
-        <Card className="gap-0 py-0">
+        <Card data-block className="gap-0 py-0">
           <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
             />
           <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
