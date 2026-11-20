@@ -1,5 +1,4 @@
-import { money, P, rel, ROWS } from '@/data/legacy'
-import { fmtFull } from '@/lib/dates'
+import { rel, ROWS } from '@/data/legacy'
 import { bandOf, isMissing, type Band } from '@/components/health'
 
 export type Row = {
@@ -15,18 +14,19 @@ export const isTA = (r: Row) => r.name === 'TransAmerica'
 export const live = (r: Row) => !/Churn/.test(r.stage)
 const h = (r: Row) => (isMissing(r.health) ? null : r.health)
 const lt = (r: Row, n: number) => h(r) != null && h(r)! < n
-const renewing90 = (r: Row) => { const d = runway(r).days; return live(r) && d >= 0 && d <= 90 }
+/** renews within 90 days, or the date has already passed unsigned */
+export const renewing90 = (r: Row) => live(r) && runway(r).days <= 90
+export const lowHealth = (r: Row) => live(r) && lt(r, 40)
 
 /* ---------- saved views (legacy order; "Needs me first" is the landing view) ---------- */
-export type ViewId = 'needs' | 'all' | 'risk' | 'watch' | 'healthy' | 'renew' | 'impl'
+export type ViewId = 'needs' | 'all' | 'risk' | 'watch' | 'healthy' | 'renew'
 export const VIEWS: { id: ViewId; label: string; band?: Band; test: (r: Row) => boolean }[] = [
-  { id: 'needs', label: 'Needs me first', test: r => isTA(r) || (live(r) && (lt(r, 40) || runway(r).days <= 90)) },
+  { id: 'needs', label: 'Needs me first', test: r => isTA(r) || renewing90(r) || lowHealth(r) },
   { id: 'all', label: 'All accounts', test: () => true },
-  { id: 'risk', label: 'At risk', band: 'bad', test: r => live(r) && lt(r, 40) },
+  { id: 'risk', label: 'At risk', band: 'bad', test: lowHealth },
   { id: 'watch', label: 'Watch', band: 'warn', test: r => live(r) && h(r) != null && h(r)! >= 40 && h(r)! < 70 },
   { id: 'healthy', label: 'Healthy', band: 'good', test: r => live(r) && h(r) != null && h(r)! >= 70 },
   { id: 'renew', label: 'Renewing in 90 days', test: renewing90 },
-  { id: 'impl', label: 'In implementation', test: r => /Implementation/.test(r.stage) },
 ]
 
 /* ---------- filters: dimension -> checkable options (any of the checked values matches) ---------- */
@@ -63,10 +63,10 @@ export const filterCount = (f: FilterState) => FILTER_DIMS.reduce((n, d) => n + 
 
 /* ---------- columns + sort ---------- */
 /** Hidden until turned on in the Columns menu; their values also sit in the preview sheet. */
-export const DEFAULT_HIDDEN: ColId[] = ['nrr', 'repo', 'lic']
-export type ColId = 'nrr' | 'signals' | 'stage' | 'repo' | 'lic'
+export const DEFAULT_HIDDEN: ColId[] = ['nrr', 'stage', 'repo', 'lic']
+export type ColId = 'nrr' | 'stage' | 'repo' | 'lic'
 export const OPTIONAL_COLS: { id: ColId; label: string }[] = [
-  { id: 'nrr', label: 'NRR' }, { id: 'signals', label: 'Signal' }, { id: 'stage', label: 'Stage' },
+  { id: 'nrr', label: 'NRR' }, { id: 'stage', label: 'Stage' },
   { id: 'repo', label: 'Repository' }, { id: 'lic', label: 'Licence use' },
 ]
 export type SortKey = 'name' | 'health' | 'carr' | 'nrr' | 'renew' | 'repo' | 'lic'
@@ -83,7 +83,10 @@ const KEY: Record<SortKey, (r: Row) => string | number | null> = {
 
 export function sortRows(list: Row[], key: SortKey, dir: 'asc' | 'desc', priority: boolean) {
   const out = [...list]
-  if (priority) return out.sort((a, b) => +isTA(b) - +isTA(a) || runway(a).days - runway(b).days)
+  if (priority) {
+    const g = (r: Row) => (reason(r).group === 'renewal' ? 0 : 1)
+    return out.sort((a, b) => g(a) - g(b) || (g(a) ? (h(a) ?? 0) - (h(b) ?? 0) : runway(a).days - runway(b).days))
+  }
   const k = KEY[key], m = dir === 'asc' ? 1 : -1
   // missing values ("No data") always sink to the bottom, whatever the direction
   return out.sort((a, b) => {
@@ -93,64 +96,44 @@ export function sortRows(list: Row[], key: SortKey, dir: 'asc' | 'desc', priorit
   })
 }
 
-/* ---------- signals: ranked, the first one is the main signal ---------- */
 export type Tone = 'bad' | 'warn' | 'good' | 'neutral'
-export type Signal = { tone: Tone; text: string }
-export function signals(r: Row): Signal[] {
-  if (!live(r)) return [{ tone: 'bad', text: 'Churned' }]
-  const d = runway(r).days, s: Signal[] = []
-  if (isTA(r)) s.push({ tone: 'bad', text: 'Renewal unsigned' }, { tone: 'bad', text: 'Champion handed over' })
-  else if (d < 0) s.push({ tone: 'bad', text: 'Overdue renewal' })
-  else if (d <= 90) s.push({ tone: 'warn', text: 'Renewal imminent' })
-  if (lt(r, 40)) s.push({ tone: 'bad', text: 'Low health' })
-  if (r.nrr != null && r.nrr > 100) s.push({ tone: 'good', text: 'NRR expanding' })
-  else if (r.nrr != null && r.nrr < 100) s.push({ tone: 'warn', text: 'NRR contracting' })
-  if (/Implementation/.test(r.stage)) s.push({ tone: 'neutral', text: 'In implementation' })
-  if (r.lic != null && r.lic > 100) s.push({ tone: 'good', text: 'Over licence' })
-  const rank: Record<Tone, number> = { bad: 0, warn: 1, neutral: 2, good: 3 }
-  return s.sort((a, b) => rank[a.tone] - rank[b.tone])
-}
 
-/* ---------- insights (TransAmerica: brief from the account record; others: rule summary) ---------- */
-// ported from legacy screen-account.js BRIEF, citation refs stripped
+/* ---------- account brief: TransAmerica only (ported from legacy screen-account.js BRIEF, citation refs stripped) ---------- */
 const BRIEF: [string, string][] = [
   ['Where we stand', 'Health is 50, capped from 62 because the $330K renewal is 41 days out with auto-renew off. Usage is steady: licence use 111% and 222 monthly users.'],
-  ["What's in play", 'The renewal closes Dec 30 on two order forms with nothing signed. The account insight says to secure a signed commitment within 7 days. $85K of expansion is open and unsigned.'],
-  ["What's at stake", 'The champion, Bailey Laske, handed over on Oct 21 and leadership threatened the renewal on Aug 28. Executive engagement is 0 this month; Nick Cavazos is the likely new day-to-day owner.'],
+  ["What's in play", 'The renewal closes Dec 30 on two order forms with nothing signed. $85K of expansion is open and unsigned.'],
+  ["What's at stake", 'The champion, Bailey Laske, handed over on Oct 21. Executive engagement is 0 this month; Nick Cavazos is the likely new day-to-day owner.'],
 ]
-export type Insights = { tag: 'AI' | 'Rule'; rows: [string, string][] }
-export function insights(r: Row): Insights {
-  if (isTA(r)) return { tag: 'AI', rows: BRIEF }
-  const rr = runway(r), d = rr.days, hv = h(r)
-  const nr = r.nrr == null ? 'NRR and GRR have no data' : `NRR ${r.nrr}% and GRR ${r.grr}%`
-  const hs = hv == null ? 'Health has no data' : `Health ${hv} (${hv >= 70 ? 'healthy' : hv >= 40 ? 'watch' : 'at risk'})`
+export const brief = (r: Row) => (isTA(r) ? BRIEF : null)
+
+/* ---------- why a row needs attention: the main reason in full, plus the next step ---------- */
+export type Group = 'renewal' | 'health'
+export type Reason = { tone: Tone; text: string; next?: string; group?: Group }
+export function reason(r: Row): Reason {
+  if (!live(r)) return { tone: 'neutral', text: 'Churned this year' }
+  const rr = runway(r), d = rr.days
+  if (isTA(r)) return { tone: 'bad', text: `Renewal unsigned, champion handed over`, next: 'Get a signed commitment this week', group: 'renewal' }
+  if (d < 0) return { tone: 'bad', text: `Renewal ${rr.t.toLowerCase()}`, next: 'Chase the signature', group: 'renewal' }
+  if (d <= 90) return { tone: 'warn', text: `Renews in ${rr.t}`, next: 'Confirm the paper path', group: 'renewal' }
+  if (lt(r, 40)) return { tone: 'bad', text: `Health ${h(r)}, under 40`, next: 'Book a recovery call', group: 'health' }
+  if (r.nrr != null && r.nrr < 100) return { tone: 'warn', text: `NRR ${r.nrr}%, contracting`, next: 'Review the downsell' }
+  if (r.nrr != null && r.nrr > 100) return { tone: 'good', text: `NRR ${r.nrr}%, expanding`, next: 'Look for expansion' }
+  return { tone: 'neutral', text: 'Nothing urgent' }
+}
+export const GROUP_LABEL: Record<Group, string> = { renewal: 'Renewals at risk', health: 'Low health' }
+
+/* ---------- headline tiles: computed from the same 25 rows as the table, so the numbers reconcile ---------- */
+const sum = (l: Row[]) => l.reduce((a, r) => a + r.carr, 0)
+export function summary(list: Row[]) {
+  const renew = list.filter(renewing90), low = list.filter(lowHealth)
+  const scored = list.filter(r => live(r) && h(r) != null)
+  const avg = scored.length ? Math.round(scored.reduce((a, r) => a + h(r)!, 0) / scored.length) : null
+  const bands = (['bad', 'warn', 'good'] as const).map(b => ({ band: b, n: scored.filter(r => bandOf(r.health) === b).length }))
   return {
-    tag: 'Rule',
-    rows: [
-      ['Where we stand', `${hs} on ${money(r.carr)} CARR, stage ${r.stage}. ${nr}.`],
-      ["What's in play", !live(r) ? 'Churned this financial year.'
-        : d < 0 ? `The renewal date (${fmtFull(r.renew)}) has passed: ${rr.t.toLowerCase()}.`
-        : `Renews ${fmtFull(r.renew)}, ${rr.t} away.${r.lic != null ? ` Licence use ${r.lic}%.` : ''}`],
-      ["What's at stake", lt(r, 40) ? `${money(r.carr)} at renewal risk with health under 40.`
-        : d >= 0 && d <= 90 ? `${money(r.carr)} renews within 90 days; confirm the paper path.`
-        : 'Nothing urgent in the list data. Only TransAmerica has full account detail in this build.'],
-    ],
+    arr: sum(list.filter(live)),
+    renew: { arr: sum(renew), n: renew.length, overdue: renew.filter(r => runway(r).days < 0).length },
+    low: { arr: sum(low), n: low.length },
+    health: { avg, n: scored.length, bands },
   }
 }
-
-/* ---------- headline tiles (book of 260; the list below holds the 25 captured rows) ---------- */
-const bookArr = P.pods.reduce((a: number, p: unknown[]) => a + (p[2] as number), 0) // $M
-const bookCount = P.pods.reduce((a: number, p: unknown[]) => a + (p[1] as number), 0)
-export const BOOK = {
-  owner: 'Rahul Dev Sharma',
-  count: bookCount,
-  arr: `$${bookArr.toFixed(1)}M`,
-  arrPer: money(Math.round((bookArr * 1000) / bookCount)),
-  atRisk: '$3.81M',
-  pipeline: '$8.47M',
-  opps: 57,
-  avgHealth: 55,
-  /** the same figures in $M, for the tile meters */
-  arrM: bookArr, atRiskM: 3.81, pipelineM: 8.47,
-}
-export const avgBand = bandOf(BOOK.avgHealth)
+export const OWNER = 'Rahul Dev Sharma'

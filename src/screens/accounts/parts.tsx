@@ -4,74 +4,46 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { P } from '@/data/legacy'
-import { fmtFull } from '@/lib/dates'
+import { fmtShort } from '@/lib/dates'
 import { cn } from '@/lib/utils'
-import { BAND_LABEL, bandOf } from '@/components/health'
+import { money } from '@/data/legacy'
+import { BAND_LABEL, bandOf, HealthRing } from '@/components/health'
 import { TableSkeleton as PageTableSkeleton, Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
-  FILTER_DIMS, filterCount, insights, live, NO_FILTERS, runway, signals,
-  type DimId, type FilterDim, type FilterState, type Row, type Signal, type Tone,
+  brief, FILTER_DIMS, filterCount, live, NO_FILTERS, reason, runway,
+  type DimId, type FilterDim, type FilterState, type Row, type Tone,
 } from './model'
 
 
-export const monogram = (r: Row) => r.name.replace(/[^A-Za-z ]/g, '').trim()[0]?.toUpperCase() ?? '?'
-
-export function Monogram({ row, size = 'sm' }: { row: Row; size?: 'sm' | 'lg' }) {
-  return (
-    <span aria-hidden="true" className={cn('grid shrink-0 place-items-center rounded-md border border-hairline bg-surface-2 font-medium text-foreground',
-      size === 'sm' ? 'size-7 text-xs' : 'size-10 text-base')}>{monogram(row)}</span>
-  )
-}
-
 const DOT: Record<Tone, string> = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good', neutral: 'bg-muted-foreground/60' }
 
-/** A signal as a 6px dot and plain muted text; only the dot carries colour. */
-export function SignalText({ s, className }: { s: Signal; className?: string }) {
+/** Why the row is in the list, in full, with the next step underneath. Only the dot carries colour. */
+export function ReasonCell({ row }: { row: Row }) {
+  const r = reason(row)
   return (
-    <span className={cn('inline-flex items-center gap-1.5 text-muted-foreground', className)}>
-      <span className={cn('size-1.5 shrink-0 rounded-full', DOT[s.tone])} aria-hidden="true" />
-      <span className="truncate">{s.text}</span>
+    <span className="grid min-w-0 gap-0.5">
+      <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
+        <span className={cn('truncate', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
+      </span>
+      {r.next && <span className="truncate pl-3 text-xs text-muted-foreground">→ {r.next}</span>}
     </span>
   )
 }
 
-/** Top signal + "+N" as muted text, the rest in a tooltip. */
-export function SignalsCell({ row }: { row: Row }) {
-  const sg = signals(row)
-  if (!sg.length) return <span className="text-muted-foreground">None</span>
-  const rest = sg.slice(1)
-  return (
-    <span className="inline-flex items-center gap-2">
-      <SignalText s={sg[0]} />
-      {rest.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0} className="rounded-sm text-xs tabular-nums text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              aria-label={`${rest.length} more: ${rest.map(s => s.text).join(', ')}`} onClick={e => e.stopPropagation()}>+{rest.length}</span>
-          </TooltipTrigger>
-          <TooltipContent>{rest.map(s => s.text).join(' · ')}</TooltipContent>
-        </Tooltip>
-      )}
-    </span>
-  )
-}
-
-/** Renewal runway as one value. Red text only within 60 days or overdue; the date is in the tooltip. */
+/** Renewal date with the time to it underneath. Red only within 60 days or overdue. */
 export function RunwayCell({ row }: { row: Row }) {
   if (!live(row)) return <span className="text-muted-foreground">Churned</span>
   const rr = runway(row)
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={-1} className={cn('tabular-nums', rr.c === 'b' ? 'text-bad' : 'text-foreground')}>{rr.t}</span>
-      </TooltipTrigger>
-      <TooltipContent>Renews {fmtFull(row.renew)}</TooltipContent>
-    </Tooltip>
+    <span className="grid gap-0.5 tabular-nums">
+      <span>{fmtShort(row.renew)}</span>
+      <span className={cn('text-xs', rr.c === 'b' ? 'text-bad' : 'text-muted-foreground')}>{rr.days < 0 ? rr.t : `in ${rr.t}`}</span>
+    </span>
   )
 }
 
@@ -109,8 +81,8 @@ export function AccountFilter({ value, onChange, rows, buttonRef }: {
             <DropdownMenuSub key={d.id}>
               <DropdownMenuSubTrigger className="gap-2">
                 <I className="text-muted-foreground" aria-hidden="true" />
-                <span>{d.label}</span>
-                <span className={cn('ml-auto max-w-28 truncate text-xs', value[d.id].length ? 'text-foreground' : 'text-muted-foreground')}>{current(d)}</span>
+                <span className="flex-1">{d.label}</span>
+                <span className={cn('max-w-28 truncate text-right text-xs', value[d.id].length ? 'text-foreground' : 'text-muted-foreground')}>{current(d)}</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-80 w-64 overflow-y-auto p-1">
                 <DropdownMenuLabel className="flex justify-between text-xs font-normal text-muted-foreground"><span>{d.label}</span><span>accounts</span></DropdownMenuLabel>
@@ -160,51 +132,69 @@ export function InsightsPopover({ row, open, onOpenChange, onHover, onLeave, foc
   row: Row; open: boolean; onOpenChange: (o: boolean) => void; onHover: () => void; onLeave: () => void
   focusOnOpen: boolean; onOpenRow: () => void; children: React.ReactNode
 }) {
-  const ins = insights(row)
+  const br = brief(row)
+  const b = bandOf(row.health)
   const closeRef = useRef<HTMLButtonElement>(null)
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
         <div className="inline-flex items-center gap-1" onMouseEnter={onHover} onMouseLeave={onLeave}>{children}</div>
       </PopoverAnchor>
-      <PopoverContent align="start" className="w-[22rem] max-w-[calc(100vw-24px)] gap-3 p-0"
+      <PopoverContent align="start" className="w-80 max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
         aria-label={`Insights for ${row.name}`}
         onOpenAutoFocus={e => { e.preventDefault(); if (focusOnOpen) closeRef.current?.focus() }}
         onMouseEnter={onHover} onMouseLeave={onLeave}
         onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-        <div className="flex items-start gap-2.5 border-b border-hairline px-4 py-3">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <HealthRing value={row.health} size={36} stroke={3} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">{row.name}</p>
+            <p className="truncate text-sm font-medium">{row.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{BAND_LABEL[b]} · {row.ind}</p>
           </div>
-          <Button ref={closeRef} variant="ghost" size="icon-xs" aria-label="Close insights" onClick={() => onOpenChange(false)}><X /></Button>
+          <Button ref={closeRef} variant="ghost" size="icon-xs" className="self-start" aria-label="Close insights" onClick={() => onOpenChange(false)}><X /></Button>
         </div>
-        <div className="grid max-h-[50vh] gap-3 overflow-y-auto px-4 pb-4">
-          {ins.rows.map(([hd, t]) => (
-            <div key={hd}>
-              <h4 className="text-xs font-medium text-muted-foreground">{hd}</h4>
-              <p className="mt-0.5 text-sm leading-relaxed">{t}</p>
+        <dl className="mx-4 grid grid-cols-3 gap-3 rounded-lg bg-surface-2 px-3 py-2.5 text-xs">
+          <Fact label="ARR" value={money(row.carr)} />
+          <Fact label="Renewal" value={live(row) ? fmtShort(row.renew) : 'Churned'} />
+          <Fact label="NRR" value={row.nrr == null ? '–' : `${row.nrr}%`} />
+        </dl>
+        <div className="grid gap-3 px-4 py-3">
+          <ReasonCell row={row} />
+          {br && (
+            <div className="grid gap-2 border-t border-hairline pt-3">
+              {br.map(([hd, t]) => (
+                <p key={hd} className="text-xs leading-relaxed text-muted-foreground"><span className="font-medium text-foreground">{hd}. </span>{t}</p>
+              ))}
             </div>
-          ))}
-          <Button variant="outline" size="sm" className="justify-self-start" onClick={() => { onOpenChange(false); onOpenRow() }}>
-            Open account
-          </Button>
+          )}
+        </div>
+        <div className="border-t border-hairline px-4 py-2.5">
+          <Button variant="outline" size="sm" className="w-full" onClick={() => { onOpenChange(false); onOpenRow() }}>Open account</Button>
         </div>
       </PopoverContent>
     </Popover>
   )
 }
 
-/** Portfolio ARR split by pod: one thin stacked bar, categorical series colours, a tooltip per pod. */
-const POD_FILL = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-chart-seq-2']
-export function PodArrSplit() {
-  const pods = (P.pods as [string, number, number][]).filter(p => p[2] > 0).sort((a, b) => b[2] - a[2])
-  const total = pods.reduce((a, p) => a + p[2], 0)
+function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <span className="flex h-1.5 w-full gap-0.5" role="img" aria-label={`ARR by pod: ${pods.map(p => `${p[0]} $${p[2]}M`).join(', ')}`}>
-      {pods.map((p, i) => (
-        <Tip key={p[0]} tip={`${p[0]}: $${p[2].toFixed(1)}M · ${p[1]} accounts`}>
-          <span tabIndex={0} className={cn('h-full rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50', POD_FILL[i % POD_FILL.length])}
-            style={{ width: `${(p[2] / total) * 100}%` }} />
+    <div className="grid min-w-0 gap-0.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="truncate text-sm font-medium tabular-nums">{value}</dd>
+    </div>
+  )
+}
+
+/** Scored accounts split by health band: one thin stacked bar, a tooltip per band. */
+const BAND_FILL = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good' } as const
+const BAND_NAME = { bad: 'At risk', warn: 'Watch', good: 'Healthy' } as const
+export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n: number }[] }) {
+  const total = bands.reduce((a, b) => a + b.n, 0) || 1
+  return (
+    <span className="flex h-1.5 w-full gap-0.5" role="img" aria-label={bands.map(b => `${BAND_NAME[b.band]} ${b.n}`).join(', ')}>
+      {bands.filter(b => b.n).map(b => (
+        <Tip key={b.band} tip={`${BAND_NAME[b.band]}: ${b.n} accounts`}>
+          <span className={cn('h-full rounded-full', BAND_FILL[b.band])} style={{ width: `${(b.n / total) * 100}%` }} />
         </Tip>
       ))}
     </span>
@@ -214,9 +204,9 @@ export function PodArrSplit() {
 /* ---------- loading skeletons matching each widget's shape ---------- */
 export function TilesSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-hidden="true">
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} className="grid gap-2 rounded-xl border border-hairline bg-card px-5 py-4">
+    <div className="grid gap-3 sm:grid-cols-3" aria-hidden="true">
+      {[0, 1, 2].map(i => (
+        <div key={i} className="grid gap-2 rounded-xl border border-hairline bg-card p-5">
           <Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-1.5 w-full" /><Skeleton className="h-3 w-32" />
         </div>
       ))}
@@ -225,7 +215,5 @@ export function TilesSkeleton() {
 }
 
 export function TableSkeleton() {
-  return <PageTableSkeleton lead={false} columns={[{ w: 'w-40' }, { w: 'w-20' }, { w: 'w-16' }, { w: 'w-16', right: true }, { w: 'w-28' }, { w: 'w-20' }]} />
+  return <PageTableSkeleton lead={false} columns={[{ w: 'w-40' }, { w: 'w-20' }, { w: 'w-16' }, { w: 'w-16', right: true }, { w: 'w-48' }]} />
 }
-
-export const bandName = (v: number | null) => BAND_LABEL[bandOf(v)]

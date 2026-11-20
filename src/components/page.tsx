@@ -136,7 +136,7 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, cla
   className?: string
 }) {
   return (
-    <Card className={cn('h-full gap-1.5 px-5 py-4', className)}>
+    <Card className={cn('h-full gap-1.5 p-5', className)}>
       <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{label}</span></div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
