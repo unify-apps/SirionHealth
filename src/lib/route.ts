@@ -11,8 +11,9 @@ const read = (): Route => {
   return ROUTES.includes(h) ? h : 'accounts'
 }
 
-export function go(r: Route) {
-  location.hash = r
+/** `query` carries one-off parameters for the target screen, e.g. go('accounts', 'view=risk'). */
+export function go(r: Route, query?: string) {
+  location.hash = query ? `${r}?${query}` : r
   window.scrollTo(0, 0)
 }
 

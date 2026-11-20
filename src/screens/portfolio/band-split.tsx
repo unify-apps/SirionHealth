@@ -1,51 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { ArrowRight, ChevronRight, HeartPulse } from 'lucide-react'
-import { BAND_LABEL, bandBg, bandOf, bandText, HealthBar, type Band } from '@/components/health'
+import { bandBg, bandOf, type Band } from '@/components/health'
 import { SplitBar } from '@/components/charts'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BlockHeader } from '@/components/page'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Term } from '../account/overview/bits'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { money } from '@/data/legacy'
-import { fmtFull } from '@/lib/dates'
-import { go } from '@/lib/route'
+import { go, openSheet, sheetOpenChange, useSheet } from '@/lib/route'
+import { listPager, RecordSheet, RecordSheetBody, RecordSheetFooter, RecordSheetHeader, useKept } from '@/components/app/record-sheet'
 import { cn } from '@/lib/utils'
 import { EmptyState, LoadingLabel, SplitSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
-import { ARR_TIERS, BANDS, BOOK, isLive, renewal, rows } from './data'
-import type { Filters } from './filters'
+import { AccountsTable } from './accounts-table'
+import { BANDS, BOOK, isLive, rows } from './data'
 
 type LiveBand = Exclude<Band, 'none'>
 
 // this split IS health, so its segments take the health colours
 const BAND_COLOR: Record<LiveBand, string> = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' }
 
-export function BandSplit({ status, onRetry, filters, onClearFilters }: {
-  status: WidgetStatus; onRetry: () => void; filters: Filters; onClearFilters: () => void
-}) {
-  const [band, setBand] = useState<LiveBand | null>(null)
-  const toggle = (b: LiveBand) => setBand(cur => (cur === b ? null : b))
-  const listRef = useRef<HTMLDivElement>(null)
-  // the account list opens under the bands; when that is below the fold, say so and offer a jump
-  useEffect(() => {
-    if (!band) return
-    const id = requestAnimationFrame(() => {
-      const el = listRef.current
-      if (!el || el.getBoundingClientRect().top < window.innerHeight - 48) return
-      toast(`${BAND_LABEL[band]} accounts listed below`, {
-        id: 'band-list',
-        action: { label: 'Show', onClick: () => el.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
-      })
-    })
-    return () => cancelAnimationFrame(id)
-  }, [band])
-  const counts = useMemo(() => {
-    const c: Record<LiveBand, number> = { good: 0, warn: 0, bad: 0 }
-    rows.forEach(r => { const b = bandOf(r.health); if (isLive(r) && b !== 'none') c[b]++ })
-    return c
-  }, [])
+export function BandSplit({ status, onRetry }: { status: WidgetStatus; onRetry: () => void }) {
+  // the open band lives in the URL (#portfolio?sheet=band:warn): reload restores it, browser Back closes it
+  const sheet = useSheet()
+  const band = sheet?.type === 'band' && BANDS.some(s => s.band === sheet.id) ? (sheet.id as LiveBand) : null
+  const open = (b: LiveBand) => openSheet('band', b, { replace: !!band })
 
   return (
     <Card className="gap-0 py-0">
@@ -59,127 +35,71 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
           <>
             <SplitBar label="ARR by health band" legend={false}
               parts={BANDS.map(s => ({ key: s.band, label: s.label, value: s.arr, color: BAND_COLOR[s.band] }))}
-              format={v => `$${v}M`} selected={band} onSelect={k => toggle(k as LiveBand)} />
-            <div className="mt-3 grid gap-2 sm:grid-cols-3" role="group" aria-label="Health bands">
-              {BANDS.map(s => {
-                const on = band === s.band
-                return (
-                  <button
-                    key={s.band}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggle(s.band)}
-                    className={cn(
-                      'grid cursor-pointer gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring',
-                      on && 'border-border bg-accent',
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className={cn('size-2 rounded-full', bandBg[s.band])} aria-hidden="true" />
-                      <span className="text-foreground">{s.label}</span> {s.range}
+              format={v => `$${v}M`} selected={band} onSelect={k => open(k as LiveBand)} />
+            <ul className="mt-2 grid" aria-label="Health bands">
+              {BANDS.map(s => (
+                <li key={s.band} className="border-b border-hairline last:border-b-0">
+                  <button type="button" aria-haspopup="dialog" onClick={() => open(s.band)}
+                    aria-label={`${s.label}, health ${s.range}: $${s.arr}M, ${share(s.arr)} of the book. See accounts`}
+                    className="-mx-2 grid w-[calc(100%+1rem)] cursor-pointer grid-cols-[minmax(0,1fr)_auto_2.5rem_1rem] items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className={cn('size-2 shrink-0 rounded-full', bandBg[s.band])} aria-hidden="true" />
+                      <span className="font-medium">{s.label}</span>
+                      <span className="truncate text-xs text-muted-foreground">Health {s.range}</span>
                     </span>
-                    <span className="flex items-baseline gap-2">
-                      <span className={cn('text-xl tabular-nums tracking-[-0.02em]', bandText[s.band])}>${s.arr}M</span>
-                      <span className="text-xs tabular-nums text-muted-foreground">{Math.round((s.arr / BOOK.arr) * 100)}%</span>
-                    </span>
-                    <span className="text-xs tabular-nums text-muted-foreground">{counts[s.band]} in My accounts</span>
+                    <span className="text-right font-medium tabular-nums">${s.arr}M</span>
+                    <span className="text-right text-xs tabular-nums text-muted-foreground">{share(s.arr)}</span>
+                    <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />
                   </button>
-                )
-              })}
-            </div>
-            {band && <div ref={listRef} className="scroll-mt-20"><BandAccounts band={band} filters={filters} onClearFilters={onClearFilters} onClose={() => setBand(null)} /></div>}
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </div>
+      <BandSheet band={band} onPage={b => openSheet('band', b, { replace: true })} />
     </Card>
   )
 }
 
-function BandAccounts({ band, filters, onClearFilters, onClose }: {
-  band: LiveBand; filters: Filters; onClearFilters: () => void; onClose: () => void
-}) {
-  const tier = ARR_TIERS.find(t => t.key === filters.arr)
-  const list = rows
-    .filter(r => isLive(r) && bandOf(r.health) === band)
-    .filter(r => filters.stage === 'all' || r.stage === filters.stage)
-    .filter(r => !tier || tier.test(r.carr))
-    .sort((a, b) => b.carr - a.carr)
-  const filtered = filters.stage !== 'all' || !!tier
+/** The My accounts saved view that matches each band. */
+const VIEW: Record<LiveBand, string> = { good: 'healthy', warn: 'watch', bad: 'risk' }
+const share = (arr: number) => `${Math.round((arr / BOOK.arr) * 100)}%`
+const inBand = (band: LiveBand) => rows.filter(r => isLive(r) && bandOf(r.health) === band)
+
+/** The accounts behind a band. The book-level figures cover every account; the rows are the ones in My accounts. */
+function BandSheet({ band: current, onPage }: { band: LiveBand | null; onPage: (b: LiveBand) => void }) {
+  const band = useKept(current) // keeps the content while the sheet slides out
+  const info = BANDS.find(s => s.band === band)
+  const list = (band ? inBand(band) : []).sort((a, b) => b.carr - a.carr)
+  const live = rows.filter(isLive).length
 
   return (
-    <div className="mt-5 border-t border-hairline pt-4 animate-in fade-in-0 slide-in-from-top-1 duration-200">
-      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h3 className="text-sm font-medium">{BAND_LABEL[band]} accounts</h3>
-        <span className="text-xs text-muted-foreground">
-          {list.length} from My accounts{filtered ? ', filtered' : ''}, by CARR
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => go('accounts')}>Open My accounts<ArrowRight aria-hidden="true" /></Button>
-          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
-        </div>
-      </div>
-      {list.length === 0 ? (
-        <EmptyState
-          title={`No ${BAND_LABEL[band].toLowerCase()} accounts match these filters`}
-          sub="Stage and ARR filters narrow this list."
-          action={filtered ? 'Clear filters' : undefined}
-          onAction={onClearFilters}
-        />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account</TableHead>
-              <TableHead>Stage</TableHead>
-              <TableHead>Health</TableHead>
-              <TableHead className="text-right"><Term>CARR</Term></TableHead>
-              <TableHead className="text-right">Renewal</TableHead>
-              <TableHead className="w-6"><span className="sr-only">Open</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map(r => {
-              const open = r.name === 'TransAmerica'
-              const rr = renewal(r)
-              return (
-                <TableRow
-                  key={r.name}
-                  className={cn(open ? 'cursor-pointer' : 'hover:bg-transparent')}
-                  onClick={open ? () => go('account') : undefined}
-                >
-                  <TableCell className="font-medium">
-                    {open ? (
-                      <button type="button" className="rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" onClick={e => { e.stopPropagation(); go('account') }}>
-                        {r.name}
-                      </button>
-                    ) : r.name}
-                    <span className="block text-xs font-normal text-muted-foreground">{r.ind} · {r.seg}</span>
-                  </TableCell>
-                  <TableCell>{r.stage}</TableCell>
-                  <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={open ? -1 : 0} className="inline-flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"><HealthBar value={r.health} /></span>
-                      </TooltipTrigger>
-                      <TooltipContent>Health {r.health} of 100 · {BAND_LABEL[bandOf(r.health)]}</TooltipContent>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{money(r.carr)}</TableCell>
-                  <TableCell className={cn('text-right tabular-nums', rr.days <= 60 && 'text-bad')}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={open ? -1 : 0} className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{rr.t}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>Renews {fmtFull(r.renew)}</TooltipContent>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>{open && <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />}</TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+    <RecordSheet open={!!current} onOpenChange={sheetOpenChange} size="lg" view={band ?? ''}
+      pager={listPager(BANDS, info, s => s.band, s => onPage(s.band), 'bands')}>
+      {band && info && (
+        <>
+          <RecordSheetHeader eyebrow="Health band"
+            title={<span className="flex items-center gap-2"><span className={cn('size-2.5 rounded-full', bandBg[band])} aria-hidden="true" />{info.label} · health {info.range}</span>}
+            meta={`$${info.arr}M across the book, ${share(info.arr)} of $${BOOK.arr}M`} />
+          <RecordSheetBody className="px-6 py-4">
+            <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+              <h3 className="text-sm font-medium">In My accounts</h3>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {list.length} of {live} · {money(list.reduce((a, r) => a + r.carr, 0))} CARR
+              </span>
+            </div>
+            {list.length === 0 ? (
+              <EmptyState title={`None of your accounts are ${info.label.toLowerCase()}`} sub="The figure above covers the whole book." />
+            ) : (
+              <AccountsTable list={list} />
+            )}
+          </RecordSheetBody>
+          <RecordSheetFooter>
+            <Button variant="outline" size="sm" onClick={() => go('accounts', `view=${VIEW[band]}`)}>Open in My accounts<ArrowRight aria-hidden="true" /></Button>
+          </RecordSheetFooter>
+        </>
       )}
-    </div>
+    </RecordSheet>
   )
 }

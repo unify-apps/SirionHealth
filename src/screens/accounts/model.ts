@@ -30,9 +30,9 @@ export const VIEWS: { id: ViewId; label: string; band?: Band; test: (r: Row) => 
 ]
 
 /* ---------- filters: dimension -> checkable options (any of the checked values matches) ---------- */
-export type DimId = 'band' | 'renew' | 'stage' | 'seg' | 'ind'
+export type DimId = 'band' | 'renew' | 'stage' | 'arr' | 'seg' | 'ind'
 export type FilterState = Record<DimId, string[]>
-export const NO_FILTERS: FilterState = { band: [], renew: [], stage: [], seg: [], ind: [] }
+export const NO_FILTERS: FilterState = { band: [], renew: [], stage: [], arr: [], seg: [], ind: [] }
 export type FilterOption = { value: string; label: string; test: (r: Row) => boolean }
 export type FilterDim = { id: DimId; label: string; options: FilterOption[] }
 
@@ -52,6 +52,11 @@ export const FILTER_DIMS: FilterDim[] = [
     ['overdue', 'Overdue'], ['30', 'Within 30 days'], ['90', '31 to 90 days'], ['180', '91 to 180 days'], ['later', 'Over 180 days'], ['churned', 'Churned'],
   ] as const).map(([value, label]) => ({ value, label, test: r => renewWindow(r) === value })) },
   { id: 'stage', label: 'Stage', options: distinct(r => r.stage).map(v => ({ value: v, label: v, test: r => r.stage === v })) },
+  // carr is in $K
+  { id: 'arr', label: 'ARR size', options: ([
+    ['lt100', 'Under $100K', (k: number) => k < 100], ['100-500', '$100K to $500K', (k: number) => k >= 100 && k < 500],
+    ['500-1000', '$500K to $1M', (k: number) => k >= 500 && k < 1000], ['gt1000', '$1M and over', (k: number) => k >= 1000],
+  ] as const).map(([value, label, test]) => ({ value, label, test: r => test(r.carr) })) },
   { id: 'seg', label: 'Segment', options: distinct(r => r.seg).map(v => ({ value: v, label: v, test: r => r.seg === v })) },
   { id: 'ind', label: 'Industry', options: distinct(r => r.ind).map(v => ({ value: v, label: v, test: r => r.ind === v })) },
 ]

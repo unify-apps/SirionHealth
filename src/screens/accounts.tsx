@@ -98,7 +98,11 @@ function usePins() {
 
 export function AccountsScreen() {
   const { status, data, retry } = useAccounts()
-  const [view, setView] = useState<ViewId>('needs')
+  // a link from Portfolio can name the saved view to land on: #accounts?view=risk
+  const [view, setView] = useState<ViewId>(() => {
+    const v = new URLSearchParams(location.hash.split('?')[1] ?? '').get('view')
+    return VIEWS.some(x => x.id === v) ? (v as ViewId) : 'needs'
+  })
   const [q, setQ] = useState('')
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS)
   const [sortKey, setSortKey] = useState<SortKey>('health')

@@ -1,5 +1,5 @@
 import { isValidElement, useState } from 'react'
-import { ChevronLeft, ArrowLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ArrowLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { tc } from '@/lib/text'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -145,7 +145,7 @@ export function DeltaChip({ value, format, label, health, className }: Delta & {
 /** KPI tile with one fixed structure so tiles in a row line up: icon + label, value (+ delta, + aside),
  *  a visual row that is always 20px tall (reserved when empty), and a one-line truncated hint.
  *  Tiles fill their grid cell, so a row of tiles is equal height. `tone` colours the value only (health semantics). */
-export function Stat({ label, value, hint, tone, icon, delta, aside, visual, className }: {
+export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onOpen, openLabel = 'See details', className }: {
   label: React.ReactNode; value: React.ReactNode; hint?: React.ReactNode
   tone?: 'good' | 'warn' | 'bad'
   /** a lucide component (rendered 16px muted) or a ready node */
@@ -156,11 +156,21 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, cla
   aside?: React.ReactNode
   /** small visual under the value, e.g. a meter or sparkline; fits a 20px row */
   visual?: React.ReactNode
+  /** makes the whole tile open a detail view: hover tint, a chevron button (the keyboard target) named `openLabel` */
+  onOpen?: () => void; openLabel?: string
   className?: string
 }) {
   return (
-    <Card className={cn('h-full gap-1.5 p-5', className)}>
-      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{tc(label)}</span></div>
+    <Card onClick={onOpen} className={cn('h-full gap-1.5 p-5', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
+      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground">
+        <IconSlot icon={icon} /><span className="truncate">{tc(label)}</span>
+        {onOpen && (
+          <button type="button" aria-haspopup="dialog" aria-label={openLabel} onClick={e => { e.stopPropagation(); onOpen() }}
+            className="-my-1 -mr-1.5 ml-auto grid size-6 shrink-0 place-items-center rounded-md outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        )}
+      </div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
           <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
