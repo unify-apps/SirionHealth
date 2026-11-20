@@ -107,34 +107,44 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         {/* States page hidden for now; route stays reachable at #states */}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip={theme === 'dark' ? 'Light theme' : 'Dark theme'} onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} className="text-sidebar-foreground/80">
+              {theme === 'dark' ? <Sun /> : <Moon />}
+              <span>{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                  <Avatar className="size-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-sidebar-accent text-xs text-sidebar-accent-foreground">RS</AvatarFallback>
+                <SidebarMenuButton size="lg" tooltip="Rahul Dev Sharma"
+                  className="group/me hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:hover:bg-transparent group-data-[collapsible=icon]:data-[state=open]:bg-transparent">
+                  {/* collapsed: no row fill, the avatar alone takes a ring on hover and while open, centred in the rail */}
+                  <Avatar className="size-8 shrink-0 rounded-full ring-offset-2 ring-offset-sidebar transition-shadow group-data-[collapsible=icon]:group-hover/me:ring-2 group-data-[collapsible=icon]:group-hover/me:ring-sidebar-ring/40 group-data-[collapsible=icon]:group-data-[state=open]/me:ring-2 group-data-[collapsible=icon]:group-data-[state=open]/me:ring-sidebar-ring/60">
+                    <AvatarFallback className="rounded-full bg-sidebar-primary text-xs font-medium text-sidebar-primary-foreground">RS</AvatarFallback>
                   </Avatar>
-                  <span className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-medium text-sidebar-accent-foreground">Rahul Dev Sharma</span>
                     <span className="truncate text-xs text-sidebar-foreground/70">Customer Success Manager</span>
                   </span>
-                  <ChevronsUpDown className="ml-auto size-4" />
+                  <ChevronsUpDown className="ml-auto size-4 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg" side="right" align="end" sideOffset={4}>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="grid text-sm leading-tight">
-                    <span className="font-medium">Rahul Dev Sharma</span>
-                    <span className="text-xs text-muted-foreground">260 accounts · CS – NA</span>
-                  </div>
+              <DropdownMenuContent className="w-64 rounded-xl p-1.5" side="right" align="end" sideOffset={8}>
+                <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2 font-normal">
+                  <Avatar className="size-10 rounded-full">
+                    <AvatarFallback className="rounded-full bg-sidebar-primary text-sm font-medium text-sidebar-primary-foreground">RS</AvatarFallback>
+                  </Avatar>
+                  <span className="grid min-w-0 leading-tight">
+                    <span className="truncate text-sm font-medium">Rahul Dev Sharma</span>
+                    <span className="truncate text-xs text-muted-foreground">Customer Success Manager</span>
+                    <span className="mt-1 truncate text-xs text-muted-foreground">260 accounts · CS – NA</span>
+                  </span>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={toggleTheme}>
-                  {theme === 'dark' ? <Sun /> : <Moon />}{theme === 'dark' ? 'Light theme' : 'Dark theme'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={onFind}><Search />Find an account<DropdownMenuShortcut>⌘K</DropdownMenuShortcut></DropdownMenuItem>
-                <DropdownMenuItem onSelect={onAsk}><MessageSquareText />Ask about an account</DropdownMenuItem>
+                <DropdownMenuSeparator className="my-1.5" />
+                <DropdownMenuItem onSelect={onFind} className="h-9"><Search />Find an account<DropdownMenuShortcut>⌘K</DropdownMenuShortcut></DropdownMenuItem>
+                <DropdownMenuItem onSelect={onAsk} className="h-9"><MessageSquareText />Ask about an account</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

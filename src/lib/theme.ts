@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 
 type Theme = 'dark' | 'light'
-const KEY = 'sah-theme'
+// v2: light became the default; the old key was written on every load, so it can't tell a choice from the old default
+const KEY = 'sah-theme-v2'
 
 const initial = (): Theme => {
   try {
     const t = localStorage.getItem(KEY)
     if (t === 'dark' || t === 'light') return t
   } catch {}
-  return 'dark' // the Default design system is dark-first
+  return 'light'
 }
 
 export function useTheme() {

@@ -175,7 +175,7 @@ export function BarList({ data, name, format = fmtNum, selected, onSelect, track
             )}
           </div>
         )} />} />
-        <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]} animationDuration={ANIM_MS}
+        <Bar dataKey="value" fill="var(--color-value)" radius={4} animationDuration={ANIM_MS}
           background={track ? { fill: TRACK, radius: 4 } : undefined}
           className={cn(onSelect && 'cursor-pointer')}
           onClick={onSelect ? (_: unknown, i: number) => data[i] && onSelect(data[i].label) : undefined}>
