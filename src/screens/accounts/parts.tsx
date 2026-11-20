@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Building2, CalendarClock, Factory, HeartPulse, Layers, ListFilter, X, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarClock, DollarSign, Factory, HeartPulse, Layers, ListFilter, X, type LucideIcon } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
@@ -54,7 +54,7 @@ export function NrrCell({ row }: { row: Row }) {
 }
 
 /* ---------- cascading filter: dimension -> checkable options with counts; active values as removable chips ---------- */
-const DIM_ICON: Record<DimId, LucideIcon> = { band: HeartPulse, renew: CalendarClock, stage: Layers, seg: Building2, ind: Factory }
+const DIM_ICON: Record<DimId, LucideIcon> = { band: HeartPulse, renew: CalendarClock, stage: Layers, arr: DollarSign, seg: Building2, ind: Factory }
 
 export function AccountFilter({ value, onChange, rows, buttonRef }: {
   value: FilterState; onChange: (f: FilterState) => void; rows: Row[]; buttonRef?: React.Ref<HTMLButtonElement>

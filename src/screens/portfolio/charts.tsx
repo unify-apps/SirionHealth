@@ -1,116 +1,137 @@
-import { ChartBar, RefreshCw } from 'lucide-react'
-import { Donut, seqColors } from '@/components/charts'
+import { useMemo, useState } from 'react'
+import { ArrowRight, ChartBar } from 'lucide-react'
+import { bandOf, bandText } from '@/components/health'
+import { SplitBar } from '@/components/charts'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BlockHeader } from '@/components/page'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { listPager, RecordSheet, RecordSheetBody, RecordSheetFooter, RecordSheetHeader, useKept } from '@/components/app/record-sheet'
+import { go, openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { Term } from '../account/overview/bits'
-import { BarsSkeleton, DonutSkeleton, EmptyState, LoadingLabel, WidgetError, type WidgetStatus } from '../states/widget-states'
-import { GRR, KPIS, STAGES } from './data'
+import { EmptyState, LoadingLabel, SplitSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
+import { AccountsTable, META, SheetListHead } from './accounts-table'
+import { carrK, moneyK, plural, type StageInfo } from './data'
+import { useScope } from './scope'
 
-const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
-const pct = (v: number, total: number) => `${Math.round((v / total) * 100)}%`
+/** Stages coloured by lifecycle phase: one hue per phase, the phase's first stage in a lighter tint (mixed with the
+ *  card so it holds in light and dark). Never green/amber/red: those mean health. Stages outside the lifecycle go to Other. */
+const tint = (c: string) => `color-mix(in oklab, ${c} 55%, var(--card))`
+const PHASE_DEF = [
+  { label: 'Not yet live', hue: 'var(--chart-1)', stages: ['Pending kick-off', 'Implementation'] },
+  { label: 'Live', hue: 'var(--chart-2)', stages: ['BAU + Implementation', 'BAU'] },
+  { label: 'Leaving', hue: 'var(--chart-4)', stages: ['Expected churn', 'Churned'] },
+]
+const LIGHT = new Set(['Pending kick-off', 'BAU + Implementation', 'Churned'])
+const PHASE_OF: Record<string, (typeof PHASE_DEF)[number]> = Object.fromEntries(PHASE_DEF.flatMap(p => p.stages.map(st => [st, p])))
+/** A stage's colour, the same in every scope. */
+const colorOf = (stage: string) => { const p = PHASE_OF[stage]; return p ? (LIGHT.has(stage) ? tint(p.hue) : p.hue) : 'var(--chart-4)' }
 
-/** Shared card frame: same height side by side, body vertically centred. */
-function ChartCard({ header, children }: { header: React.ReactNode; children: React.ReactNode }) {
+/** The stage card's view of a summary: phases with their stages, the stages that open a sheet, and share wording. */
+function useStages() {
+  const { summary: S } = useScope()
+  return useMemo(() => {
+    const phases = [
+      ...PHASE_DEF.map(p => ({ label: p.label, stages: S.stages.filter(s => p.stages.includes(s.stage)) })),
+      { label: 'Other', stages: S.stages.filter(s => !PHASE_OF[s.stage]) },
+    ].filter(p => p.stages.length)
+    /** Whole percent of the scope's CARR, with small non-zero shares shown as under 1%. */
+    const share = (k: number) => (!k || !S.book.carr ? '0%' : (k / S.book.carr) * 100 < 0.5 ? 'Under 1%' : S.share(k))
+    return { S, phases, share, open: S.stages.filter(s => s.accounts > 0) }
+  }, [S])
+}
+
+export function StagesChart({ status, onRetry }: { status: WidgetStatus; onRetry: () => void }) {
+  const { S, phases: PHASES, share, open: OPEN } = useStages()
+  const sheet = useSheet()
+  const stage = sheet?.type === 'stage' ? OPEN.find(s => s.stage === sheet.id) ?? null : null
+  const open = (s: StageInfo) => openSheet('stage', s.stage, { replace: !!stage })
+  // hovering or focusing a stage lights its segment in the bar
+  const [hot, setHot] = useState<string | null>(null)
+
   return (
-    <Card className="h-full gap-0 py-0">
-      {header}
-      <div className="flex flex-1 flex-col justify-center px-5 py-4">{children}</div>
+    <Card className="gap-0 py-0">
+      <BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} />
+      <div className="px-5 py-4">
+        {status === 'loading' && <><LoadingLabel what="CARR by stage" /><SplitSkeleton /></>}
+        {status === 'error' && <WidgetError title="Stage data didn't load" sub="The stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
+        {status === 'ready' && !S.book.carr && <EmptyState title="No CARR by stage" sub={`No account in ${S.name} carries CARR yet.`} />}
+        {status === 'ready' && S.book.carr > 0 && (
+          <>
+            <SplitBar label="CARR by stage" legend={false}
+              parts={S.stages.map(s => ({ key: s.stage, label: s.stage, value: s.carr / 1000, color: colorOf(s.stage) }))}
+              format={m => moneyK(m * 1000)} selected={hot ?? stage?.stage} onSelect={k => { const s = OPEN.find(x => x.stage === k); if (s) open(s) }} />
+            <div className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+              {PHASES.map(ph => {
+                const k = carrK(ph.stages.flatMap(s => s.list))
+                return (
+                  <section key={ph.label} aria-label={`${ph.label}: ${moneyK(k)}, ${share(k)} of ${S.name}`} className="min-w-0">
+                    <p className="text-xs text-muted-foreground">{ph.label}</p>
+                    <p className="mt-0.5 mb-1.5 flex items-baseline gap-2 tabular-nums">
+                      <span className="text-lg">{moneyK(k)}</span>
+                      <span className="text-xs text-muted-foreground">{share(k)}</span>
+                    </p>
+                    <ul className="grid">
+                      {ph.stages.map(s => {
+                        const cells = (
+                          <>
+                            <span className="size-2 shrink-0 rounded-[2px]" style={{ background: colorOf(s.stage) }} aria-hidden="true" />
+                            <span className="min-w-0 flex-1 truncate">{s.stage}</span>
+                            <span className="tabular-nums">{moneyK(s.carr)}</span>
+                          </>
+                        )
+                        return (
+                          <li key={s.stage}>
+                            {s.accounts ? (
+                              <button type="button" aria-haspopup="dialog" onClick={() => open(s)}
+                                aria-label={`${s.stage}: ${moneyK(s.carr)}, ${share(s.carr)} of ${S.name}. See accounts`}
+                                onPointerEnter={() => setHot(s.stage)} onPointerLeave={() => setHot(null)} onFocus={() => setHot(s.stage)} onBlur={() => setHot(null)}
+                                className="-mx-2 flex h-7 w-[calc(100%+1rem)] cursor-pointer items-center gap-2 rounded-md px-2 text-left text-sm outline-none transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring">
+                                {cells}
+                              </button>
+                            ) : (
+                              <div className="flex h-7 items-center gap-2 text-sm text-muted-foreground">{cells}</div>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
+      <StageSheet stage={stage} />
     </Card>
   )
 }
 
-export function StagesChart({ status, onRetry, stage, onStage }: {
-  status: WidgetStatus; onRetry: () => void; stage: string; onStage: (s: string) => void
-}) {
-  const data = STAGES
-  const max = Math.max(...data.map(d => d.carr), 0.0001)
-  const pick = (s: string) => onStage(stage === s ? 'all' : s)
+/** `#portfolio?sheet=stage:<name>`: every account in one stage, within the page's scope. Previous/next step through the stages that have accounts. */
+function StageSheet({ stage: current }: { stage: StageInfo | null }) {
+  const { S, share, open: OPEN } = useStages()
+  const s = useKept(current)
   return (
-    <ChartCard header={<BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} sub="$M" />}>
-      {status === 'loading' && <><LoadingLabel what="CARR by stage" /><BarsSkeleton /></>}
-      {status === 'error' && <WidgetError title="Stage data didn't load" sub="The stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
-      {status === 'ready' && data.every(d => !d.carr) && <EmptyState title="No CARR by stage" sub="No live accounts carry CARR in any stage." />}
-      {status === 'ready' && data.some(d => d.carr) && (
-        <ul className="grid gap-0.5" aria-label="CARR by stage, select one to filter">
-          {data.map(d => {
-            const on = stage === d.stage
-            const dim = stage !== 'all' && !on
-            const empty = !d.carr
-            return (
-              <li key={d.stage}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" aria-pressed={on} disabled={empty} onClick={() => pick(d.stage)}
-                      aria-label={`${d.stage}: ${empty ? 'no CARR' : `$${d.carr}M CARR`}. ${on ? 'Clear the filter' : 'Filter to this stage'}`}
-                      className={cn('-mx-2 grid w-[calc(100%+1rem)] grid-cols-[9.5rem_minmax(0,1fr)] items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                        !empty && 'hover:bg-hover', on && 'bg-accent', focusRing, 'disabled:cursor-default')}>
-                      <span className={cn('truncate', dim && 'opacity-60')}>{d.stage}</span>
-                      <span className="flex min-w-0 items-center gap-2">
-                        {empty
-                          ? <span className="text-xs tabular-nums text-muted-foreground">$0</span>
-                          : <>
-                              <span className={cn('h-3 rounded-r-[3px] bg-chart-1 transition-opacity', dim && 'opacity-30')}
-                                style={{ width: `${Math.max(1, (d.carr / max) * 80)}%` }} />
-                              <span className="shrink-0 text-xs tabular-nums">${d.carr}M</span>
-                            </>}
-                      </span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="tabular-nums">
-                    {empty ? `${d.stage}: no CARR` : `${d.stage}: $${d.carr}M · ${on ? 'click to clear' : 'click to filter'}`}
-                  </TooltipContent>
-                </Tooltip>
-              </li>
-            )
-          })}
-        </ul>
+    <RecordSheet open={!!current} onOpenChange={sheetOpenChange} size="lg" view={s?.stage ?? ''}
+      pager={listPager(OPEN, s, x => x.stage, x => openSheet('stage', x.stage, { replace: true }), 'stages')}>
+      {s && (
+        <>
+          <RecordSheetHeader eyebrow="Stage"
+            title={<span className="flex items-center gap-2"><span className="size-2.5 rounded-[3px]" style={{ background: colorOf(s.stage) }} aria-hidden="true" />{s.stage}</span>}
+            meta={<>{plural(s.accounts, 'account')} · {moneyK(s.carr)} · {share(s.carr)} of {S.name} · {s.health == null
+              ? 'no accounts scored' : <>average health <span className={cn('font-medium tabular-nums', bandText[bandOf(s.health)])}>{s.health}</span></>}</>} />
+          <RecordSheetBody className="px-6 py-5">
+            <SheetListHead list={s.list} title={`${plural(s.accounts, 'account')} in ${s.stage}`} order="largest first" />
+            <AccountsTable key={s.stage} list={s.list} meta={META.podIndustry} grr={s.stage === 'Churned'} />
+          </RecordSheetBody>
+          <RecordSheetFooter>
+            <Button variant="outline" size="sm" onClick={() => go('accounts', /Implementation/.test(s.stage) ? 'view=impl' : undefined)}>
+              Open in My accounts<ArrowRight aria-hidden="true" />
+            </Button>
+          </RecordSheetFooter>
+        </>
       )}
-    </ChartCard>
-  )
-}
-
-export function GrrChart({ status, onRetry }: { status: WidgetStatus; onRetry: () => void }) {
-  const total = GRR.reduce((a, g) => a + g.accounts, 0)
-  const colors = seqColors(GRR.length)
-  return (
-    <ChartCard header={<BlockHeader icon={RefreshCw} title="Gross retention" sub={<>Accounts by <Term>GRR</Term> band</>} />}>
-      {status === 'loading' && <><LoadingLabel what="gross retention" /><DonutSkeleton /></>}
-      {status === 'error' && <WidgetError title="Retention data didn't load" sub="The retention feed timed out. Other sections are up to date." onRetry={onRetry} />}
-      {status === 'ready' && total === 0 && <EmptyState title="No GRR data" sub="No account in the book reports GRR yet." />}
-      {status === 'ready' && total > 0 && (
-        <div className="flex flex-col items-center gap-6 sm:flex-row">
-          <Donut compact legend={false} data={GRR.map(g => ({ key: g.key, label: g.label, value: g.accounts }))} colors={colors}
-            center={{ value: `${Math.round((KPIS.grr100 / total) * 100)}%`, label: 'at 100%+' }}
-            label={`${KPIS.grr100} of ${total} accounts retain 100% or more`} className="shrink-0" />
-          <ul className="grid w-full min-w-0 flex-1 gap-1">
-            {[...GRR].reverse().map(g => {
-              const i = GRR.indexOf(g)
-              return (
-                <li key={g.key}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0} className={cn('grid grid-cols-[minmax(0,1fr)_auto_2.5rem_2.5rem] items-center gap-3 rounded-md py-1.5 text-sm', focusRing)}>
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: colors[i] }} aria-hidden="true" />
-                          <span className="truncate">{g.label}</span>
-                        </span>
-                        <span className="hidden h-1 w-12 overflow-hidden rounded-full bg-chart-5 sm:block" aria-hidden="true">
-                          <span className="block h-full rounded-full" style={{ width: pct(g.accounts, total), background: colors[i] }} />
-                        </span>
-                        <span className="text-right font-medium tabular-nums">{g.accounts}</span>
-                        <span className="text-right text-xs tabular-nums text-muted-foreground">{pct(g.accounts, total)}</span>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="tabular-nums">{g.label} GRR: {g.accounts} of {total} accounts ({pct(g.accounts, total)})</TooltipContent>
-                  </Tooltip>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
-    </ChartCard>
+    </RecordSheet>
   )
 }
