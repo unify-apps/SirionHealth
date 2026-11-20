@@ -54,7 +54,7 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
                       return (
                         <li key={i.area + i.field + i.name}>
                           <button type="button" onClick={() => onOpen(i.area)} aria-label={`${i.name}, ${i.areaName}: ${i.score ?? 'No data'}. Open ${i.areaName}`}
-                            className="group flex w-full items-center gap-3 px-6 py-3 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
+                            className="group flex w-full items-center gap-3 px-6 py-3 text-left outline-none transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
                             <I className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                             <span className="grid min-w-0 flex-1 gap-0.5">
                               <span className="truncate text-sm">{i.name}</span>

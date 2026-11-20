@@ -133,7 +133,7 @@ export function ListRow({ icon: Icon, title, meta, status, onClick, label }: {
     <li>
       {onClick
         ? <button type="button" onClick={onClick} aria-label={label}
-            className={cn(cls, 'cursor-pointer transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>{body}</button>
+            className={cn(cls, 'cursor-pointer transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}>{body}</button>
         : <div className={cls}>{body}</div>}
     </li>
   )

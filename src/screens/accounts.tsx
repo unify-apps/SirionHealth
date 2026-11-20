@@ -320,7 +320,7 @@ export function AccountsScreen() {
                         <ContextMenu>
                         <ContextMenuTrigger asChild>
                         <TableRow tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
-                          className="cursor-pointer focus-visible:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-14 [&>td]:py-2"
+                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-14 [&>td]:py-2"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
                           <TableCell className={cn(stickyCol, 'max-w-72')}>
@@ -398,7 +398,7 @@ export function AccountsScreen() {
 function TileButton({ active, onClick, label, children }: { active: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active} aria-label={label}
-      className={cn('h-full rounded-xl text-left outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring [&>*]:transition-colors hover:[&>*]:bg-accent/40',
+      className={cn('h-full rounded-xl text-left outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring [&>*]:transition-shadow hover:[&>*]:shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_14%,transparent),0_4px_14px_rgb(11_24_33/0.07)]',
         active && 'ring-2 ring-foreground/80')}>
       {children}
     </button>

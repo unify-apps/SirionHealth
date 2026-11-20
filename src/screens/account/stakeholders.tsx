@@ -161,7 +161,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
               return (
                 <li key={role}>
                   <button type="button" disabled={!first} onClick={() => first && onOpen(first.key, people.map(x => x.key))}
-                    className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none enabled:hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/50">
+                    className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none enabled:hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring/50">
                     <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good' : state === 'warn' ? 'bg-warn' : 'bg-bad')} aria-hidden="true" />
                     <span className="flex-1 truncate">{role}</span>
                     <span className="truncate text-xs text-muted-foreground">
@@ -276,7 +276,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               {viewRows.length ? viewRows.map(r => {
                 const G = GAP_ICON[r.gap[0]]
                 return (
-                  <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-accent/60 [&>td]:h-14 [&>td]:py-2"
+                  <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-hover [&>td]:h-14 [&>td]:py-2"
                     aria-label={`${r.name}, open detail`}
                     onClick={() => onOpen(r.key, list.map(x => x.key))} onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(r.key, list.map(x => x.key)) } }}>
                     <TableCell className={cn(stickyCol, 'max-w-72')}>

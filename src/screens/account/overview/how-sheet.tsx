@@ -123,7 +123,7 @@ function AreaTile({ k, onOpen }: { k: AreaKey; onOpen: () => void }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" onClick={onOpen} aria-label={`${AREA_NAME[k]} ${v}, ${BAND_LABEL[b]}. ${tip}. Open inputs`}
-            className={cn('flex h-full w-full flex-col gap-2 rounded-lg border border-hairline p-3 text-left transition-colors hover:bg-accent/40', focusRing)}>
+            className={cn('flex h-full w-full flex-col gap-2 rounded-lg border border-hairline p-3 text-left transition-colors hover:bg-hover', focusRing)}>
             <span className="flex items-start gap-2">
               <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span className="min-w-0 flex-1">

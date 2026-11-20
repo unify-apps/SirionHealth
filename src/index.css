@@ -34,6 +34,7 @@
     --color-destructive: var(--destructive);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
+    --color-hover: var(--hover);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -95,6 +96,8 @@
     --input: #c5d9dc;
     --ring: #5d939a;
     --surface-2: #f0f5f6;
+    /* row and card hover: a neutral wash, not the teal-tinted accent */
+    --hover: rgb(11 24 33 / 0.035);
     --signal: #0d5e68;              /* Sirion teal: active, links, focus */
     --signal-soft: rgb(13 94 104 / 0.08);
     --good: #1f7a4d;
@@ -149,6 +152,7 @@
     --input: rgb(180 205 208 / 0.16);
     --ring: #90b5ba;
     --surface-2: #0f2b33;
+    --hover: rgb(245 246 246 / 0.05);
     --signal: #90b5ba;
     --signal-soft: rgb(144 181 186 / 0.12);
     --good: #4cc38a;
@@ -215,3 +219,4 @@
   [data-slot="chart"] .recharts-rectangle.recharts-tooltip-cursor { fill: var(--foreground); fill-opacity: 0.04; stroke: none; }
   [data-slot="chart"] .recharts-dot, [data-slot="chart"] .recharts-active-dot circle { stroke: var(--card); stroke-width: 2px; }
 }
+

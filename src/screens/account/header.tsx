@@ -234,7 +234,7 @@ function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: 
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" onClick={() => onArea(a.k)} aria-label={`${AREA_NAME[a.k]} ${a.v}, ${BAND_LABEL[b]}. ${tip}. Open inputs`}
-                    className={cn('flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent/60', focusRing)}>
+                    className={cn('flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-hover', focusRing)}>
                     <span className="truncate text-xs text-muted-foreground">{tc(AREA_SHORT[a.k])}</span>
                     <span className="flex items-baseline gap-1.5 tabular-nums">
                       <span className={cn('text-xl font-medium tracking-[-0.02em]', bandText[b])}>{a.v}</span>

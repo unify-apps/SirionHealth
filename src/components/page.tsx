@@ -71,15 +71,15 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
 }
 
 /**
- * Header for a card/block: icon + title (+ count) on the left, actions on the right, hairline under it.
- * Use as the first child of a Card with py-0 / gap-0 so the rule spans the card.
+ * Header for a card/block: icon + title (+ count) on the left, actions on the right. No rule under it: every card title row,
+ * this and the inline ones on small cards, reads the same. Use as the first child of a Card with py-0 / gap-0.
  */
 export function BlockHeader({ icon: Icon, title, count, sub, actions, className }: {
   icon?: LucideIcon; title: React.ReactNode; count?: React.ReactNode; sub?: React.ReactNode
   actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-3', className)}>
+    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
       <div className="flex min-w-0 items-center gap-2">
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
         <h3 className="truncate text-sm font-medium text-foreground">{tc(title)}</h3>
@@ -244,7 +244,7 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
   if (!onClick) return <div className={cls}>{body}</div>
   return (
     <button type="button" onClick={onClick} {...aria}
-      className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring')}>
+      className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring')}>
       {body}
     </button>
   )
@@ -322,7 +322,7 @@ export function Tip({ tip, children, side }: { tip?: React.ReactNode; children: 
 /* ---------- tables: the base look lives in ui/table.tsx; these are the shared pieces on top ---------- */
 
 /** First column stays put on horizontal scroll. Its background follows the row hover tint. */
-export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--accent)_60%,var(--card))]'
+export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--foreground)_3.5%,var(--card))]'
 /** Sticky first column for tables whose rows aren't clickable: no hover tint. */
 export const stickyColStatic = 'sticky left-0 z-10 bg-card'
 
