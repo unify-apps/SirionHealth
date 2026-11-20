@@ -115,10 +115,10 @@ export function BarsSkeleton({ bars = 6 }: { bars?: number }) {
 
 export function DonutSkeleton() {
   return (
-    <div className="grid h-[232px] place-items-center content-center gap-6" aria-hidden="true">
-      <Skeleton className="size-36 rounded-full" />
-      <div className="flex flex-wrap justify-center gap-4">
-        {[0, 1, 2].map(i => <Skeleton key={i} className="h-3 w-24" />)}
+    <div className="flex min-h-[152px] flex-col items-center gap-6 sm:flex-row" aria-hidden="true">
+      <Skeleton className="size-36 shrink-0 rounded-full" />
+      <div className="grid w-full flex-1 gap-3">
+        {[0, 1, 2].map(i => <Skeleton key={i} className="h-3 w-full" />)}
       </div>
     </div>
   )

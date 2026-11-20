@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertTriangle, Building2, ChevronDown, Columns3, DollarSign, HeartPulse, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
 import { money, TODAY } from '@/data/legacy'
+import { fmtFull } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { go } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
@@ -48,7 +49,7 @@ function useAccounts() {
   return { status, data, retry: () => setAttempt(a => a + 1) }
 }
 
-const today = TODAY.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const today = fmtFull(TODAY)
 
 export function AccountsScreen() {
   const { status, data, retry } = useAccounts()
@@ -119,8 +120,8 @@ export function AccountsScreen() {
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
         <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`By pod · ${BOOK.arrPer} average per account`} visual={<PodArrSplit />} />
-          <Stat icon={AlertTriangle} label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Health under 40 or unsigned"
+          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`${BOOK.arrPer} per account`} visual={<PodArrSplit />} />
+          <Stat icon={AlertTriangle} label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Under 40 or unsigned"
             visual={<Meter value={BOOK.atRiskM} max={BOOK.arrM} tone="bad" label="Share of ARR at risk" showValue={`${Math.round((BOOK.atRiskM / BOOK.arrM) * 100)}% of ARR`} />} />
           <Stat icon={Target} label="Open pipeline" value={BOOK.pipeline} hint={`${BOOK.opps} opportunities`}
             visual={<Meter value={BOOK.pipelineM} max={BOOK.arrM} label="Pipeline against ARR" showValue={`${Math.round((BOOK.pipelineM / BOOK.arrM) * 100)}% of ARR`} />} />
@@ -143,7 +144,7 @@ export function AccountsScreen() {
             {/* one toolbar row: saved views left ("More" last); search, Filter, Columns, Reset right; all 32px.
                 On phones the views scroll and search drops below. */}
             <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5 lg:flex-nowrap">
-              <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+              <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto max-sm:basis-full">
                 <ToggleGroup type="single" spacing={1} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
                   onValueChange={v => v && setView(v as ViewId)}>
                   {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
@@ -277,7 +278,7 @@ export function AccountsScreen() {
                               onOpenChange={o => setIns(o ? { name: r.name, focus: true } : null)}
                               onHover={() => hoverIn(r.name)} onLeave={hoverOut} onOpenRow={() => openRow(r)}>
                               <span tabIndex={0} role="button" aria-haspopup="dialog" aria-label={`Health ${isMissing(r.health) ? 'No data' : r.health}, ${BAND_LABEL[b]}. Insights for ${r.name}`}
-                                className="inline-flex items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                className="inline-flex h-6 items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                                 onFocus={() => setIns(s => (s?.name === r.name ? s : { name: r.name, focus: false }))}
                                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setIns({ name: r.name, focus: true }) } }}>
                                 {isMissing(r.health) ? <span className="text-muted-foreground">No data</span> : <>

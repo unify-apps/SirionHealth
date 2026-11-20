@@ -30,7 +30,7 @@ export function StagesChart({ status, onRetry, stage, onStage }: {
   return (
     <ChartCard header={<BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} sub="$M · select a stage to filter" />}>
       {status === 'loading' && <><LoadingLabel what="CARR by stage" /><BarsSkeleton /></>}
-      {status === 'error' && <WidgetError title="Stage data didn't load" sub="AHI's stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
+      {status === 'error' && <WidgetError title="Stage data didn't load" sub="The stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
       {status === 'ready' && data.every(d => !d.carr) && <EmptyState title="No CARR by stage" sub="No live accounts carry CARR in any stage." />}
       {status === 'ready' && data.some(d => d.carr) && (
         <ul className="grid gap-0.5" aria-label="CARR by stage, select one to filter">
@@ -49,7 +49,7 @@ export function StagesChart({ status, onRetry, stage, onStage }: {
                       <span className={cn('truncate', dim && 'opacity-60')}>{d.stage}</span>
                       <span className="flex min-w-0 items-center gap-2">
                         {empty
-                          ? <span className="text-muted-foreground">—</span>
+                          ? <span className="text-xs tabular-nums text-muted-foreground">$0</span>
                           : <>
                               <span className={cn('h-3 rounded-r-[3px] bg-chart-1 transition-opacity', dim && 'opacity-30')}
                                 style={{ width: `${Math.max(1, (d.carr / max) * 80)}%` }} />
@@ -77,7 +77,7 @@ export function GrrChart({ status, onRetry }: { status: WidgetStatus; onRetry: (
   return (
     <ChartCard header={<BlockHeader icon={RefreshCw} title="Gross retention" sub={<>Accounts by <Term>GRR</Term> band</>} />}>
       {status === 'loading' && <><LoadingLabel what="gross retention" /><DonutSkeleton /></>}
-      {status === 'error' && <WidgetError title="Retention data didn't load" sub="AHI's GRR feed timed out. Other sections are up to date." onRetry={onRetry} />}
+      {status === 'error' && <WidgetError title="Retention data didn't load" sub="The retention feed timed out. Other sections are up to date." onRetry={onRetry} />}
       {status === 'ready' && total === 0 && <EmptyState title="No GRR data" sub="No account in the book reports GRR yet." />}
       {status === 'ready' && total > 0 && (
         <div className="flex flex-col items-center gap-6 sm:flex-row">
@@ -96,7 +96,7 @@ export function GrrChart({ status, onRetry }: { status: WidgetStatus; onRetry: (
                           <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: colors[i] }} aria-hidden="true" />
                           <span className="truncate">{g.label}</span>
                         </span>
-                        <span className="hidden h-1 w-[96px] overflow-hidden rounded-full bg-chart-5 sm:block" aria-hidden="true">
+                        <span className="hidden h-1 w-12 overflow-hidden rounded-full bg-chart-5 sm:block" aria-hidden="true">
                           <span className="block h-full rounded-full" style={{ width: pct(g.accounts, total), background: colors[i] }} />
                         </span>
                         <span className="text-right font-medium tabular-nums">{g.accounts}</span>

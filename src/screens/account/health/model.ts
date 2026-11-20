@@ -1,6 +1,8 @@
 /* Health model for TransAmerica: the six areas, their 21 inputs and 18 months of area scores.
    Ported from legacy/src/screen-account.js (areaInputs, areaDriver, coverage, bandRun, facts, evidenceFor). */
-import { AREAS, TA_REAL, TA_RECORD, taEvidence } from '@/data/legacy'
+import { AREAS, TA_REAL, TA_RECORD } from '@/data/legacy'
+import { evidence } from '../stakeholders/model'
+import { fmtMonth, fmtTick } from '@/lib/dates'
 import { BAND_LABEL, bandOf, isMissing } from '@/components/health'
 
 export type AreaKey = 'commercial' | 'adoption' | 'support' | 'engagement' | 'sentiment' | 'renewalRisk'
@@ -18,10 +20,7 @@ export type Area = {
   band: { label: string; run: number; all: boolean }
 }
 
-export const ymLabel = (ym: string) =>
-  new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-const ymShort = (ym: string) =>
-  new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'short' }) + ' ' + ym.slice(2, 4)
+export { fmtMonth as ymLabel } from '@/lib/dates'
 
 export const shortArea = (name: string) => name.replace(' and enhancement requests', '')
 
@@ -33,7 +32,7 @@ export function months(): Month[] {
     const areas = {} as Record<AreaKey, number>
     f.slice(2).forEach((k, i) => { areas[k as AreaKey] = r[i + 2] as number })
     const ym = r[0] as string
-    return { ym, label: ymLabel(ym), short: ymShort(ym), final: r[1] as number, areas }
+    return { ym, label: fmtMonth(ym), short: fmtTick(ym), final: r[1] as number, areas }
   })
 }
 
@@ -93,13 +92,13 @@ export function loadHealth(): HealthData {
 export type Statement = { ym: string; text: string; date: Date | null; who: string[]; tickets: string[] }
 
 export function strongNegatives(): Statement[] {
-  return (taEvidence() as (Statement & { kind: string; strong: boolean })[])
+  return (evidence() as unknown as (Statement & { kind: string; strong: boolean })[])
     .filter(e => e.kind === 'neg' && e.strong)
     .sort((a, b) => b.ym.localeCompare(a.ym) || (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0))
 }
 
 export const CAP = {
-  code: TA_RECORD.overrideCode as string, reason: TA_RECORD.overrideReason as string,
+  code: TA_RECORD.overrideCode as string, reason: (TA_RECORD.overrideReason as string).replace(/\s*\(max [\d.]+\)/, ''),
   weighted: TA_RECORD.weightedHealth as number, final: TA_RECORD.finalHealth as number,
   snapshot: TA_RECORD.snapshot as string, scoredOn: TA_RECORD.scoredOn as string,
 }

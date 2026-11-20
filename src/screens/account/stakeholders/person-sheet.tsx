@@ -1,20 +1,49 @@
 import { useState } from 'react'
-import { AlertTriangle, Check, CircleCheck, Info, LifeBuoy } from 'lucide-react'
+import { AlertTriangle, Check, CircleCheck, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RecordSheet, RecordSheetBody, RecordSheetFooter, RecordSheetHeader, TicketChip, type RecordSheetPager } from '@/components/app/record-sheet'
+import { openSheet } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { fmtDY, ymLabel } from '../activity/shared'
-import type { Evidence, GapLevel, StakeRow } from './model'
-import { Avatar, EngagementPill, MonthStrip, RoleMenu, RoleTag, TonePill } from './parts'
+import { loadBase, type Evidence, type GapLevel, type StakeRow } from './model'
+import { EngagementPill, MonthStrip, RoleMenu, RoleTag, TonePill } from './parts'
 import { roleChange, roleStore } from './store'
 import { toast } from 'sonner'
 import { Copy } from 'lucide-react'
-import { Fact, SheetBody, sheetHeaderCls, Tip } from '@/components/page'
+import { Fact, SheetBody, Tip } from '@/components/page'
 
 /** Copies an address and confirms it. */
 export function copyEmail(email: string) {
   navigator.clipboard?.writeText(email).then(() => toast.success('Email copied', { description: email }), () => toast.error("Couldn't copy the email"))
+}
+
+// display name -> stakeholder key (email, or 'news:<name>' for people found in public news), for person links
+let nameKeys: Map<string, string> | null = null
+function personKey(name: string) {
+  if (!nameKeys) {
+    nameKeys = new Map()
+    try {
+      const b = loadBase()
+      b.people.filter(p => p.customer).forEach(p => nameKeys!.set(p.name, p.email))
+      b.news.forEach(n => { if (!nameKeys!.has(n.name)) nameKeys!.set(n.name, 'news:' + n.name) })
+    } catch { /* no links: names stay plain text */ }
+  }
+  return nameKeys.get(name)
+}
+
+/** A customer contact's name as a link to their person sheet on the Stakeholders tab. Anyone else (Sirion,
+ *  partners) stays plain text, since they have no person sheet. */
+export function PersonLink({ name }: { name: string }) {
+  const key = personKey(name)
+  if (!key) return <span>{name}</span>
+  return (
+    <Tip tip={`Open ${name} in Stakeholders`}>
+      <button type="button" onClick={() => openSheet('person', key, { tab: 'stakeholders' })}
+        className="rounded-sm text-left text-signal underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50">
+        {name}
+      </button>
+    </Tip>
+  )
 }
 
 export const GAP_ICON: Record<GapLevel, { I: typeof Info; cls: string }> = {
@@ -22,7 +51,7 @@ export const GAP_ICON: Record<GapLevel, { I: typeof Info; cls: string }> = {
 }
 
 const SOURCE_TEXT: Record<StakeRow['source'], string> = {
-  mine: 'set here', tagged: 'tagged in AHI', confirmed: 'confirmed', inferred: 'inferred from the monthly summaries, not confirmed', news: 'inferred from public news, not confirmed', none: '',
+  mine: 'set here', tagged: 'tagged in the health record', confirmed: 'confirmed', inferred: 'suggested from the monthly summaries, not confirmed', news: 'suggested from public news, not confirmed', none: '',
 }
 
 /** One statement from a monthly summary, as a quote with its month, tone and tickets. */
@@ -35,43 +64,30 @@ export function Statement({ e }: { e: Evidence }) {
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span>{e.date ? fmtDY(e.date) : ymLabel(e.ym)}</span>
           <span>{e.kind === 'pos' ? 'Positive' : 'Negative'}</span>
-          {e.tickets.map(t => <span key={t} className="inline-flex items-center gap-1"><LifeBuoy className="size-3" aria-hidden="true" />{t}</span>)}
+          {e.tickets.map(t => <TicketChip key={t} id={t} />)}
         </p>
       </div>
     </li>
   )
 }
 
-export function PersonSheet({ row, ev, months, max, onOpenChange }: {
-  row: StakeRow | null; ev: Evidence[]; months: string[]; max: number; onOpenChange: (open: boolean) => void
+export function PersonSheet({ row, ev, months, max, onOpenChange, pager }: {
+  row: StakeRow | null; ev: Evidence[]; months: string[]; max: number; onOpenChange: (open: boolean) => void; pager?: RecordSheetPager
 }) {
   const [all, setAll] = useState(false)
+  // paging to another person starts their statements collapsed again
+  const [seen, setSeen] = useState(row?.key)
+  if (row?.key !== seen) { setSeen(row?.key); setAll(false) }
   const said = row ? ev.filter(e => e.who.includes(row.name)).sort((a, b) => b.ym.localeCompare(a.ym) || +(b.date ?? 0) - +(a.date ?? 0)) : []
   const shown = all ? said : said.slice(0, 6)
   const G = row ? GAP_ICON[row.gap[0]] : null
   return (
-    <Sheet open={!!row} onOpenChange={o => { if (!o) setAll(false); onOpenChange(o) }}>
-      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
+    <RecordSheet open={!!row} onOpenChange={o => { if (!o) setAll(false); onOpenChange(o) }} size="md" pager={pager} view={row?.key}>
         {row && G && (
           <>
-            <SheetHeader className={sheetHeaderCls}>
-              <div className="flex flex-wrap items-center gap-3">
-                <Avatar name={row.name} className="size-10" />
-                <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-lg font-normal">{row.name}</SheetTitle>
-                  <SheetDescription className="truncate">{[row.title, row.org].filter(Boolean).join(' · ') || 'No title on the contact card'}</SheetDescription>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <RoleMenu row={row} align="end">
-                    <Button variant="outline" size="sm">Change role</Button>
-                  </RoleMenu>
-                  {(row.source === 'inferred' || row.source === 'news') && (
-                    <Button size="sm" onClick={() => roleChange(() => roleStore.confirm(row.key), `Confirmed ${row.name} as ${row.label.toLowerCase()}`)}><Check />Confirm role</Button>
-                  )}
-                </div>
-              </div>
-            </SheetHeader>
-            <ScrollArea className="min-h-0 flex-1">
+            <RecordSheetHeader eyebrow="Stakeholder" title={row.name}
+              meta={[row.title, row.org].filter(Boolean).join(' · ') || 'No title on the contact card'} />
+            <RecordSheetBody>
               <SheetBody facts={
                 <>
                   <Fact label={<>Role{SOURCE_TEXT[row.source] && <> · {SOURCE_TEXT[row.source]}</>}</>}><RoleTag row={row} /></Fact>
@@ -84,7 +100,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
                   <Fact label="Last named">
                     {row.last
                       ? <Tip tip={`${row.days} days ago`}><span tabIndex={0} className="rounded-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{fmtDY(row.last)}</span></Tip>
-                      : <span className="text-muted-foreground">{row.news ? 'Not in AHI\'s contacts' : 'Never'}</span>}
+                      : <span className="text-muted-foreground">{row.news ? 'Not in the account\'s contacts' : 'Never'}</span>}
                   </Fact>
                   <Fact label="Mentions, 18 months">
                     <span className="flex items-center gap-2"><MonthStrip months={row.months} labels={months} max={max} /><span className="tabular-nums">{row.mentions}</span></span>
@@ -104,7 +120,7 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
                   <h3 className="text-xs text-muted-foreground">What to do</h3>
                   <p className="flex items-start gap-2"><G.I className={cn('mt-0.5 size-4 shrink-0', G.cls)} aria-hidden="true" />{row.gap[1]}</p>
                   {row.basis && <p className="leading-relaxed text-pretty text-muted-foreground">{row.basis}{row.confidence ? ` (${row.confidence} confidence)` : ''}</p>}
-                  {!row.basis && row.source === 'tagged' && <p className="text-muted-foreground">Tagged by hand in AHI.</p>}
+                  {!row.basis && row.source === 'tagged' && <p className="text-muted-foreground">Tagged by hand in the health record.</p>}
                 </section>
 
                 {!row.news && (
@@ -123,10 +139,17 @@ export function PersonSheet({ row, ev, months, max, onOpenChange }: {
                   </section>
                 )}
               </SheetBody>
-            </ScrollArea>
+            </RecordSheetBody>
+            <RecordSheetFooter>
+              <RoleMenu row={row} align="end">
+                <Button variant="outline" size="sm">Change role</Button>
+              </RoleMenu>
+              {(row.source === 'inferred' || row.source === 'news') && (
+                <Button variant="default" size="sm" onClick={() => roleChange(() => roleStore.confirm(row.key), `Confirmed ${row.name} as ${row.label.toLowerCase()}`)}><Check />Confirm role</Button>
+              )}
+            </RecordSheetFooter>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+    </RecordSheet>
   )
 }

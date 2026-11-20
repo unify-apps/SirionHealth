@@ -4,7 +4,8 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { fmtDate, P } from '@/data/legacy'
+import { P } from '@/data/legacy'
+import { fmtFull } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { BAND_LABEL, bandOf } from '@/components/health'
 import { TableSkeleton as PageTableSkeleton, Tip } from '@/components/page'
@@ -69,7 +70,7 @@ export function RunwayCell({ row }: { row: Row }) {
       <TooltipTrigger asChild>
         <span tabIndex={-1} className={cn('tabular-nums', rr.c === 'b' ? 'text-bad' : 'text-foreground')}>{rr.t}</span>
       </TooltipTrigger>
-      <TooltipContent>Renews {fmtDate(row.renew)}</TooltipContent>
+      <TooltipContent>Renews {fmtFull(row.renew)}</TooltipContent>
     </Tooltip>
   )
 }

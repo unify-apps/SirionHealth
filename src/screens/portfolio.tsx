@@ -45,7 +45,7 @@ function useRetryToast(name: string, what: string) {
 }
 
 /** A tile tooltip: what the metric is, then its source. */
-const tipText = (what: string) => <span className="grid gap-0.5"><span>{what}</span><span className="opacity-70">Source: AHI portfolio view, {BOOK.asOf}</span></span>
+const tipText = (what: string) => <span className="grid gap-0.5"><span>{what}</span><span className="opacity-70">Source: portfolio view, {BOOK.asOf}</span></span>
 
 /** Focusable wrapper so a ring or meter in a tile carries its exact value in a tooltip. */
 function Tip({ tip, label, children }: { tip: React.ReactNode; label: string; children: React.ReactNode }) {
@@ -90,7 +90,7 @@ export function PortfolioScreen() {
       <section aria-label="Book KPIs" className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.status === 'loading' && <><LoadingLabel what="KPIs" />{[0, 1, 2, 3].map(i => <KpiSkeleton key={i} />)}</>}
         {kpis.status === 'error' && (
-          <WidgetError className="col-span-full" title="KPIs didn't load" sub="AHI's portfolio summary timed out. Other sections are up to date." onRetry={kpis.retry} />
+          <WidgetError className="col-span-full" title="KPIs didn't load" sub="The portfolio summary timed out. Other sections are up to date." onRetry={kpis.retry} />
         )}
         {kpis.status === 'ready' && (
           <>
@@ -104,17 +104,17 @@ export function PortfolioScreen() {
               value={KPIS.arrAtRisk} tone="bad"
               visual={<Meter value={KPIS.arrAtRiskM} max={BOOK.arr} min={2}
                 tip={`$${KPIS.arrAtRiskM}M of the $${BOOK.arr}M book (${((KPIS.arrAtRiskM / BOOK.arr) * 100).toFixed(1)}%)`} />}
-              hint={`${((KPIS.arrAtRiskM / BOOK.arr) * 100).toFixed(1)}% of the $${BOOK.arr}M book`} />
+              hint={`${((KPIS.arrAtRiskM / BOOK.arr) * 100).toFixed(1)}% of $${BOOK.arr}M`} />
             <Stat label={<Term tip={tipText('Accounts with a renewal date in the next 60 days')}>Renewing in 60 days</Term>} icon={CalendarClock}
               value={KPIS.renewing60}
               visual={<Meter value={KPIS.renewing60} max={BOOK.accounts} min={2}
                 tip={`${KPIS.renewing60} of ${BOOK.accounts} accounts renew in 60 days`} />}
               hint={`of ${BOOK.accounts} accounts`} />
-            <Stat label={<>Accounts at 100%+ <Term tip={tipText('GRR: gross revenue retention, revenue kept from existing customers before expansion')}>GRR</Term></>} icon={ShieldCheck}
+            <Stat label={<>At 100%+ <Term tip={tipText('GRR: gross revenue retention, revenue kept from existing customers before expansion')}>GRR</Term></>} icon={ShieldCheck}
               value={KPIS.grr100} tone="good"
               visual={<Meter value={KPIS.grr100} max={KPIS.grrWithData}
                 tip={`${KPIS.grr100} of ${KPIS.grrWithData} accounts with GRR data (${Math.round((KPIS.grr100 / KPIS.grrWithData) * 100)}%)`} />}
-              hint={`of ${KPIS.grrWithData} with GRR data · ${Math.round((KPIS.grr100 / KPIS.grrWithData) * 100)}%`} />
+              hint={`of ${KPIS.grrWithData} · ${Math.round((KPIS.grr100 / KPIS.grrWithData) * 100)}%`} />
           </>
         )}
       </section>

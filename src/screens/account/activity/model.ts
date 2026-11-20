@@ -7,45 +7,56 @@ import { dayISO, ymLabel } from './shared'
 
 export type Channel = 'email' | 'meeting' | 'teams' | 'call' | 'ticket' | 'record' | 'file' | 'ai' | 'note'
 export const CH_NAME: Record<Channel, string> = {
-  email: 'Email', meeting: 'Meeting', teams: 'Teams', call: 'Call', ticket: 'Ticket', record: 'AHI record', file: 'Order form', ai: 'Account insight', note: 'Summary note',
+  email: 'Email', meeting: 'Meeting', teams: 'Teams', call: 'Call', ticket: 'Ticket', record: 'Health record', file: 'Order form', ai: 'Account insight', note: 'Summary note',
 }
 export type EventKind = 'pos' | 'neg' | 'flag' | 'goal' | 'end' | 'neu'
 export type Cat = 'risk' | 'positive' | 'general'
 export const catOf = (k: EventKind): Cat => k === 'neg' || k === 'flag' ? 'risk' : k === 'pos' ? 'positive' : 'general'
 export const CAT_LABEL: Record<Cat, string> = { risk: 'Risk', positive: 'Positive', general: 'General' }
 
-export function jrChannel(text: string, src: string): Channel {
+/** Statements that report a change of people, not a message: the ticket or RCA they mention is incidental. */
+const ROLE_CHANGE = /handed over|hand(ed)? (her|his|their) role|left (the|her|his|their) role|stepped down|no longer (in|with|at)\b/i
+
+export function jrChannel(text: string, src: string, tickets: string[] = []): Channel {
   if (/AHI record/.test(src)) return 'record'
   if (/order forms/i.test(src)) return 'file'
   if (/AI insight/.test(src)) return 'ai'
+  if (ROLE_CHANGE.test(text)) return 'note'
   if (/Last email/.test(text)) return 'email'
   if (/Last meeting/.test(text)) return 'meeting'
   if (/\b(on|via|in a) (MS )?Teams\b|Teams (message|chat)/i.test(text)) return 'teams'
   if (/\b(after|on|during) a call\b|\bcall with\b|\bphone\b/i.test(text)) return 'call'
-  if (/INC-|SR-|#|ticket|RCA|Jira/i.test(text)) return 'ticket'
+  if (tickets.length || /INC-|SR-|#|ticket|RCA|Jira/i.test(text)) return 'ticket'
   if (/meeting|MBR|business review|call|QBR|check-in|session|demo|workshop/i.test(text)) return 'meeting'
   if (/email|replied|thread|wrote|forward|asked|sent|notice/i.test(text)) return 'email'
   return 'note'
 }
+/** One-line summary of a statement for use as a row title: drops a leading date, keeps the first sentence, caps the length at a word. */
+export function summarise(text: string, max = 90) {
+  let t = text.replace(/\s+/g, ' ').trim().replace(/^On \w+ \d{1,2}(st|nd|rd|th)?,? (\d{4},? )?/i, '')
+  t = t.split(/(?<=[.!?])\s+(?=[A-Z])/)[0].replace(/[.!?]+$/, '')
+  if (t.length > max) { const cut = t.slice(0, max); t = cut.slice(0, Math.max(cut.lastIndexOf(' '), 40)).replace(/[\s,;:–-]+$/, '').replace(/(\s+(of|for|to|a|an|the|and|or|as|on|in|at|by|with|that|from|about|is|was|were|MS))+$/i, '') + '…' }
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
 function jrTitle(e: Evidence) {
   if (e.tickets.length) return `Ticket ${e.tickets[0]}`
   if (/MBR|business review/i.test(e.text)) return 'Monthly business review'
-  const ch = jrChannel(e.text, '')
-  return ({ meeting: 'Meeting', email: 'Email thread', ticket: 'Support ticket' } as Record<string, string>)[ch] ?? 'Account update'
+  // the icon already shows the type, so the title is what happened
+  return summarise(e.text) || 'Account update'
 }
-const srcLabel = (s: string) => { s = s.replace(/^sentiment /, 'Monthly summary, '); return s[0].toUpperCase() + s.slice(1) }
+const srcLabel = (s: string) => { s = s.replace(/^sentiment /, 'Monthly summary, ').replace(/^AHI record/, 'Health record'); return s[0].toUpperCase() + s.slice(1) }
 
 /** Plain-language copy for key events that come from the record rather than a summary. */
 const KEY_COPY: Record<string, [string, string]> = {
-  '2026-10-31': ['Health capped at 50', 'Renewal in 59 days with auto-renew off · AHI record, Oct 31'],
+  '2026-10-31': ['Health capped at 50', 'Renewal in 59 days with auto-renew off · health record, Oct 31'],
   '2026-12-30': ['Renewal due · $330K CARR', '2 order forms, auto-renew off'],
   '2026-11-26': ['Commitment target date', 'Suggested by the account insight: get a signed renewal commitment'],
 }
 /** What the record itself says, for events that come from it rather than from a summary. */
 const RECORD_DETAIL = {
-  record: ['AHI scored record, Oct 31 snapshot', `Final health ${TA_RECORD.finalHealth}, weighted ${TA_RECORD.weightedHealth}. Override ${TA_RECORD.overrideCode}: ${TA_RECORD.overrideReason}.`],
-  file: ['Order forms and AHI record', 'Renewal Dec 30, 2026 for $330K CARR (CU0213 OF 001 $275K, OF 002 $55K). Auto-renew: No. Signed commitment: No.'],
-  ai: ['Account insight in AHI', '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”'],
+  record: ['Scored health record, Oct 31 snapshot', `Final health ${TA_RECORD.finalHealth}, weighted ${TA_RECORD.weightedHealth}. Renewal cap: ${String(TA_RECORD.overrideReason).replace(/\s*\(max [\d.]+\)/, '')}.`],
+  file: ['Order forms and health record', 'Renewal Dec 30, 2026 for $330K CARR (CU0213 OF 001 $275K, OF 002 $55K). Auto-renew: No. Signed commitment: No.'],
+  ai: ['Account insight', '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”'],
 } as Partial<Record<Channel, [string, string]>>
 
 export interface Item {
@@ -70,7 +81,7 @@ export function loadActivity(): ActivityData {
     const dt = new Date(d + 'T00:00:00')
     const match = /^sentiment/.test(src) ? dated.find(v => !used.has(v) && v.kind === k && Math.abs(+v.date! - +dt) <= 2 * DAY) ?? null : null
     if (match) used.add(match)
-    const who = match ? match.who : [], ch = jrChannel(match ? match.text : text, src), kc = KEY_COPY[d]
+    const who = match ? match.who : [], ch = jrChannel(match ? match.text : text, src, match?.tickets), kc = KEY_COPY[d]
     return {
       id: 'k' + d + text.slice(0, 12), date: dt, kind: k, cat: catOf(k), key: true,
       title: kc && !who.length ? kc[0] : text, desc: match ? match.text : kc && !who.length ? kc[1] : '', src: srcLabel(src), ch,
@@ -79,12 +90,20 @@ export function loadActivity(): ActivityData {
   })
   dated.filter(v => !used.has(v)).forEach(v => items.push({
     id: 's' + v.date!.toISOString() + v.text.slice(0, 12), date: v.date!, kind: v.kind, cat: catOf(v.kind), key: false, title: jrTitle(v), desc: v.text,
-    src: 'Monthly summary, ' + ymLabel(v.ym), ch: jrChannel(v.text, ''), who: v.who, ...split(v.who), tickets: v.tickets, record: null, fromSummary: true,
+    src: 'Monthly summary, ' + ymLabel(v.ym), ch: jrChannel(v.text, '', v.tickets), who: v.who, ...split(v.who), tickets: v.tickets, record: null, fromSummary: true,
   }))
   const snapshot = events.filter(e => /engagement snapshot/.test(e[3]))
     .map(e => ({ kind: /email/i.test(e[2]) ? 'email' : 'meeting', date: new Date(e[0] + 'T00:00:00') }) as Touch)
   return { items, snapshot, ev }
 }
+
+/** One count for the whole activity list: Summary's "View all", the Timeline header and its filter chips all read this.
+ *  `total` = every item; `past` happened on or before today; `upcoming` is dated after it. */
+export function activityCounts(items: Item[]) {
+  const upcoming = items.filter(i => i.date > TODAY).length
+  return { total: items.length, past: items.length - upcoming, upcoming }
+}
+export const activityTotal = () => activityCounts(loadActivity().items).total
 
 /** Re-labels customer participants with any role set on the Stakeholders tab. */
 export function withRoles(items: Item[], st: RoleState): Item[] {

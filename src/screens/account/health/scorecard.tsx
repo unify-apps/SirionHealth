@@ -1,9 +1,9 @@
 import { ChevronRight } from 'lucide-react'
-import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RecordSheetBody, RecordSheetHeader } from '@/components/app/record-sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { HealthPill, bandOf, bandText } from '@/components/health'
-import { Empty, sheetHeaderCls, stickyCol } from '@/components/page'
+import { Empty, stickyCol } from '@/components/page'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { AREA_ICON, ScoreBar } from './parts'
@@ -23,12 +23,8 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
   ]
   return (
     <>
-      <SheetHeader className={sheetHeaderCls}>
-        <SheetTitle className="text-lg font-normal">All {data.inputs.length} inputs</SheetTitle>
-        <SheetDescription className="max-w-[65ch]">
-          Scored 0 to 100, weakest first. {missing} have no data. Select a row to open its area.
-        </SheetDescription>
-      <div className="pt-1">
+      <RecordSheetHeader eyebrow="Health inputs" title={`All ${data.inputs.length} inputs`}
+        meta={`Weakest first · ${missing} have no data`}>
         <ToggleGroup type="single" variant="outline" size="sm" value={area} aria-label="Filter by area"
           onValueChange={v => v && onArea(v as AreaKey | 'all')} className="flex w-full flex-wrap justify-start gap-1.5">
           {filters.map(([k, l, c]) => (
@@ -37,8 +33,8 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-      </div>
-      </SheetHeader>
+      </RecordSheetHeader>
+      <RecordSheetBody>
 
       <div className="border-b border-hairline">
         {list.length ? (
@@ -46,9 +42,9 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
             <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 z-10 bg-popover pl-6">Input</TableHead>
-                <TableHead>Why this score</TableHead>
+                <TableHead className="hidden sm:table-cell">Why this score</TableHead>
                 <TableHead className="text-right">Score</TableHead>
-                <TableHead>Band</TableHead>
+                <TableHead className="hidden sm:table-cell">Band</TableHead>
                 <TableHead className="w-6 pr-6"><span className="sr-only">Open</span></TableHead>
               </TableRow>
             </TableHeader>
@@ -67,7 +63,7 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
                         <span className="truncate">{i.name}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="max-w-64">
+                    <TableCell className="hidden max-w-64 sm:table-cell">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="block truncate text-muted-foreground">{i.reason}{i.score == null && ' · left out of averages'}</span>
@@ -83,7 +79,7 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
                             <span className={cn('w-7 text-right font-medium', bandText[bandOf(i.score)])}>{i.score}</span>
                           </span>}
                     </TableCell>
-                    <TableCell><HealthPill value={i.score} /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><HealthPill value={i.score} /></TableCell>
                     <TableCell className="pr-6">
                       <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </TableCell>
@@ -95,10 +91,11 @@ export function ScorecardBody({ data, area, onArea, onOpen }: {
         ) : <Empty title="No inputs in this area" className="m-4" />}
       </div>
 
-      <p className="max-w-[65ch] px-6 pb-6 text-xs text-muted-foreground">
+      <p className="max-w-[65ch] px-6 py-4 text-xs text-muted-foreground">
         {data.inputs.length} inputs, weakest first. {missing} have no data and are left out of their area's average and drivers,
         never counted as healthy.
       </p>
+      </RecordSheetBody>
     </>
   )
 }

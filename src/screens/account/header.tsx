@@ -5,10 +5,11 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarClock, DollarSign, Gauge, HeartPulse, Layers, Mail, Minus, RefreshCw, TrendingDown, Users, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fmtMonthName } from '@/lib/dates'
 import { Meter } from '@/components/charts'
 import { PageHeader } from '@/components/page'
 import { DateRangeMenu } from '@/components/app/date-range'
-import { go } from '@/lib/route'
+import { go, openSheet } from '@/lib/route'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,11 +17,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { BAND_LABEL, bandOf, bandText, HealthPill, type Band } from '@/components/health'
 import {
   AREA_KEYS, AREA_NAME, AREA_SHORT, areaDelta, areaDriver, fmtD, fmtDY, kpis, latest, previous, RENEWAL, renewal, runway,
-  score, strongThisMonth, ymLabel, type AreaKey,
+  score, strongThisMonth, type AreaKey,
 } from './facts'
-import { GLOSSARY, showTab, Term, Truncate, useWidget, WidgetBody } from './overview/bits'
-import { HowScoresSheet } from './overview/how-sheet'
-import { AreaSheet } from './overview/area-sheet'
+import { CapTerm, GLOSSARY, showTab, Term, useWidget, WidgetBody } from './overview/bits'
+import { HeaderSheets } from './overview/how-sheet'
 
 /** Short cause per area, shown in a driver's tooltip. */
 const CAUSE: Partial<Record<AreaKey, () => string>> = {
@@ -94,10 +94,9 @@ function buildVerdict() {
 }
 
 export function AccountHeader() {
-  const [how, setHow] = useState(false)
-  const [area, setArea] = useState<AreaKey | null>(null)
   const w = useWidget(buildVerdict)
-  const openArea = (k: AreaKey) => { setHow(false); setArea(k) }
+  // both sheets live in the URL; HeaderSheets renders them on every tab
+  const openArea = (k: AreaKey) => openSheet('area', k)
   // hovering an area lights the ring; hovering the ring lights every area: the areas feed the score
   const [hl, setHl] = useState<Link>(null)
 
@@ -115,7 +114,7 @@ export function AccountHeader() {
         <WidgetBody w={w} what="the health verdict" skeleton={<VerdictSkeleton />}>
           {d => (
             <div className="grid divide-y divide-hairline md:grid-cols-12 md:divide-y-0">
-              <ScoreZone onHow={() => setHow(true)} hl={hl} onHl={setHl} />
+              <ScoreZone onHow={() => openSheet('how')} hl={hl} onHl={setHl} />
               <AreasZone d={d} onArea={openArea} hl={hl} onHl={setHl} />
               <RenewalZone />
             </div>
@@ -125,8 +124,7 @@ export function AccountHeader() {
 
       <KpiStrip />
 
-      <HowScoresSheet open={how} onOpenChange={setHow} onOpenArea={openArea} />
-      <AreaSheet area={area} onOpenChange={o => !o && setArea(null)} />
+      <HeaderSheets />
     </header>
   )
 }
@@ -150,7 +148,7 @@ function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l:
   return (
     <section aria-labelledby="h-health" className="flex flex-col gap-2 p-5 md:col-span-4 lg:col-span-3">
       <ZoneLabel id="h-health" icon={HeartPulse}
-        right={<Button variant="ghost" size="xs" className="-my-1 -mr-2 text-muted-foreground" onClick={onHow}>How scores work</Button>}>Health</ZoneLabel>
+        right={<Button variant="outline" size="xs" className="-my-1 rounded-full" onClick={onHow}>How scores work</Button>}>Health</ZoneLabel>
       <div className="flex flex-1 flex-col items-center justify-center gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -173,7 +171,7 @@ function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l:
         <span className="flex items-center gap-1 text-xs tabular-nums" aria-label={`${score.weighted} weighted average, minus ${score.cap} renewal cap, equals ${score.final}`}>
           <span className="text-foreground">{score.weighted}</span><span className="text-muted-foreground">avg</span>
           <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
-          <Term tip={`${score.overrideCode} · ${GLOSSARY.O7}`} className="text-foreground">−{score.cap}</Term><span className="text-muted-foreground">cap</span>
+          <CapTerm className="text-foreground">−{score.cap}</CapTerm><span className="text-muted-foreground">cap</span>
           <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
           <span className={cn('font-medium', bandText[b])}>{score.final}</span>
         </span>
@@ -186,7 +184,7 @@ function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l:
 function AreasZone({ d, onArea, hl, onHl }: {
   d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void; hl: Link; onHl: (l: Link) => void
 }) {
-  const since = ymLabel(previous.ym).split(' ')[0]
+  const since = fmtMonthName(previous.ym)
   const drawn = useDrawn()
   return (
     <section aria-labelledby="h-areas" className="relative flex min-w-0 flex-col gap-2 p-5 md:col-span-8 md:border-l md:border-hairline md:px-6 lg:col-span-6">
@@ -257,7 +255,7 @@ function RenewalZone() {
       <TooltipTrigger asChild>
         <span tabIndex={0} className={cn('rounded-md bg-bad-soft px-1.5 py-0.5 text-xs text-bad', focusRing)}>Auto-renew off</span>
       </TooltipTrigger>
-      <TooltipContent>The contract won't renew on its own, so the {score.overrideCode} cap applies</TooltipContent>
+      <TooltipContent>The contract won't renew on its own, so the renewal cap applies</TooltipContent>
     </Tooltip>
   )
   return (
@@ -267,13 +265,14 @@ function RenewalZone() {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" onClick={() => showTab('overview', 'runway')}
-            aria-label={`${renewal.daysLeft} days left to renewal on ${fmtDY(renewal.date)}. Show the renewal runway`}
-            className={cn('-mx-1.5 flex items-baseline gap-1.5 self-start rounded-md px-1.5 text-left leading-none transition-colors hover:bg-accent/60', focusRing)}>
+            aria-label={`${renewal.daysLeft} days left to renewal on ${fmtDY(renewal.date)}. Go to the renewal runway`}
+            className={cn('group/nav flex cursor-pointer items-baseline gap-1.5 self-start rounded-md text-left leading-none', focusRing)}>
             <span className="text-3xl leading-9 font-normal tabular-nums tracking-[-0.03em] text-bad">{renewal.daysLeft}</span>
-            <span className="text-sm text-muted-foreground">days left</span>
+            <span className="text-sm text-muted-foreground group-hover/nav:text-foreground group-hover/nav:underline group-hover/nav:underline-offset-4">days left</span>
+            <ArrowRight className="size-3.5 self-center text-signal transition-transform group-hover/nav:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Renews {fmtDY(renewal.date)} · show the runway</TooltipContent>
+        <TooltipContent>Renews {fmtDY(renewal.date)} · go to the runway</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -309,58 +308,87 @@ function RenewalZone() {
   )
 }
 
-/* ---------- KPI strip: every tile carries a small visual ---------- */
-type Kpi = { icon: LucideIcon; label: React.ReactNode; key: string; tip: string; value: React.ReactNode; visual: React.ReactNode; wide?: boolean }
+/* ---------- KPI strip: label, value, at most one delta chip against a stated baseline ----------
+   The chip always means "change against <baseline>" and the baseline is in its tooltip; lineage lives in the label tooltip. */
+type Kpi = { icon: LucideIcon; label: React.ReactNode; key: string; tip: string; value: React.ReactNode; delta?: React.ReactNode; visual?: React.ReactNode; wide?: boolean }
 
-function Delta({ n, suffix = '', tip }: { n: number; suffix?: string; tip: string }) {
+function Delta({ n, suffix = '', base, tip }: { n: number; suffix?: string; base: string; tip: string }) {
   const Ic = n > 0 ? ArrowUp : n < 0 ? ArrowDown : Minus
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className={cn('inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums', focusRing)}>
+        <span tabIndex={0} className={cn('inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-xs whitespace-nowrap tabular-nums', focusRing)}>
           <Ic className="size-3" aria-hidden="true" />{n === 0 ? 'Flat' : `${Math.abs(n)}${suffix}`}
+          <span className="text-muted-foreground">{base}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{tip}</TooltipContent>
     </Tooltip>
   )
 }
-const Chip = ({ children }: { children: React.ReactNode }) =>
-  <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs">{children}</span>
+
+/** Seats in use against seats bought. Past 100% the bar keeps the licence share in teal, adds a distinct
+ *  overage segment after a marker at 100%. Neutral colours: going over is not a health band. */
+function LicenceMeter({ used, bought, pct }: { used: number; bought: number; pct: number }) {
+  const total = Math.max(used, bought)
+  const mark = (bought / total) * 100
+  const over = used > bought
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} role="img" aria-label={`${used} of ${bought} seats in use (${pct}%)${over ? `, ${used - bought} over the licence` : ''}`}
+          className="relative -my-2 block w-14 rounded-full py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="relative block h-1.5 overflow-hidden rounded-full bg-chart-5" aria-hidden="true">
+            <span className="absolute inset-y-0 left-0 bg-chart-1" style={{ width: `${over ? mark : (used / total) * 100}%` }} />
+            {over && <span className="absolute inset-y-0 right-0 bg-foreground/70" style={{ width: `${100 - mark}%` }} />}
+          </span>
+          {over && <span className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-foreground" style={{ left: `${mark}%` }} aria-hidden="true" />}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="tabular-nums">
+        {used} of {bought} seats in use ({pct}%){over ? `. ${used - bought} over the licence; the marker is 100%.` : ''}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 function KpiStrip() {
   const { licence: l } = kpis
+  const over = l.used - l.bought
   const w = useWidget((): Kpi[] => [
     { icon: RefreshCw, key: 'ret', label: 'NRR / GRR', value: `${kpis.nrr}% / ${kpis.grr}%`,
-      tip: 'Net and gross revenue retention, last 12 months · AHI scored record',
-      visual: <Delta n={0} tip="No change since last month" /> },
+      tip: 'Net and gross revenue retention, last 12 months. Source: scored health record',
+      delta: <Delta n={0} base="vs last mo" tip="No change against last month" /> },
     { icon: Users, key: 'mau', label: 'Monthly active users', value: kpis.mau,
-      tip: 'MAU: users active in Sirion this month · AHI adoption inputs',
-      visual: <Delta n={kpis.mauChange} suffix="% vs avg" tip={`${Math.abs(kpis.mauChange)}% ${kpis.mauChange < 0 ? 'below' : 'above'} the 12-month average of ${kpis.mauAvg}`} /> },
+      tip: 'Monthly active users (MAU): users active in Sirion this month. Source: adoption inputs',
+      delta: <Delta n={kpis.mauChange} suffix="%" base="vs avg" tip={`${Math.abs(kpis.mauChange)}% ${kpis.mauChange < 0 ? 'below' : 'above'} the 12-month average of ${kpis.mauAvg}`} /> },
     { icon: Gauge, key: 'lic', label: 'Licence use', value: `${l.pct}%`,
-      tip: 'Seats in use against seats bought · AHI adoption inputs',
-      visual: <div className="w-14"><Meter value={l.pct} tip={`${l.used} of ${l.bought} seats in use (${l.pct}%)`} /></div> },
+      tip: 'Seats in use against seats bought. Source: adoption inputs',
+      delta: over !== 0 ? <Delta n={over} base="seats" tip={`${Math.abs(over)} seats ${over > 0 ? 'over' : 'under'} the ${l.bought} bought`} /> : undefined,
+      visual: <LicenceMeter used={l.used} bought={l.bought} pct={l.pct} /> },
     { icon: DollarSign, key: 'exp', label: 'Expansion', value: renewal.expansionLabel,
-      tip: 'Open expansion opportunity on this account · AHI scored record', visual: <Chip>Open</Chip> },
+      tip: 'Open expansion opportunity on this account. Source: scored health record' },
     { icon: Mail, key: 'mail', label: 'Emails this month', value: kpis.emails, wide: true,
-      tip: 'Customer emails this month; they feed the sentiment score · AHI email summaries',
-      visual: <Chip>Sentiment input</Chip> },
+      tip: 'Customer emails this month; they feed the sentiment score. Source: monthly email summaries' },
   ])
+  // five across from 1200px; below that the strip wraps to two or three per row instead of truncating values
+  const grid = 'grid grid-cols-2 gap-3 sm:grid-cols-3 min-[75rem]:grid-cols-5'
   return (
     <section aria-label="Key metrics">
       <WidgetBody w={w} what="key metrics" isEmpty={d => d.length === 0} empty={{ title: 'No metrics' }}
-        skeleton={<div className="grid grid-cols-2 gap-3 md:grid-cols-5">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[72px] rounded-xl" />)}</div>}>
+        skeleton={<div className={grid}>{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[72px] rounded-xl" />)}</div>}>
         {d => (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className={grid}>
             {d.map(k => (
-              <Card key={k.key} className={cn('gap-1.5 px-4 py-3', k.wide && 'col-span-2 md:col-span-1')}>
+              <Card key={k.key} className={cn('gap-1.5 px-4 py-3', k.wide && 'col-span-2 sm:col-span-1')}>
                 <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                   <k.icon className="size-4 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 truncate"><Term tip={k.tip}>{k.label}</Term></span>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <Truncate className="text-xl font-normal tabular-nums tracking-[-0.02em]">{k.value}</Truncate>
-                  {k.visual}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-xl font-normal whitespace-nowrap tabular-nums tracking-[-0.02em]">{k.value}</span>
+                  {k.delta}
+                  {k.visual && <span className="ml-auto shrink-0">{k.visual}</span>}
                 </div>
               </Card>
             ))}

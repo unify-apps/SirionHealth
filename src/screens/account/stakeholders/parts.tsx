@@ -23,7 +23,7 @@ export function RoleTag({ row, className }: { row: Pick<StakeRow, 'label' | 'sou
         : p === 'sponsor' || p === 'champion' ? 'border-border bg-card text-foreground' : 'border-hairline bg-surface-2 text-foreground', className)}>
       <Icon className="size-3 shrink-0" aria-hidden="true" />
       <span className="truncate">{row.label}</span>
-      {ai && <span className="font-normal text-muted-foreground">inferred</span>}
+      {ai && <span className="font-normal text-muted-foreground">suggested</span>}
     </span>
   )
 }
@@ -81,7 +81,7 @@ export function MonthStrip({ months, labels, max, className }: { months: number[
 }
 
 /** Edit a person's role: pick one, keep the inferred one, or go back to what AHI had. */
-export function RoleMenu({ row, children, align = 'start' }: { row: StakeRow; children?: React.ReactNode; align?: 'start' | 'end' }) {
+export function RoleMenu({ row, children, align = 'start', reveal = false }: { row: StakeRow; children?: React.ReactNode; align?: 'start' | 'end'; reveal?: boolean }) {
   const canKeep = row.source === 'inferred' || row.source === 'news'
   return (
     <DropdownMenu>
@@ -91,7 +91,8 @@ export function RoleMenu({ row, children, align = 'start' }: { row: StakeRow; ch
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-xs" aria-label={`Edit role for ${row.name}`}><Pencil /></Button>
+              <Button variant="ghost" size="icon-xs" aria-label={`Edit role for ${row.name}`}
+                className={cn(reveal && 'transition-opacity focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/row:opacity-100 [@media(hover:hover)]:group-hover/row:opacity-100')}><Pencil /></Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>Edit role</TooltipContent>
@@ -101,7 +102,7 @@ export function RoleMenu({ row, children, align = 'start' }: { row: StakeRow; ch
         <DropdownMenuLabel>Role for {row.name}</DropdownMenuLabel>
         {canKeep && row.aiRole && (
           <DropdownMenuItem onSelect={() => roleChange(() => roleStore.confirm(row.key), `Confirmed ${row.name} as ${row.aiRole}`)}>
-            <Check />Keep {row.aiRole} <span className="ml-auto text-xs text-muted-foreground">inferred</span>
+            <Check />Keep {row.aiRole} <span className="ml-auto text-xs text-muted-foreground">suggested</span>
           </DropdownMenuItem>
         )}
         {canKeep && <DropdownMenuSeparator />}
@@ -120,7 +121,8 @@ export function RoleMenu({ row, children, align = 'start' }: { row: StakeRow; ch
 }
 
 /** The role cell: tag plus an edit menu, or a "Set role" button when there is none. */
-export function RoleCell({ row }: { row: StakeRow }) {
+/** `reveal`: inside a `group/row` table row, the pencil shows on row hover or focus (always on touch). */
+export function RoleCell({ row, reveal = false }: { row: StakeRow; reveal?: boolean }) {
   if (!row.label) return (
     <RoleMenu row={row}>
       <Button variant="outline" size="xs" aria-label={`Set role for ${row.name}`}>Set role<ChevronDown /></Button>
@@ -129,7 +131,7 @@ export function RoleCell({ row }: { row: StakeRow }) {
   return (
     <span className="inline-flex max-w-full items-center gap-1">
       <RoleTag row={row} />
-      <RoleMenu row={row} />
+      <RoleMenu row={row} reveal={reveal} />
     </span>
   )
 }

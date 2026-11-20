@@ -9,7 +9,8 @@ import { BlockHeader } from '@/components/page'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Term } from '../account/overview/bits'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { fmtDate, money } from '@/data/legacy'
+import { money } from '@/data/legacy'
+import { fmtFull } from '@/lib/dates'
 import { go } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { EmptyState, LoadingLabel, SplitSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
@@ -52,7 +53,7 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
       <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="health split" /><SplitSkeleton /></>}
         {status === 'error' && (
-          <WidgetError title="The health split didn't load" sub="AHI's portfolio summary timed out. Other sections are up to date." onRetry={onRetry} />
+          <WidgetError title="The health split didn't load" sub="The portfolio summary timed out. Other sections are up to date." onRetry={onRetry} />
         )}
         {status === 'ready' && (
           <>
@@ -169,7 +170,7 @@ function BandAccounts({ band, filters, onClearFilters, onClose }: {
                       <TooltipTrigger asChild>
                         <span tabIndex={open ? -1 : 0} className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{rr.t}</span>
                       </TooltipTrigger>
-                      <TooltipContent>Renews {fmtDate(r.renew)}</TooltipContent>
+                      <TooltipContent>Renews {fmtFull(r.renew)}</TooltipContent>
                     </Tooltip>
                   </TableCell>
                   <TableCell>{open && <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />}</TableCell>

@@ -63,9 +63,5 @@ export function InfoTip({ children, label = 'About this' }: { children: React.Re
 }
 
 export const initials = (n: string) => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-export const fmtD = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-export const fmtDY = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-export const ymLabel = (ym: string) => new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-export const ymLong = (ym: string) => new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-export const dayISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+export { fmtShort as fmtD, fmtFull as fmtDY, fmtMonth as ymLabel, fmtMonthLong as ymLong, isoDay as dayISO } from '@/lib/dates'
 export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`

@@ -247,9 +247,9 @@ export function MeterValue({ value, max = 100, tone, label, tip, display, classN
 export function ListColumns({ children, label, className }: { children: React.ReactNode[]; label?: string; className?: string }) {
   const half = Math.ceil(children.length / 2)
   return (
-    <div className={cn('grid gap-x-8 gap-y-1 md:grid-cols-2', className)} aria-label={label} role={label ? 'group' : undefined}>
-      <ul className="grid content-start gap-1">{children.slice(0, half)}</ul>
-      <ul className="relative grid content-start gap-1 md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-hairline">{children.slice(half)}</ul>
+    <div className={cn('grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-1 md:grid-cols-2', className)} aria-label={label} role={label ? 'group' : undefined}>
+      <ul className="grid grid-cols-[minmax(0,1fr)] content-start gap-1">{children.slice(0, half)}</ul>
+      <ul className="relative grid grid-cols-[minmax(0,1fr)] content-start gap-1 md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-hairline">{children.slice(half)}</ul>
     </div>
   )
 }

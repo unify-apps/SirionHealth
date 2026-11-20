@@ -1,20 +1,23 @@
 /* renderRunway + openEvent: monthly health since May 2025 with flagged months, key events on the line, the Watch
    line, today and the renewal; every event marker opens its evidence. */
-import { useMemo, useState } from 'react'
+import { Fragment, memo, useMemo } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Scatter, XAxis, YAxis } from 'recharts'
 import { cn } from '@/lib/utils'
+import { fmtTick } from '@/lib/dates'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import {
   ANIM_MS, AREA_FILL_OPACITY, activeDotProps, gridProps, refLabel, SERIES, thresholdLine, tooltipSurface, xAxisProps, yAxisProps,
 } from '@/components/charts'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RecordSheet, RecordSheetBody, RecordSheetHeader, TicketChip, listPager, useKept, type RecordSheetPager } from '@/components/app/record-sheet'
+import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { Skeleton } from '@/components/ui/skeleton'
 import { HealthPill } from '@/components/health'
 import {
   EVENT_LABEL, eventEvidence, events, fmtD, fmtDY, months, RENEWAL, runway, score, sourceLabel, TODAY, ymLabel,
-  type KeyEvent, type Month,
+  type Evidence, type KeyEvent, type Month,
 } from '../facts'
-import { EvidenceRow, InfoTip, Term, useWidget, WidgetBody } from './bits'
+import { PersonLink } from '../stakeholders/person-sheet'
+import { CapTerm, Glossed, useWidget, WidgetBody } from './bits'
 
 const cfg = {
   health: { label: 'Monthly health', color: SERIES[0] },
@@ -61,7 +64,6 @@ function flaggedBands(): [number, number][] {
 }
 
 const TICKS = (() => { const out: number[] = []; for (let d = new Date(T0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + 3, 1)) out.push(+d); return out })()
-const tickLabel = (t: number) => new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
 
 /** Event markers, at most 8px: risk is a filled dot, positive a ring, everything else a small neutral dot. */
 const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: number }> = {
@@ -74,22 +76,29 @@ const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: numb
 }
 
 export function RunwayChart() {
-  const [open, setOpen] = useState<KeyEvent | null>(null)
+  // the open event lives in the URL (?sheet=event:<iso date>); prev/next walks the events in date order
+  const sheet = useSheet()
+  const open = sheet?.type === 'event' ? events.find(e => e.iso === sheet.id) ?? null : null
+  const pager = listPager(events, open, e => e.iso, e => openSheet('event', e.iso, { replace: true }), 'event')
   const w = useWidget(buildRows)
   return (
     <>
       <WidgetBody w={w} what="the renewal runway" isEmpty={d => d.length === 0}
         empty={{ title: 'No data', sub: 'No monthly health has been scored for this account yet.' }}
         skeleton={<Skeleton className="h-[260px] w-full rounded-lg" />}>
-        {rows => <Plot rows={rows} onEvent={setOpen} />}
+        {rows => <Plot rows={rows} onEvent={openEvent} />}
       </WidgetBody>
       <Legend />
-      <EventSheet event={open} onOpenChange={o => !o && setOpen(null)} />
+      <EventSheet event={open} onOpenChange={sheetOpenChange} pager={pager} />
     </>
   )
 }
 
-function Plot({ rows, onEvent }: { rows: Row[]; onEvent: (e: KeyEvent) => void }) {
+// stable, so the memoised Plot never re-renders when a sheet opens
+const openEvent = (e: KeyEvent) => openSheet('event', e.iso)
+
+/* memo: the Scatter `shape` is an inline component, so a re-render (the sheet opening) would remount the dots and drop keyboard focus. */
+const Plot = memo(function Plot({ rows, onEvent }: { rows: Row[]; onEvent: (e: KeyEvent) => void }) {
   const bands = useMemo(flaggedBands, [])
   const label = `Monthly health from ${ymLabel(months[0].ym)} to ${ymLabel(months[months.length - 1].ym)}, with ${events.length} events up to the ${fmtDY(RENEWAL)} renewal.`
     + (runway ? ` First flagged ${fmtDY(runway.firstFlag)}.` : '')
@@ -98,7 +107,7 @@ function Plot({ rows, onEvent }: { rows: Row[]; onEvent: (e: KeyEvent) => void }
       <ChartContainer config={cfg} className="aspect-auto h-[260px] w-full min-w-[640px]">
         <ComposedChart data={rows} margin={{ top: 18, right: 16, bottom: 0, left: 0 }} accessibilityLayer>
           <CartesianGrid {...gridProps} />
-          <XAxis dataKey="t" type="number" scale="time" domain={[T0, T1]} ticks={TICKS} tickFormatter={tickLabel} {...xAxisProps} />
+          <XAxis dataKey="t" type="number" scale="time" domain={[T0, T1]} ticks={TICKS} tickFormatter={fmtTick} {...xAxisProps} />
           <YAxis domain={[0, 100]} ticks={[0, 40, 70, 100]} {...yAxisProps} />
 
           {bands.map(([x1, x2]) => (
@@ -123,7 +132,7 @@ function Plot({ rows, onEvent }: { rows: Row[]; onEvent: (e: KeyEvent) => void }
       </ChartContainer>
     </div>
   )
-}
+})
 
 function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; payload: Row; onEvent: (e: KeyEvent) => void }) {
   const e = payload.event
@@ -133,7 +142,7 @@ function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; paylo
   return (
     <g role="button" tabIndex={0} aria-label={`${fmtDY(e.date)}: ${e.text}. Open evidence`} className="cursor-pointer outline-none [&:focus-visible>circle:first-child]:stroke-ring [&:hover>circle:first-child]:fill-accent"
       onClick={act} onKeyDown={k => { if (k.key === 'Enter' || k.key === ' ') { k.preventDefault(); act() } }}>
-      <circle cx={cx} cy={cy} r={9} fill="transparent" stroke="transparent" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={12} fill="transparent" stroke="transparent" pointerEvents="all" />
       <circle cx={cx} cy={cy} r={s.r} fill={s.fill} stroke={s.stroke} strokeWidth={e.kind === 'pos' ? 2 : 1.5} />
     </g>
   )
@@ -166,7 +175,8 @@ function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload:
 function Legend() {
   const items: [React.ReactNode, string][] = [
     [<span className="inline-block h-0.5 w-4 rounded bg-chart-1" />, 'Monthly health'],
-    [<span className="inline-block h-2.5 w-3 rounded-sm bg-chart-axis/15" />, 'Flagged by the model'],
+    [<span className="inline-block h-2.5 w-3 rounded-sm bg-chart-axis/15" />, 'Months the model flagged'],
+    [<span className="inline-block w-4 border-t-2 border-dotted border-chart-axis" />, 'Held by the renewal cap until signed'],
     [<span className="inline-block size-2 rounded-full bg-bad" />, 'Risk event'],
     [<span className="inline-block size-2 rounded-full border-2 border-good" />, 'Positive event'],
   ]
@@ -177,39 +187,57 @@ function Legend() {
   )
 }
 
-function EventSheet({ event, onOpenChange }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void }) {
+// "On August 28, " opens most summary statements; the sheet's meta line already gives the date
+const LEAD_DATE = /^On (January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2},?\s+/
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+
+/** One summary statement behind an event. The date shows only when it isn't the event's own (already in the meta line). */
+function Statement({ e, on }: { e: Evidence; on: Date }) {
+  const own = !!e.date && sameDay(e.date, on)
+  const text = own ? e.text.replace(LEAD_DATE, '').replace(/^./, c => c.toUpperCase()) : e.text
+  const meta = !own || e.strong || e.who.length > 0 || e.tickets.length > 0
+  return (
+    <li className="py-3 first:pt-0">
+      <p className="max-w-[65ch] leading-relaxed text-pretty">{text}</p>
+      {meta && (
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+          {e.strong && <HealthPill band="bad">Strong negative</HealthPill>}
+          {!own && <span className="tabular-nums">{e.date ? fmtDY(e.date) : ymLabel(e.ym)}</span>}
+          {e.who.map((n, i) => <Fragment key={n}>{(i > 0 || !own || e.strong) && <span aria-hidden="true">·</span>}<PersonLink name={n} /></Fragment>)}
+          {e.tickets.map(t => <TicketChip key={t} id={t} />)}
+        </p>
+      )}
+    </li>
+  )
+}
+
+function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
+  const event = useKept(live)
   const related = event ? eventEvidence(event) : []
   return (
-    <Sheet open={!!event} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-2xl">
-        {event && (
-          <>
-            <SheetHeader className="sticky top-0 z-10 border-b border-hairline bg-popover px-6 py-4 pr-14">
-              <SheetDescription>{fmtDY(event.date)} · {EVENT_LABEL[event.kind]}</SheetDescription>
-              <SheetTitle className="flex items-start gap-2 text-lg font-normal leading-snug">
-                <span>{event.text}</span>
-                <InfoTip className="mt-1" text={`Source: ${sourceLabel(event.source)}${event.ai ? ' (written by AI)' : ''}`} />
-              </SheetTitle>
-            </SheetHeader>
+    <RecordSheet open={!!live} onOpenChange={onOpenChange} size="md" pager={pager} view={event?.iso}>
+      {event && (
+        <>
+          <RecordSheetHeader eyebrow="Runway event" title={<Glossed text={event.text} focusable={false} />}
+            meta={<span className="tabular-nums">{fmtDY(event.date)} · {EVENT_LABEL[event.kind]} · {sourceLabel(event.source)}{event.ai ? ', written by AI' : ''}</span>} />
+          <RecordSheetBody>
             <div className="flex flex-col gap-6 p-6">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border border-hairline p-4">
-                <div className="grid gap-1"><dt className="text-xs text-muted-foreground">Date</dt><dd className="tabular-nums">{fmtDY(event.date)}</dd></div>
-                <div className="grid gap-1"><dt className="text-xs text-muted-foreground">Kind</dt><dd>{EVENT_LABEL[event.kind]}</dd></div>
-                {event.kind === 'flag' && (
-                  <div className="col-span-2 grid gap-1"><dt className="text-xs text-muted-foreground">Score</dt>
-                    <dd className="tabular-nums">Weighted {score.weighted} → final {score.final} (<Term>{score.overrideCode}</Term>)</dd></div>
-                )}
-              </dl>
+              {event.kind === 'flag' && (
+                <section className="min-w-0">
+                  <h3 className="text-sm font-medium">Score</h3>
+                  <p className="mt-1 tabular-nums">Weighted {score.weighted} → final {score.final} (<CapTerm focusable={false} />)</p>
+                </section>
+              )}
               <section className="min-w-0">
-                <h3 className="text-sm font-medium">Evidence</h3>
+                <h3 className="text-sm font-medium">{related.length > 1 ? 'What the summaries say' : related.length ? 'What the summary says' : 'Evidence'}</h3>
                 {related.length
-                  ? <div className="divide-y divide-hairline">{related.map(e => <EvidenceRow key={e.text} e={e} />)}</div>
-                  : <p className="mt-1 text-muted-foreground">No monthly summary statement on this date. The event comes from {sourceLabel(event.source).toLowerCase()}.</p>}
+                  ? <ul className="mt-2 divide-y divide-hairline">{related.map(e => <Statement key={e.text} e={e} on={event.date} />)}</ul>
+                  : <p className="mt-1 text-muted-foreground">No monthly summary mentions this date.</p>}
               </section>
             </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          </RecordSheetBody>
+        </>
+      )}
+    </RecordSheet>
   )
 }

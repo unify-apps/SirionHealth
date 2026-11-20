@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ArrowDownRight, ArrowUpRight, ChevronRight, CircleSlash, Newspaper } from 'lucide-react'
-import { BlockHeader, Empty, Fact, ListColumns, ListRow, Meter, MeterValue, SectionTitle, SheetBody, sheetHeaderCls } from '@/components/page'
+import { BlockHeader, Empty, Fact, ListColumns, ListRow, Meter, MeterValue, SectionTitle, SheetBody } from '@/components/page'
 import { BAND_LABEL, bandOf } from '@/components/health'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RecordSheet, RecordSheetBody, RecordSheetHeader, listPager, useKept } from '@/components/app/record-sheet'
+import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState, useLoad } from './activity/shared'
 import { AREA_ICON } from './health/parts'
@@ -19,9 +19,9 @@ export function IntelligenceTab() {
   const load = useLoad(() => ({ intel: loadIntel(), base: loadBase() }), undefined, 'intelligence')
   return (
     <div>
-      <SectionTitle title="Internal" sub="From AHI's scored record" />
+      <SectionTitle title="Internal" sub="From the scored health record" />
       {load.status === 'loading' && <InternalSkeleton />}
-      {load.status === 'error' && <ErrorState what="AHI's inputs" onRetry={load.retry} />}
+      {load.status === 'error' && <ErrorState what="The scored inputs" onRetry={load.retry} />}
       {load.status === 'ready' && <Internal data={load.data.intel} />}
 
       <SectionTitle title="External" sub="From public news, 2026" />
@@ -43,11 +43,11 @@ function Internal({ data }: { data: IntelData }) {
       <Card className="gap-0 py-0">
         <BlockHeader icon={CircleSlash} title="Not scored" count={data.unscored.length} />
         {data.unscored.length ? (
-          <ListColumns label="Inputs with no score" className="px-2 py-2">
+          <ListColumns label="Inputs with no score" className="px-2 py-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             {data.unscored.map(u => (
               <li key={u.area + u.name}>
                 <ListRow icon={AREA_ICON[u.area as AreaKey]} title={u.name} meta={`${u.areaName} · ${u.note}`}
-                  right={<MeterValue value={null} label={`${u.name} score`} />} />
+                  right={<span className="whitespace-nowrap text-xs text-muted-foreground">No data</span>} />
               </li>
             ))}
           </ListColumns>
@@ -62,13 +62,13 @@ function InputList({ title, icon, items }: { title: string; icon: typeof ArrowUp
     <Card className="gap-0 py-0">
       <BlockHeader icon={icon} title={title} count={items.length} />
       {items.length ? (
-        <ul className="grid gap-1 px-2 py-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-1 px-2 py-2">
           {items.map(x => {
             const b = bandOf(x.v)
             return (
               <li key={x.area + x.name}>
                 <ListRow icon={AREA_ICON[x.area as AreaKey]} title={x.name} meta={`${x.areaName} · ${x.note}`}
-                  right={<MeterValue value={x.v} tone={b === 'none' ? undefined : b} label={`${x.name} score`} tip={`${x.name}: ${x.v} of 100, ${BAND_LABEL[b].toLowerCase()}`} />} />
+                  right={<MeterValue value={x.v} tone={b === 'none' ? undefined : b} display={x.v} label={`${x.name} score`} tip={`${x.name}: ${x.v} of 100, ${BAND_LABEL[b].toLowerCase()}`} />} />
               </li>
             )
           })}
@@ -83,20 +83,23 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
   const roles = useRoles()
   const rows = useMemo(() => stakeRows(base, roles), [base, roles])
   const max = useMemo(() => Math.max(1, ...rows.flatMap(r => r.months)), [rows])
-  const [key, setKey] = useState<string | null>(null)
-  const [open, setOpen] = useState<Theme | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  // both sheets live in the URL: ?sheet=news:<theme title> and ?sheet=person:<key>; prev/next walks the themes
+  const sheet = useSheet()
+  const live = sheet?.type === 'news' ? themes.find(t => t.title === sheet.id) ?? null : null
+  const open = useKept(live)
+  const person = sheet?.type === 'person' ? rows.find(r => r.key === sheet.id) ?? null : null
+  const pager = listPager(themes, live, t => t.title, t => openSheet('news', t.title, { replace: true }), 'theme')
   const news = base.news[0]
   if (!themes.length) return <Empty title="No news found" sub="Nothing public about Transamerica or Aegon this year." />
   return (
     <Card className="gap-0 py-0">
       <BlockHeader icon={Newspaper} title="Public news" count={themes.length} sub="Relevance to the renewal, 0 to 100" />
-      <ul className="grid gap-1 px-2 py-2">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-1 px-2 py-2">
         {themes.map(t => {
           const latest = t.events.find(e => e.date) ?? t.events[0]
           return (
             <li key={t.title}>
-              <ListRow icon={Newspaper} title={t.title} onClick={() => { setOpen(t); setSheetOpen(true) }} aria-haspopup="dialog"
+              <ListRow icon={Newspaper} title={t.title} onClick={() => openSheet('news', t.title)} aria-haspopup="dialog"
                 aria-label={`${t.title}${t.relevance == null ? ', no events' : `, relevance ${t.relevance} of 100`}. Open`}
                 meta={latest ? <>{latest.date && <span className="tabular-nums">{latest.date.replace(', 2026', '')} · </span>}{latest.text}</> : 'No events'}
                 right={t.relevance == null ? <MeterValue value={null} display={<span className="text-xs font-normal text-muted-foreground">None</span>} /> : (
@@ -106,15 +109,12 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
           )
         })}
       </ul>
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
+      <RecordSheet open={!!live} onOpenChange={sheetOpenChange} size="md" pager={pager} view={open?.title}>
           {open && (
             <>
-              <SheetHeader className={sheetHeaderCls}>
-                <SheetTitle className="text-lg font-normal">{open.title}</SheetTitle>
-                <SheetDescription>{open.events.filter(e => e.date).length} dated events, 2026</SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="min-h-0 flex-1">
+              <RecordSheetHeader eyebrow="Public news" title={open.title}
+                meta={(n => `${n} dated event${n === 1 ? '' : 's'}, 2026`)(open.events.filter(e => e.date).length)} />
+              <RecordSheetBody>
                 <SheetBody facts={
                   <>
                     <Fact label="Relevance to the renewal">
@@ -127,12 +127,11 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                     </Fact>
                     {open.title === 'Executive leadership' && news && (
                       <Fact label="Suggested contact">
-                        <Button variant="outline" size="sm" className="w-fit" onClick={() => { setSheetOpen(false); setKey('news:' + news.name) }}>
+                        <Button variant="outline" size="sm" className="w-fit" onClick={() => openSheet('person', 'news:' + news.name, { replace: true })}>
                           {news.name}<ChevronRight />
                         </Button>
                       </Fact>
                     )}
-                    <Fact label="Source"><span className="text-muted-foreground">Public news</span></Fact>
                   </>
                 }>
                   <section className="grid gap-2">
@@ -153,12 +152,11 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                     </section>
                   )}
                 </SheetBody>
-              </ScrollArea>
+              </RecordSheetBody>
             </>
           )}
-        </SheetContent>
-      </Sheet>
-      <PersonSheet row={rows.find(r => r.key === key) ?? null} ev={base.ev} months={base.months} max={max} onOpenChange={o => { if (!o) setKey(null) }} />
+      </RecordSheet>
+      <PersonSheet row={person} ev={base.ev} months={base.months} max={max} onOpenChange={sheetOpenChange} />
     </Card>
   )
 }

@@ -10,15 +10,15 @@ export type Ref =
   | { kind: 'person'; email: string }
 
 export const SUM_REFS: Record<string, Ref> = {
-  cap: { kind: 'rec', label: 'AHI scored record, Oct 31 snapshot', text: `Final health ${score.final}, weighted ${score.weighted}. Override ${score.overrideCode}: ${score.overrideReason}.` },
-  renew: { kind: 'rec', label: 'Order forms and AHI record', text: `Renewal Dec 30, 2026 for ${renewal.carrLabel} CARR (CU0213 OF 001 $275K, OF 002 $55K). Auto-renew: No. Signed commitment: No.` },
-  adopt: { kind: 'rec', label: 'AHI scored record, adoption inputs', text: `Licence use ${kpis.licence.pct}% (${kpis.licence.used} of ${kpis.licence.bought} seats). Monthly active users ${kpis.mau} (12-month average ${kpis.mauAvg}). Onboarding 97%.` },
-  approvals: { kind: 'rec', label: 'AHI scored record, active workflows', text: `Approval cycles closed ${kpis.approvalCycles[1]} this period (12-month average ${kpis.approvalCycles[0]}). Contracts processed 155 (12-month average 171).` },
-  insight: { kind: 'rec', ai: true, label: 'AHI strategic insight in the live app (AI)', text: '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”' },
-  comm: { kind: 'rec', label: 'AHI scored record, commercial inputs', text: `NRR ${TA_RECORD.nrr}%, GRR ${TA_RECORD.grr}%. Open invoices: no overdue invoices (input score 100).` },
-  sup: { kind: 'rec', label: 'AHI scored record, support inputs', text: 'Ticket reopen rate: 0 reopened (input score 100). Tickets by priority: P1 0, P2 7, P3 29, P4 90.' },
-  exec: { kind: 'rec', label: 'AHI scored record, engagement inputs', text: 'Executive sponsor engagement 0 this month (12-month average 11). CSM touchpoints 5 (12-month average 199).' },
-  per: { kind: 'rec', label: 'AHI scored record, support inputs', text: `Open Jira enhancement requests ${kpis.openJira}, average age ${kpis.perAging} days (12-month average 434).` },
+  cap: { kind: 'rec', label: 'Scored health record, Oct 31 snapshot', text: `Final health ${score.final}, weighted ${score.weighted}. The renewal cap holds it down: the contract renews in ${score.snapshotDays} days and auto-renew is off, so health cannot go above ${score.final}.` },
+  renew: { kind: 'rec', label: 'Order forms and health record', text: `Renewal Dec 30, 2026 for ${renewal.carrLabel} CARR (CU0213 OF 001 $275K, OF 002 $55K). Auto-renew: No. Signed commitment: No.` },
+  adopt: { kind: 'rec', label: 'Scored health record, adoption inputs', text: `Licence use ${kpis.licence.pct}% (${kpis.licence.used} of ${kpis.licence.bought} seats). Monthly active users ${kpis.mau} (12-month average ${kpis.mauAvg}). Onboarding 97%.` },
+  approvals: { kind: 'rec', label: 'Scored health record, active workflows', text: `Approval cycles closed ${kpis.approvalCycles[1]} this period (12-month average ${kpis.approvalCycles[0]}). Contracts processed 155 (12-month average 171).` },
+  insight: { kind: 'rec', ai: true, label: 'Strategic insight from the live app (AI)', text: '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”' },
+  comm: { kind: 'rec', label: 'Scored health record, commercial inputs', text: `NRR ${TA_RECORD.nrr}%, GRR ${TA_RECORD.grr}%. Open invoices: no overdue invoices (input score 100).` },
+  sup: { kind: 'rec', label: 'Scored health record, support inputs', text: 'Ticket reopen rate: 0 reopened (input score 100). Tickets by priority: P1 0, P2 7, P3 29, P4 90.' },
+  exec: { kind: 'rec', label: 'Scored health record, engagement inputs', text: 'Executive sponsor engagement 0 this month (12-month average 11). CSM touchpoints 5 (12-month average 199).' },
+  per: { kind: 'rec', label: 'Scored health record, support inputs', text: `Open Jira enhancement requests ${kpis.openJira}, average age ${kpis.perAging} days (12-month average 434).` },
   handover: { kind: 'ev', match: 'handed over her role' },
   threat: { kind: 'ev', match: 'threatened renewal' },
   nick: { kind: 'person', email: 'nick.cavazos@transamerica.com' },
@@ -48,7 +48,7 @@ export const ATTN: ListItem[] = [
 export const CLM: [string, string, string, AreaKey | null, 'good' | 'bad' | null][] = [
   ['Renewal paper', `${renewal.orderForms.length} order forms`, renewal.orderForms.map(o => `${o.id.replace('CU0213 ', '')} $${o.value}K`).join(' · '), null, null],
   ['Commitment', renewal.signed ? 'Signed' : 'Not signed', renewal.signed ? 'Signature on file' : 'No signature on file', 'commercial', renewal.signed ? 'good' : 'bad'],
-  ['Termination for convenience', renewal.tfc ? 'TFC clause' : 'No TFC clause', '', null, null],
+  ['Termination for convenience', renewal.tfc ? 'Clause included' : 'No clause', '', null, null],
 ]
 
 /** Numbers each source once, in order of first use in the brief (the lists show no paragraphs). */

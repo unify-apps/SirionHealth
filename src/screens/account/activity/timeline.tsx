@@ -1,36 +1,44 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { CalendarDays, FileText, Filter, RotateCcw, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
-import { Empty, Fact, Tip, ListGroupHeader, ListRow, SheetBody, sheetHeaderCls } from '@/components/page'
+import { CalendarDays, FileText, Filter, RotateCcw, Search, X, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
+import { Empty, Fact, Tip, ListGroupHeader, ListRow, SheetBody } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { RecordSheet, RecordSheetBody, RecordSheetHeader, TicketChip, listPager, useKept, type RecordSheetPager } from '@/components/app/record-sheet'
+import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
+import { DateText } from '@/components/app/date-text'
+import { fmtFull, fmtWhen } from '@/lib/dates'
 import { CAT_LABEL, CH_NAME, type Touch, type Cat, type Channel, type Item } from './model'
 import { dayISO, ymLong } from './shared'
+import { PersonLink } from '../stakeholders/person-sheet'
+import { Glossed } from '../overview/bits'
 
 export const CH_ICON: Record<Channel, typeof Mail> = {
   meeting: CalendarDays, email: Mail, ticket: LifeBuoy, record: HeartPulse, file: FileText, ai: Lightbulb, teams: MessagesSquare, call: Phone, note: NotebookText,
 }
 const CAT_DOT: Record<Cat, string> = { risk: 'bg-bad', positive: 'bg-good', general: 'bg-muted-foreground/60' }
-const dayShort = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).replace('Sept', 'Sep')
-const dayMon = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace('Sept', 'Sep')
 const STEP = 15
 
 export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[] }) {
   const [cat, setCat] = useState<'all' | Cat>('all')
   const [chs, setChs] = useState<Set<Channel>>(new Set())
   const [shown, setShown] = useState(STEP)
-  const [open, setOpen] = useState<Item | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [q, setQ] = useState('')
+  // the open item lives in the URL (?sheet=activity:<id>)
+  const sheet = useSheet()
+  const open = sheet?.type === 'activity' ? items.find(i => i.id === sheet.id) ?? null : null
 
   const present = useMemo(() => (Object.keys(CH_NAME) as Channel[]).filter(c => items.some(i => i.ch === c)), [items])
-  const byCh = items.filter(i => !chs.size || chs.has(i.ch))
+  const needle = q.trim().toLowerCase()
+  const matches = (i: Item) => !needle || [i.title, i.desc, i.record?.[1] ?? '', ...i.who, ...i.tickets].some(s => s.toLowerCase().includes(needle))
+  const byCh = items.filter(i => (!chs.size || chs.has(i.ch)) && matches(i))
+  const dirty = cat !== 'all' || chs.size > 0 || needle !== ''
   const count = (c: 'all' | Cat) => byCh.filter(i => c === 'all' || i.cat === c).length
   const list = byCh.filter(i => cat === 'all' || i.cat === cat)
   const up = list.filter(i => i.date > TODAY).sort((a, b) => +a.date - +b.date)
@@ -41,10 +49,12 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
     return g
   }, [past, shown])
   const toggleCh = (c: Channel) => { const n = new Set(chs); if (n.has(c)) n.delete(c); else n.add(c); setChs(n); setShown(STEP) }
-  const show = (i: Item) => { setOpen(i); setSheetOpen(true) }
+  const show = (i: Item) => openSheet('activity', i.id)
+  // prev/next walks the list as filtered and sorted: upcoming first, then past, newest first
+  const pager = listPager([...up, ...past], open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup type="single" variant="outline" size="sm" value={cat} onValueChange={v => { if (v) { setCat(v as typeof cat); setShown(STEP) } }} aria-label="Filter activity" className="flex-wrap">
           {(['all', 'risk', 'positive', 'general'] as const).map(c => (
@@ -55,17 +65,12 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
           ))}
         </ToggleGroup>
         <div className="ml-auto flex flex-wrap items-center gap-1">
-        {snapshot.map(t => {
-          const I = t.kind === 'email' ? Mail : CalendarDays
-          return (
-            <Tip key={t.kind} tip={`Last ${t.kind} with the customer: ${dayMon(t.date)}`}>
-              <span tabIndex={0} className="hidden items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:inline-flex">
-                <I className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                <span className="text-muted-foreground">Last {t.kind}</span><span className="tabular-nums">{dayShort(t.date)}</span>
-              </span>
-            </Tip>
-          )
-        })}
+        <InputGroup className="h-8 w-44 transition-[width] duration-200 focus-within:w-60 sm:w-52">
+          <InputGroupAddon><Search /></InputGroupAddon>
+          <InputGroupInput type="search" placeholder="Search activity" aria-label="Search activity by title, text, person or ticket" autoComplete="off"
+            value={q} onChange={e => { setQ(e.target.value); setShown(STEP) }} />
+          {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => { setQ(''); setShown(STEP) }}><X /></InputGroupButton></InputGroupAddon>}
+        </InputGroup>
         <DropdownMenu>
           <Tip tip={chs.size ? `${chs.size} channel${chs.size > 1 ? 's' : ''}` : 'Filter by channel'}>
           <DropdownMenuTrigger asChild>
@@ -88,30 +93,43 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
             <DropdownMenuItem disabled={!chs.size} onSelect={() => { setChs(new Set()); setShown(STEP) }}>Show all channels</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {(cat !== 'all' || chs.size > 0) && (
-          <Button variant="ghost" size="sm" onClick={() => { setCat('all'); setChs(new Set()); setShown(STEP); toast('Filters reset') }}><RotateCcw />Reset</Button>
+        {dirty && (
+          <Button variant="ghost" size="sm" onClick={() => { setCat('all'); setChs(new Set()); setQ(''); setShown(STEP); toast('Filters reset') }}><RotateCcw />Reset</Button>
         )}
         </div>
       </div>
 
+      {/* facts, not filters: a plain stats line */}
+      <p className="-mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground" aria-label="Activity facts">
+        <span className="tabular-nums" aria-live="polite">{dirty ? `${list.length} of ${items.length} items` : `${items.length} items`}</span>
+        {snapshot.map(t => (
+          <span key={t.kind} className="inline-flex items-center gap-2">
+            <span aria-hidden="true">·</span>
+            <Tip tip={`Last ${t.kind} with the customer: ${fmtFull(t.date)}`}>
+              <span>Last {t.kind} <span className="tabular-nums text-foreground">{fmtWhen(t.date)}</span></span>
+            </Tip>
+          </span>
+        ))}
+      </p>
+
       <section aria-label="Upcoming">
-        <ListGroupHeader count={up.length} className="top-11">Upcoming</ListGroupHeader>
-        {up.length ? <div className="grid gap-1">{up.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
+        <ListGroupHeader count={up.length} className="top-[33px]">Upcoming</ListGroupHeader>
+        {up.length ? <div className="grid grid-cols-[minmax(0,1fr)] gap-1">{up.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
       </section>
 
       {months.length ? months.map(([ym, rows]) => (
         <section key={ym} aria-label={ymLong(ym)}>
-          <ListGroupHeader count={rows.length} className="top-11">{ymLong(ym)}</ListGroupHeader>
-          <div className="grid gap-1">{rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div>
+          <ListGroupHeader count={rows.length} className="top-[33px]">{ymLong(ym)}</ListGroupHeader>
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-1">{rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div>
         </section>
-      )) : <Empty title="No past activity" sub="Nothing in this filter." className="py-6" />}
+      )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
       {past.length > shown && (
         <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
-          Show {Math.min(STEP, past.length - shown)} more of {past.length - shown}
+          Show {Math.min(STEP, past.length - shown)} more · {past.length - shown} earlier {dirty ? 'matching not shown' : 'not shown'}
         </Button>
       )}
 
-      <ItemSheet item={open} open={sheetOpen} onOpenChange={setSheetOpen} />
+      <ItemSheet item={open} onOpenChange={sheetOpenChange} pager={pager} />
     </div>
   )
 }
@@ -122,9 +140,9 @@ function Row({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
   const hollow = i.kind === 'goal' || i.kind === 'end'
   return (
     <ListRow size="lg" icon={CH_ICON[i.ch]} onClick={() => onOpen(i)} aria-haspopup="dialog"
-      aria-label={`${i.title}, ${CH_NAME[i.ch]}, ${dayMon(i.date)}, ${CAT_LABEL[i.cat]}`}
+      aria-label={`${i.title}, ${CH_NAME[i.ch]}, ${fmtFull(i.date)}, ${CAT_LABEL[i.cat]}`}
       title={i.title}
-      meta={<span className="tabular-nums">{dayShort(i.date)} · {CH_NAME[i.ch]}{people.length ? ` · ${people.join(', ')}` : ''}</span>}
+      meta={<span className="tabular-nums"><DateText date={i.date} /> · {CH_NAME[i.ch]}{people.length ? ` · ${people.join(', ')}` : ''}</span>}
       right={<span className="inline-flex items-center gap-1.5 text-muted-foreground">
         <span className={cn('size-1.5 rounded-full', hollow ? 'border border-muted-foreground bg-transparent' : CAT_DOT[i.cat])} aria-hidden="true" />
         <span className="hidden sm:inline">{CAT_LABEL[i.cat]}</span>
@@ -132,31 +150,27 @@ function Row({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
   )
 }
 
-function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+function ItemSheet({ item: live, onOpenChange, pager }: { item: Item | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
+  const item = useKept(live)
   const I = item ? CH_ICON[item.ch] : Mail
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 p-0 data-[side=right]:sm:max-w-2xl">
+    <RecordSheet open={!!live} onOpenChange={onOpenChange} size="md" pager={pager} view={item?.id}>
         {item && (
           <>
-            <SheetHeader className={sheetHeaderCls}>
-              <SheetTitle className="text-lg font-normal">{item.title}</SheetTitle>
-              <SheetDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <RecordSheetHeader eyebrow="Activity" title={<Glossed text={item.title} focusable={false} />}
+              meta={<span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="tabular-nums">{fmtFull(item.date)}</span>
                 <span className="inline-flex items-center gap-1.5"><span className={cn('size-1.5 rounded-full', CAT_DOT[item.cat])} aria-hidden="true" />{CAT_LABEL[item.cat]}</span>
                 <span className="inline-flex items-center gap-1"><I className="size-3.5" aria-hidden="true" />{CH_NAME[item.ch]}</span>
-                <span className="tabular-nums">{dayMon(item.date)}</span>
-              </SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="min-h-0 flex-1">
+              </span>} />
+            <RecordSheetBody>
               <SheetBody facts={
                 <>
-                  <Fact label="Date"><span className="tabular-nums">{dayMon(item.date)}</span></Fact>
-                  <Fact label="Channel"><span className="inline-flex items-center gap-1.5"><I className="size-4 text-muted-foreground" aria-hidden="true" />{CH_NAME[item.ch]}</span></Fact>
                   {!(item.record && !item.who.length) && (
                     <>
                       <Fact label="Customer">
                         {item.external.length ? <ul className="grid gap-1">{item.external.map(([n, r]) => (
-                          <li key={n}>{n}{r && <span className="block text-xs text-muted-foreground">{r}</span>}</li>
+                          <li key={n}><PersonLink name={n} />{r && <span className="block text-xs text-muted-foreground">{r}</span>}</li>
                         ))}</ul> : <span className="text-muted-foreground">None named</span>}
                       </Fact>
                       <Fact label="Sirion">
@@ -166,9 +180,7 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
                   )}
                   {item.tickets.length > 0 && (
                     <Fact label="Tickets" wide>
-                      <span className="flex flex-wrap gap-1.5">{item.tickets.map(t => (
-                        <span key={t} className="inline-flex items-center gap-1 rounded-md border border-hairline px-1.5 text-xs"><LifeBuoy className="size-3 text-muted-foreground" aria-hidden="true" />{t}</span>
-                      ))}</span>
+                      <span className="flex flex-wrap gap-1.5">{item.tickets.map(t => <TicketChip key={t} id={t} />)}</span>
                     </Fact>
                   )}
                   <Fact label="Source" wide><span className="text-muted-foreground">{item.src}</span></Fact>
@@ -177,7 +189,7 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
                 {item.record && !item.who.length ? (
                   <section className="grid gap-1.5">
                     <h3 className="text-xs text-muted-foreground">{item.record[0]}</h3>
-                    <p className="leading-relaxed text-pretty">{item.record[1]}</p>
+                    <p className="leading-relaxed text-pretty"><Glossed text={item.record[1]} focusable={false} /></p>
                   </section>
                 ) : (
                   <section className="grid gap-1.5">
@@ -186,10 +198,9 @@ function ItemSheet({ item, open, onOpenChange }: { item: Item | null; open: bool
                   </section>
                 )}
               </SheetBody>
-            </ScrollArea>
+            </RecordSheetBody>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+    </RecordSheet>
   )
 }

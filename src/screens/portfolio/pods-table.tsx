@@ -22,7 +22,7 @@ const COLS: { key: Key; label: string; tip?: string; num?: boolean }[] = [
   { key: 'renewalAtRisk', label: 'Renewal ARR at risk', num: true, tip: 'ARR renewing in 60 days that is at risk or unsigned' },
 ]
 /** One money format down every column: $ millions, two decimals. */
-const fmtM = (m: number) => `$${m.toFixed(2)}M`
+const fmtM = (m: number) => (m === 0 ? '$0' : `$${m.toFixed(2)}M`)
 
 export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters }: {
   status: WidgetStatus; onRetry: () => void; filters: Filters; refreshing: boolean; onClearFilters: () => void
@@ -59,7 +59,7 @@ export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters
   return (
     <Card className="gap-0 py-0">
       <BlockHeader icon={Users} title="Pods" count={status === 'ready' ? list.length : undefined}
-        sub={`Sorted by ${sortLabel.toLowerCase()}${sort.dir === 1 ? ', ascending' : ''}`}
+        sub={`Sorted by ${sortLabel.replace(/^(?!CARR|ARR|GRR)([A-Z])/, c => c.toLowerCase())}${sort.dir === 1 ? ', ascending' : ''}`}
         actions={refreshing && status === 'ready' ? <Loader2 className="size-3.5 animate-spin text-muted-foreground motion-reduce:animate-none" aria-label="Updating" /> : undefined} />
       <CardContent className={cn('px-0 transition-opacity duration-200', refreshing && 'opacity-55')}>
         {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton cols={7} /></>}
@@ -108,7 +108,7 @@ export function PodsTable({ status, onRetry, filters, refreshing, onClearFilters
             {list.length > 1 && (
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className={cn(stickyCol, 'bg-surface-2 font-medium [tr:hover_&]:bg-surface-2')}>Total</TableCell>
+                  <TableCell className={cn(stickyCol, 'bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))] font-medium [tr:hover_&]:bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))]')}>Total</TableCell>
                   <TableCell className="text-right">{total.accounts}</TableCell>
                   <TableCell className="text-right">{fmtM(total.carr)}</TableCell>
                   <TableCell className="text-right"><HealthBar value={total.health} className="justify-end" /></TableCell>

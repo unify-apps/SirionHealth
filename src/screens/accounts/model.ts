@@ -1,4 +1,5 @@
-import { fmtDate, money, P, rel, ROWS } from '@/data/legacy'
+import { money, P, rel, ROWS } from '@/data/legacy'
+import { fmtFull } from '@/lib/dates'
 import { bandOf, isMissing, type Band } from '@/components/health'
 
 export type Row = {
@@ -128,8 +129,8 @@ export function insights(r: Row): Insights {
     rows: [
       ['Where we stand', `${hs} on ${money(r.carr)} CARR, stage ${r.stage}. ${nr}.`],
       ["What's in play", !live(r) ? 'Churned this financial year.'
-        : d < 0 ? `The renewal date (${fmtDate(r.renew)}) has passed: ${rr.t.toLowerCase()}.`
-        : `Renews ${fmtDate(r.renew)}, ${rr.t} away.${r.lic != null ? ` Licence use ${r.lic}%.` : ''}`],
+        : d < 0 ? `The renewal date (${fmtFull(r.renew)}) has passed: ${rr.t.toLowerCase()}.`
+        : `Renews ${fmtFull(r.renew)}, ${rr.t} away.${r.lic != null ? ` Licence use ${r.lic}%.` : ''}`],
       ["What's at stake", lt(r, 40) ? `${money(r.carr)} at renewal risk with health under 40.`
         : d >= 0 && d <= 90 ? `${money(r.carr)} renews within 90 days; confirm the paper path.`
         : 'Nothing urgent in the list data. Only TransAmerica has full account detail in this build.'],

@@ -4,7 +4,8 @@
 import { CalendarClock, CircleGauge, Gauge, Info, Layers, ShieldAlert, TrendingDown, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { RecordSheet, RecordSheetBody, RecordSheetHeader, useKept } from '@/components/app/record-sheet'
+import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BlockHeader } from '@/components/page'
 import { Meter } from '@/components/charts'
@@ -13,7 +14,8 @@ import {
   AREA_KEYS, AREA_NAME, AREA_SHORT, AREA_SOURCE, areaDriver, fmtD, fmtDY, latest, RENEWAL, runway, score, SCORED_LINE,
   TODAY, ymLabel, type AreaKey,
 } from '../facts'
-import { AREA_ICON, Term } from './bits'
+import { AREA_ICON, CapTerm } from './bits'
+import { AreaContent } from './area-sheet'
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
@@ -43,17 +45,32 @@ function SheetCard({ icon, title, children }: { icon: LucideIcon; title: string;
   )
 }
 
-export function HowScoresSheet({ open, onOpenChange, onOpenArea }: {
-  open: boolean; onOpenChange: (o: boolean) => void; onOpenArea: (k: AreaKey) => void
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 overflow-y-auto data-[side=right]:sm:max-w-4xl">
-        <SheetHeader className="sticky top-0 z-20 border-b border-hairline bg-popover px-6 py-4 pr-14">
-          <SheetTitle className="text-lg font-normal">How scores work</SheetTitle>
-          <SheetDescription>{SCORED_LINE}</SheetDescription>
-        </SheetHeader>
+const isArea = (k: string): k is AreaKey => (AREA_KEYS as readonly string[]).includes(k)
+const HOW = { type: 'how', id: '' }
 
+/** The sheets the account header owns, read from the URL: "How scores work" (?sheet=how) and an area
+ *  (?sheet=area:<key>), alone or drilled into from How (&from=how), where Esc and the back button return to How.
+ *  The header renders on every tab, so any tab's opener can call openSheet('area', key). An area opened from
+ *  All inputs (&from=inputs) belongs to the Health tab instead. */
+export function HeaderSheets() {
+  const sheet = useSheet()
+  const mine = sheet && (sheet.type === 'how' || (sheet.type === 'area' && isArea(sheet.id) && (!sheet.from || sheet.from.type === 'how'))) ? sheet : null
+  const shown = useKept(mine)
+  const area = shown?.type === 'area' ? (shown.id as AreaKey) : null
+  return (
+    <RecordSheet open={!!mine} onOpenChange={sheetOpenChange} size="lg" view={shown ? shown.type + shown.id : undefined}
+      back={area && shown?.from?.type === 'how' ? { label: 'How scores work', onBack: () => openSheet('how', '', { replace: true }) } : undefined}>
+      {shown?.type === 'how' && <HowScoresBody onOpenArea={k => openSheet('area', k, { from: HOW, replace: true })} />}
+      {area && <AreaContent area={area} />}
+    </RecordSheet>
+  )
+}
+
+function HowScoresBody({ onOpenArea }: { onOpenArea: (k: AreaKey) => void }) {
+  return (
+    <>
+        <RecordSheetHeader eyebrow="Method" title="How scores work" meta={SCORED_LINE} />
+        <RecordSheetBody>
         <div className="flex flex-col gap-6 p-6">
           <ol aria-label={`Weighted ${score.weighted} minus cap ${score.cap} equals ${score.final}`}>
             <Step n="1" title="Area scores">
@@ -62,9 +79,9 @@ export function HowScoresSheet({ open, onOpenChange, onOpenArea }: {
               </ul>
             </Step>
             <Step n="2" title="Weighted average" value={score.weighted}>
-              <p className="text-muted-foreground">Sirion CS ops set each area's weight; AHI doesn't store the weights.</p>
+              <p className="text-muted-foreground">Sirion CS ops set each area's weight; the weights aren't stored in the health record.</p>
             </Step>
-            <Step n="3" title={<>Renewal cap (<Term>{score.overrideCode}</Term>)</>} value={`−${score.cap}`}>
+            <Step n="3" title={<CapTerm focusable={false}>Renewal cap</CapTerm>} value={`−${score.cap}`}>
               <p className="line-clamp-2 text-muted-foreground">
                 Renewal {score.snapshotDays} days out with auto-renew off holds health at 50. It lifts once signed or auto-renew is on.
               </p>
@@ -85,7 +102,7 @@ export function HowScoresSheet({ open, onOpenChange, onOpenArea }: {
               <RuleCard icon={CircleGauge} title="Current model" rows={[
                 { icon: CircleGauge, text: 'Composite < 70 → Watch' },
                 { icon: ShieldAlert, text: 'Composite < 40 → At risk' },
-              ]} note={<>Renewal within 60 days, auto-renew off → capped at 50 (<Term>{score.overrideCode}</Term>)</>} />
+              ]} note={<>Renewal within 60 days, auto-renew off → capped at 50</>} />
               <RuleCard icon={TrendingDown} title="Early warning" proposed rows={[
                 { icon: Layers, text: 'Any area < 50 → Flag' },
                 { icon: TrendingDown, text: 'Composite −8 or more in a month → Flag' },
@@ -93,8 +110,8 @@ export function HowScoresSheet({ open, onOpenChange, onOpenArea }: {
             </div>
           </section>
         </div>
-      </SheetContent>
-    </Sheet>
+        </RecordSheetBody>
+    </>
   )
 }
 
@@ -135,7 +152,7 @@ function BandScale() {
   return (
     <div className="space-y-3">
       <div className="relative pt-5">
-        <Marker at={score.final} label={`${score.final}`} tip={`TransAmerica: ${score.final}, after the ${score.overrideCode} cap`} />
+        <Marker at={score.final} label={`${score.final}`} tip={`TransAmerica: ${score.final}, after the renewal cap`} />
         <Marker at={score.weighted} label={`${score.weighted}`} hollow tip={`Uncapped weighted score: ${score.weighted}`} />
         <div className="flex h-2.5 gap-0.5">
           {ZONES.map(z => (

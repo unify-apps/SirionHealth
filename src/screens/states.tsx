@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { ClockCheck, Loader2 } from 'lucide-react'
 import { HealthPill } from '@/components/health'
 import { BlockHeader, ListRow, MeterValue, PageHeader, SectionTitle } from '@/components/page'
@@ -8,6 +9,9 @@ import { go } from '@/lib/route'
 import {
   BarsSkeleton, DonutSkeleton, EmptyState, KpiSkeleton, ListSkeleton, SplitSkeleton, TableSkeleton, TextSkeleton, WidgetError,
 } from './states/widget-states'
+
+/** Demo buttons have nowhere to go on this page; say what they would do. */
+const demo = (what: string) => () => toast(what, { description: 'Demo only' })
 
 /** A failed section whose retry runs a short load and fails again, so the demo stays put. */
 function RetryDemo({ title, sub }: { title: string; sub: string }) {
@@ -43,12 +47,12 @@ const RULES: { title: string; rule: string; demo: React.ReactNode }[] = [
   {
     title: 'Nothing matches',
     rule: 'A search or filter with no results says what was searched and offers the way back.',
-    demo: <EmptyState title="No accounts match “zzqx”" sub="Search looks at account names and industries." action="Clear search" />,
+    demo: <EmptyState title="No accounts match “zzqx”" sub="Search looks at account names and industries." action="Clear search" onAction={demo('Search cleared')} />,
   },
   {
     title: 'No data in this period',
     rule: 'A section with no data for the chosen dates says so and offers a wider range, instead of an empty chart or builder text.',
-    demo: <EmptyState title="No support tickets in the last 30 days" sub="BNP has 0 tickets in this period." action="Show lifetime" />,
+    demo: <EmptyState title="No support tickets in the last 30 days" sub="BNP has 0 tickets in this period." action="Show lifetime" onAction={demo('Showing lifetime')} />,
   },
   {
     title: 'Missing metric',
@@ -100,25 +104,25 @@ const WIDGETS: { name: string; loading: React.ReactNode; empty: React.ReactNode;
     name: 'Health split',
     loading: <SplitSkeleton />,
     empty: <EmptyState title="No scored accounts" sub="No account in this view has a health score yet." />,
-    error: <RetryDemo title="The health split didn't load" sub="AHI's portfolio summary timed out." />,
+    error: <RetryDemo title="The health split didn't load" sub="The portfolio summary timed out." />,
   },
   {
     name: 'Table',
     loading: <TableSkeleton cols={4} />,
-    empty: <EmptyState title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" />,
+    empty: <EmptyState title="No pods match these filters" sub="Pod and region filters narrow this table." action="Clear filters" onAction={demo('Filters cleared')} />,
     error: <RetryDemo title="Pod data didn't load" sub="The CS roster service timed out." />,
   },
   {
     name: 'Bar chart',
     loading: <BarsSkeleton bars={4} />,
     empty: <EmptyState title="No CARR by stage" sub="No live accounts carry CARR in any stage." />,
-    error: <RetryDemo title="Stage data didn't load" sub="AHI's stage chart timed out." />,
+    error: <RetryDemo title="Stage data didn't load" sub="The stage chart timed out." />,
   },
   {
     name: 'Donut',
     loading: <DonutSkeleton />,
     empty: <EmptyState title="No GRR data" sub="No account in the book reports GRR yet." />,
-    error: <RetryDemo title="Retention data didn't load" sub="AHI's GRR feed timed out." />,
+    error: <RetryDemo title="Retention data didn't load" sub="The retention feed timed out." />,
   },
   {
     name: 'List',
@@ -144,9 +148,9 @@ export function StatesScreen() {
         {RULES.map(r => (
           <Card key={r.title} className="gap-0 py-0">
             <BlockHeader title={r.title} />
-            <div className="grid gap-4 p-5">
+            <div className="grid min-w-0 gap-4 p-5">
               <p className="max-w-[65ch] text-xs text-muted-foreground">{r.rule}</p>
-              <div className="rounded-lg border border-hairline p-4">{r.demo}</div>
+              <div className="min-w-0 overflow-hidden rounded-lg border border-hairline p-4">{r.demo}</div>
             </div>
           </Card>
         ))}
@@ -161,7 +165,7 @@ export function StatesScreen() {
               {([['Loading', w.loading], ['Empty', w.empty], ['Error', w.error]] as const).map(([label, node]) => (
                 <div key={label} className="grid content-start gap-2">
                   <span className="text-xs text-muted-foreground">{label}</span>
-                  <div className="min-w-0">{node}</div>
+                  <div className="min-w-0 overflow-hidden">{node}</div>
                 </div>
               ))}
             </div>

@@ -1,8 +1,7 @@
 /* Summary tab: account brief, strengths and risks, renewal runway, recent activity, order forms.
    Ported from renderSummary, openRef, renderCLM, renderRunway and the #s-summary markup. */
-import { useState } from 'react'
 import {
-  Activity, CalendarClock, CalendarDays, ChevronRight, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
+  Activity, CalendarClock, CalendarDays, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,17 +12,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { taPeople } from '@/data/legacy'
+import { listPager } from '@/components/app/record-sheet'
+import { DateText } from '@/components/app/date-text'
+import { fmtWhen } from '@/lib/dates'
+import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
+import { activityTotal } from './activity/model'
 import {
-  activityItems, AREA_NAME, evidence, fmtD, TODAY, ymLabel, type ActivityItem, type AreaKey, type Channel,
+  activityItems, AREA_NAME, evidence, TODAY, ymLabel, type AreaKey, type Channel,
 } from './facts'
-import { AREA_ICON, EvidenceRow, Glossed, ListRow, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
+import { AREA_ICON, EvidenceRow, Glossed, ListRow, NavLink, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
 import { ACT_STATUS, ActivitySheet } from './overview/activity-sheet'
 import { ATTN, BRIEF, CLM, REF_ORDER, SUM_REFS, WELL, type ListItem } from './overview/content'
-import { AreaSheet } from './overview/area-sheet'
 import { RunwayChart } from './overview/runway-chart'
 
+// the area sheet lives in the URL and the account header renders it (overview/how-sheet.tsx)
+const setArea = (k: AreaKey) => openSheet('area', k)
+
 export function OverviewTab() {
-  const [area, setArea] = useState<AreaKey | null>(null)
   const lists = useCollapse()
   return (
     <div className="flex flex-col">
@@ -50,7 +55,6 @@ export function OverviewTab() {
         <OrderForms onArea={setArea} />
       </div>
 
-      <AreaSheet area={area} onOpenChange={o => !o && setArea(null)} />
     </div>
   )
 }
@@ -89,14 +93,14 @@ function Footnote({ k }: { k: string }) {
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <button type="button" aria-label={`Source ${n}: ${refName(k)}`}
-              className="ml-0.5 inline-grid h-4 min-w-4 -translate-y-0.5 place-items-center rounded-[5px] border border-border px-1 align-middle text-[10px] tabular-nums text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-signal data-[state=open]:text-signal">
+              className="relative ml-0.5 inline-grid h-4 min-w-4 -translate-y-0.5 place-items-center rounded-[5px] border border-border px-1 align-middle text-[10px] after:absolute after:left-1/2 after:top-1/2 after:size-6 after:min-w-6 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] tabular-nums text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-signal data-[state=open]:text-signal">
               {n}
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>{refName(k)}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)] gap-1.5 p-3">
+      <PopoverContent align="start" onOpenAutoFocus={e => e.preventDefault()} className="w-80 max-w-[calc(100vw-2rem)] gap-1.5 p-3">
         <RefBody k={k} />
       </PopoverContent>
     </Popover>
@@ -209,7 +213,6 @@ function ListCard({ title, items, tone, onArea }: {
           <ul>
             {d.map(([h, , m, area]) => (
               <ListRow key={h} icon={AREA_ICON[area]} title={h} meta={`${m} · ${AREA_NAME[area]}`}
-                status={{ tone, label: tone === 'good' ? 'Strength' : 'Risk' }}
                 onClick={() => onArea(area)} label={`${h}. ${m}. Open ${AREA_NAME[area]} inputs`} />
             ))}
           </ul>
@@ -227,19 +230,21 @@ const CH_ICON: Record<Channel, LucideIcon> = {
 }
 
 function RecentActivity() {
-  const [open, setOpen] = useState<ActivityItem | null>(null)
   const w = useWidget(() => {
     // the header already states the health cap; engagement snapshots carry no content
     const all = activityItems().filter(i => i.date <= TODAY && !/Engagement snapshot/.test(i.source) && i.kind !== 'flag')
       .sort((a, b) => +b.date - +a.date)
-    return { top: all.slice(0, 5), total: all.length }
+    return { top: all.slice(0, 5), all, total: activityTotal() }
   })
+  // the open item lives in the URL (?sheet=activity:<id>); prev/next steps through the five rows shown
+  const sheet = useSheet()
+  const d = w.status === 'ready' ? w.data! : null
+  const open = sheet?.type === 'activity' && d ? d.all.find(i => i.id === sheet.id) ?? null : null
+  const pager = d ? listPager(d.top, open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity') : undefined
   return (
     <Card className="gap-0 py-0">
       <BlockHeader icon={Activity} title="Recent activity" actions={w.status === 'ready' && w.data!.total > 0 && (
-        <Button variant="outline" size="sm" className="rounded-full" onClick={() => showTab('activity')}>
-          View all {w.data!.total} <ChevronRight />
-        </Button>
+        <NavLink onClick={() => showTab('activity')}>View all {w.data!.total}</NavLink>
       )} />
       <div className="px-5 py-2">
       <WidgetBody w={w} what="recent activity" isEmpty={d => d.total === 0} empty={{ title: 'No activity yet' }} skeleton={listSkeleton(5)}>
@@ -247,20 +252,22 @@ function RecentActivity() {
           <ul>
             {d.top.map(i => (
               <ListRow key={i.id} icon={CH_ICON[i.channel]} title={i.title}
-                meta={[fmtD(i.date), i.who[0]].filter(Boolean).join(' · ')}
-                status={ACT_STATUS[i.kind]} onClick={() => setOpen(i)} label={`${i.title}, ${fmtD(i.date)}. Open details`} />
+                meta={<><DateText date={i.date} />{i.who[0] ? ` · ${i.who[0]}` : ''}</>}
+                status={ACT_STATUS[i.kind]} onClick={() => openSheet('activity', i.id)} label={`${i.title}, ${fmtWhen(i.date)}. Open details`} />
             ))}
           </ul>
         )}
       </WidgetBody>
       </div>
-      <ActivitySheet item={open} onOpenChange={o => !o && setOpen(null)} />
+      <ActivitySheet item={open} onOpenChange={sheetOpenChange} pager={pager} />
     </Card>
   )
 }
 
 /* ---------- order forms (renderCLM) ---------- */
 const CLM_ICON = [FileText, FileSignature, FileX]
+// status wording by tone: a bad commitment is "Unsigned", a good one "Signed"
+const CLM_STATUS = { good: 'Signed', bad: 'Unsigned', warn: 'Pending' } as const
 
 function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
   const w = useWidget(() => CLM)
@@ -273,9 +280,9 @@ function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
           <ul>
             {d.map(([l, v, detail, area, tone], i) => (
               <ListRow key={l} icon={CLM_ICON[i] ?? FileText} title={v} meta={detail ? `${l} · ${detail}` : l}
-                status={tone ? { tone, label: tone === 'bad' ? 'Open' : 'Done' } : undefined}
-                onClick={area ? () => onArea(area) : undefined}
-                label={area ? `${l}: ${v}. Open ${AREA_NAME[area]} inputs` : undefined} />
+                status={tone ? { tone, label: CLM_STATUS[tone] } : undefined}
+                onClick={() => onArea(area ?? 'commercial')}
+                label={`${l}: ${v}. Open ${AREA_NAME[area ?? 'commercial']} inputs`} />
             ))}
           </ul>
         )}

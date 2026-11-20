@@ -53,7 +53,7 @@ export function Orbit({ people, onOpen }: { people: OrbitPerson[]; onOpen: (key:
       <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5"><i className="size-3 rounded-full border-2 border-foreground" />Active contact</span>
         <span className="inline-flex items-center gap-1.5"><i className="size-3 rounded-full border-2 border-dashed border-muted-foreground" />Quiet or no contact</span>
-        <span className="inline-flex items-center gap-1.5"><i className="size-3 rounded-full border-2 border-dotted border-foreground" />Inferred, not confirmed</span>
+        <span className="inline-flex items-center gap-1.5"><i className="size-3 rounded-full border-2 border-dotted border-foreground" />Suggested, not confirmed</span>
       </div>
     </div>
   )

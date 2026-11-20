@@ -4,11 +4,11 @@ import { HealthPill, HealthRing, bandText, bandOf } from '@/components/health'
 import { DeltaChip } from '@/components/page'
 import { cn } from '@/lib/utils'
 import { Spark } from './charts'
-import { AREA_ICON, runText } from './parts'
+import { AREA_ICON } from './parts'
 import type { Area } from './model'
 
 /** One of the six areas: score ring, band, change, 18-month trend, weakest input, coverage. Opens its inputs. */
-export function AreaCard({ area, prevLabel, onOpen }: { area: Area; prevLabel: string; onOpen: () => void }) {
+export function AreaCard({ area, prevLabel, labels, onOpen }: { area: Area; prevLabel: string; labels?: string[]; onOpen: () => void }) {
   const have = area.scored.length, all = area.inputs.length
   const I = AREA_ICON[area.key]
   return (
@@ -18,7 +18,7 @@ export function AreaCard({ area, prevLabel, onOpen }: { area: Area; prevLabel: s
         <h3 className="min-w-0 truncate text-sm font-medium">
           {/* the whole card is the hit area; the title button carries the accessible name */}
           <button type="button" onClick={onOpen} className="text-left outline-none after:absolute after:inset-0 after:rounded-xl"
-            aria-label={`${area.name}: ${area.score}, ${area.band.label}. See its ${all} inputs`}>
+            aria-label={`${area.name}: ${area.score}, ${area.band.label}. See its ${all} ${all === 1 ? 'input' : 'inputs'}`}>
             {area.name}
           </button>
         </h3>
@@ -32,11 +32,11 @@ export function AreaCard({ area, prevLabel, onOpen }: { area: Area; prevLabel: s
             <HealthPill value={area.score} />
             <DeltaChip value={area.delta} health label={`vs ${prevLabel.split(' ')[0]}`} />
           </span>
-          <span className="truncate text-xs text-muted-foreground">{runText(area)}</span>
         </div>
       </div>
 
-      <Spark values={area.series} />
+      {/* sits above the card's click overlay so hover shows each month's value; a click still opens the area */}
+      <div className="relative z-10 cursor-pointer" onClick={onOpen}><Spark values={area.series} labels={labels} name={area.shortName} /></div>
 
       <p className="truncate text-xs">
         {area.weakest
@@ -49,7 +49,7 @@ export function AreaCard({ area, prevLabel, onOpen }: { area: Area; prevLabel: s
         <span className="flex gap-0.5" aria-hidden="true">
           {area.inputs.map((i, n) => <span key={n} className={cn('h-1.5 w-3 rounded-full', i.score == null ? 'bg-muted' : 'bg-foreground/50')} />)}
         </span>
-        <span className="tabular-nums">{have} of {all} inputs have data</span>
+        <span className="tabular-nums">{have} of {all} {all === 1 ? 'input has' : 'inputs have'} data</span>
       </div>
     </div>
   )

@@ -21,7 +21,7 @@ const TABS = [
 export function AccountScreen() {
   const tab = useTab()
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-20">
       {/* header + score card */}
       <section className="flex flex-col gap-5 pb-6">
         <AccountHeader />

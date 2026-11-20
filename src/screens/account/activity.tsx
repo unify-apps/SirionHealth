@@ -3,8 +3,8 @@ import { Activity as ActivityIcon, CalendarClock, MessageSquare } from 'lucide-r
 import { BlockHeader, Empty, SectionTitle } from '@/components/page'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { journey, loadActivity, sentimentMonths, withRoles, type ActivityData, type JourneyMonth } from './activity/model'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { activityCounts, journey, loadActivity, sentimentMonths, withRoles, type ActivityData, type JourneyMonth } from './activity/model'
 import { HealthRibbon, SentimentMonths } from './activity/sentiment'
 import { ErrorState, useLoad } from './activity/shared'
 import { Timeline } from './activity/timeline'
@@ -16,23 +16,24 @@ export function ActivityTab() {
   const [view, setView] = useState<View>('timeline')
   const load = useLoad(() => ({ data: loadActivity(), journey: journey() }), undefined, 'activity')
   return (
-    <div className="grid gap-4">
+    <Tabs value={view} onValueChange={v => setView(v as View)} className="grid gap-4">
       <SectionTitle title="Activity" actions={
-        <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={v => v && setView(v as View)} aria-label="View">
-          <ToggleGroupItem value="timeline">Timeline</ToggleGroupItem>
-          <ToggleGroupItem value="sentiment">Monthly sentiment</ToggleGroupItem>
-        </ToggleGroup>
+        <TabsList aria-label="Activity view">
+          <TabsTrigger value="timeline" className="px-3">Timeline</TabsTrigger>
+          <TabsTrigger value="sentiment" className="px-3">Monthly sentiment</TabsTrigger>
+        </TabsList>
       } />
       {load.status === 'loading' && <ActivitySkeleton view={view} />}
       {load.status === 'error' && <ErrorState what="activity" onRetry={load.retry} />}
       {load.status === 'ready' && <Ready view={view} data={load.data.data} months={load.data.journey} />}
-    </div>
+    </Tabs>
   )
 }
 
 function Ready({ view, data, months }: { view: View; data: ActivityData; months: JourneyMonth[] }) {
   const roles = useRoles()
   const items = useMemo(() => withRoles(data.items, roles), [data.items, roles])
+  const counts = useMemo(() => activityCounts(items), [items])
   const sentiment = useMemo(() => sentimentMonths(data.ev), [data.ev])
   return (
     <>
@@ -40,10 +41,12 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
         <BlockHeader icon={CalendarClock} title="Timeline to renewal" sub={`${months.length} months`} />
         <div className="p-5"><HealthRibbon months={months} renewal={{ label: 'Renewal $330K', date: new Date(2026, 11, 30) }} /></div>
       </Card>
-      <Card className="gap-0 py-0">
+      <TabsContent value={view} className="grid">
+      {/* overflow-visible: the card's default overflow-hidden would stop the month headers sticking */}
+      <Card className="gap-0 overflow-visible py-0">
         {view === 'timeline' ? (
           <>
-            <BlockHeader icon={ActivityIcon} title="Timeline" count={items.length} />
+            <BlockHeader icon={ActivityIcon} title="Timeline" count={counts.total} sub={`${counts.past} to date · ${counts.upcoming} upcoming`} />
             <div className="px-3 py-4 sm:px-4">
               {items.length ? <Timeline items={items} snapshot={data.snapshot} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
             </div>
@@ -57,6 +60,7 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
           </>
         )}
       </Card>
+      </TabsContent>
     </>
   )
 }

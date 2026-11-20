@@ -14,9 +14,17 @@ export interface NewsPerson { name: string; title: string; org: string; suggeste
 export const ROLE_OPTS = ['Executive sponsor', 'Champion', 'Decision maker', 'Influencer', 'Technical owner', 'IT and security contact',
   'System administrator', 'Key user', 'Procurement', 'Legal', 'Former champion', 'Left the role'] as const
 
-export const evidence = () => taEvidence() as unknown as Evidence[]
+/** Summary statements are written by AI with long month names ("on October 21"); show them in the app's one format ("on Oct 21"). */
+const LONG_DATE = /\b(January|February|March|April|June|July|August|September|October|November|December) (?=\d{1,2}\b)/g
+let evCache: { src: unknown; out: Evidence[] } | null = null
+export const evidence = (): Evidence[] => {
+  const src = taEvidence()
+  if (evCache?.src !== src) evCache = { src, out: (src as unknown as Evidence[]).map(e => ({ ...e, text: e.text.replace(LONG_DATE, m => m.slice(0, 3) + ' ')})) }
+  return evCache.out
+}
 export const people = () => taPeople() as unknown as Person[]
-export const newsPeople = () => TA_NEWS_PEOPLE as unknown as NewsPerson[]
+const newsCache = (TA_NEWS_PEOPLE as unknown as NewsPerson[]).map(n => ({ ...n, basis: n.basis.replace(/AHI's contacts/g, "the account's contacts") }))
+export const newsPeople = () => newsCache
 export const peopleIndex = () => taPeopleIndex() as Record<string, string>
 export const MONTHS_18 = () => (taMonths() as { ym: string }[]).map(m => m.ym)
 
@@ -51,9 +59,9 @@ export interface StakeRow {
   gap: [GapLevel, string]; days: number | null; last: Date | null; sen: string; news: NewsPerson | null
 }
 
-export const ENG_LABEL: Record<Engagement, string> = { active: 'Active', warm: 'Warm', quiet: 'Quiet', none: 'Not named' }
-export const TONE_LABEL: Record<Tone, string> = { pos: 'Positive', neg: 'Negative', mix: 'Mixed', none: 'No statements' }
-export const KIND_LABEL: Record<Kind, string> = { tagged: 'Tagged', suggested: 'Inferred', departed: 'Departed', other: 'No role' }
+export const ENG_LABEL: Record<Engagement, string> = { active: 'Active', warm: 'Warm', quiet: 'Quiet', none: 'No data' }
+export const TONE_LABEL: Record<Tone, string> = { pos: 'Positive', neg: 'Negative', mix: 'Mixed', none: 'No data' }
+export const KIND_LABEL: Record<Kind, string> = { tagged: 'Tagged', suggested: 'Suggested', departed: 'Departed', other: 'No role' }
 
 const SPONSOR_EMAIL = 'lawrence.kane@transamerica.com'
 
@@ -91,7 +99,7 @@ export function stakeRows(b: Base, st: RoleState): StakeRow[] {
       key, name: n.name, title: n.title, org: n.org, email: null, sources: [], kind: mine ? (isGone(mine) ? 'departed' : 'tagged') : 'suggested',
       label: mine || n.suggested, source: mine ? 'mine' : conf ? 'confirmed' : 'news', aiRole: n.suggested, basis: n.basis, confidence: null,
       eng: 'none', tone: 'none', pos: 0, neg: 0, months: b.months.map(() => 0), mentions: 0,
-      gap: ['warn', `From public news (${n.source}); not in AHI's contacts yet`], days: null, last: null, sen: seniority(n.title), news: n,
+      gap: ['warn', `From public news (${n.source}); not in the account's contacts yet`], days: null, last: null, sen: seniority(n.title), news: n,
     })
   })
   return rows
@@ -115,7 +123,7 @@ export function orbitPeople(rows: StakeRow[]): OrbitPerson[] {
     .map(r => {
       const ring = r.days == null ? 2 : RINGS.findIndex(x => r.days! <= x[1])
       const state: OrbitState = r.source === 'news' ? 'ai' : r.kind === 'departed' || ring === 2 ? 'quiet' : r.source === 'inferred' ? 'ai' : 'active'
-      const role = r.kind === 'departed' ? (/Former champion/.test(r.label) ? 'Champion, handed over' : r.label) : r.source === 'inferred' || r.source === 'news' ? `Inferred · ${r.label}` : r.label
+      const role = r.kind === 'departed' ? (/Former champion/.test(r.label) ? 'Champion, handed over' : r.label) : r.source === 'inferred' || r.source === 'news' ? `Suggested · ${r.label}` : r.label
       return { key: r.key, name: r.name, role, state, ring, mentions: r.mentions, last: r.last, tagged: r.source === 'tagged' }
     })
 }

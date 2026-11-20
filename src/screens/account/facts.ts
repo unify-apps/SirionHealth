@@ -1,15 +1,14 @@
 /* Shared TransAmerica account facts, ported from legacy/src/screen-account.js (facts, areaInputs, areaDriver,
    coverage, inputsFlat, topInputs, evidenceFor, jrItems). Pure TS: no DOM, no React. Other tabs may import these. */
 import {
-  AREAS, DAY, daysBetween, money, RULES, TA_EVENTS, TA_RECORD, TODAY, taEpisode, taEvidence, taFlags,
+  AREAS, DAY, daysBetween, money, RULES, TA_EVENTS, TA_RECORD, TODAY, taEpisode, taFlags,
 } from '@/data/legacy'
+import { summarise } from './activity/model'
+import { evidence as stakeEvidence } from './stakeholders/model'
+import { fmtFull as fmtDY, fmtMonth as ymLabel, fmtShort as fmtD, parseISO as isoDate } from '@/lib/dates'
 
 /* ---------- formatting ---------- */
-export const fmtD = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-export const fmtDY = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-export const ymLabel = (ym: string) =>
-  new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-export const isoDate = (s: string) => new Date(s + 'T00:00:00')
+export { fmtShort as fmtD, fmtFull as fmtDY, fmtMonth as ymLabel, parseISO as isoDate } from '@/lib/dates'
 
 /* ---------- areas ---------- */
 export type AreaKey = 'commercial' | 'adoption' | 'support' | 'engagement' | 'sentiment' | 'renewalRisk'
@@ -109,8 +108,7 @@ export const runway = ep ? {
 export type Evidence = {
   ym: string; kind: 'pos' | 'neg'; text: string; date: Date | null; tickets: string[]; who: string[]; strong: boolean
 }
-let evCache: Evidence[] | null = null
-export const evidence = (): Evidence[] => (evCache ??= taEvidence() as Evidence[])
+export const evidence = (): Evidence[] => stakeEvidence()
 export const strongThisMonth = () => evidence().filter(e => e.ym === latest.ym && e.strong)
 
 /** Negative statements relevant to one area, strongest and newest first. */
@@ -134,7 +132,7 @@ export const events: KeyEvent[] = (TA_EVENTS as [string, EventKind, string, stri
   iso, date: isoDate(iso), kind, text, source, ai: /sentiment|AI insight/.test(source),
 }))
 /** Plain-words source label: "sentiment Oct 2026" -> "Monthly summary, Oct 2026". */
-export const sourceLabel = (s: string) => { s = s.replace(/^sentiment /, 'Monthly summary, '); return s[0].toUpperCase() + s.slice(1) }
+export const sourceLabel = (s: string) => { s = s.replace(/^sentiment /, 'Monthly summary, ').replace(/^AHI record/, 'Health record'); return s[0].toUpperCase() + s.slice(1) }
 /** Summary statements within two days of an event: the evidence behind it. */
 export const eventEvidence = (e: KeyEvent) =>
   evidence().filter(v => v.ym === e.iso.slice(0, 7) && v.date && Math.abs(+v.date - +e.date) < 2 * DAY)
@@ -148,15 +146,17 @@ export type ActivityItem = {
   id: string; date: Date; kind: EventKind; key: boolean; title: string; desc: string; source: string
   channel: Channel; who: string[]; tickets: string[]
 }
-export function channelOf(text: string, src: string): Channel {
+/** Same rules as jrChannel in activity/model.ts: a role change is a note, and a statement with ticket IDs is a ticket. */
+export function channelOf(text: string, src: string, tickets: string[] = []): Channel {
   if (/AHI record/.test(src)) return 'record'
   if (/order forms/.test(src)) return 'file'
   if (/AI insight/.test(src)) return 'ai'
+  if (/handed over|hand(ed)? (her|his|their) role|left (the|her|his|their) role|stepped down|no longer (in|with|at)\b/i.test(text)) return 'note'
   if (/Last email/.test(text)) return 'email'
   if (/Last meeting/.test(text)) return 'meeting'
   if (/\b(on|via|in a) (MS )?Teams\b|Teams (message|chat)/i.test(text)) return 'teams'
   if (/\b(after|on|during) a call\b|\bcall with\b|\bphone\b/i.test(text)) return 'call'
-  if (/INC-|SR-|#|ticket|RCA|Jira/i.test(text)) return 'ticket'
+  if (tickets.length || /INC-|SR-|#|ticket|RCA|Jira/i.test(text)) return 'ticket'
   if (/meeting|MBR|business review|call|QBR|check-in|session|demo|workshop/i.test(text)) return 'meeting'
   if (/email|replied|thread|wrote|forward|asked|sent|notice/i.test(text)) return 'email'
   return 'note'
@@ -164,7 +164,8 @@ export function channelOf(text: string, src: string): Channel {
 function statementTitle(e: Evidence) {
   if (e.tickets.length) return `Ticket ${e.tickets[0]}`
   if (/MBR|business review/i.test(e.text)) return 'Monthly business review'
-  return ({ meeting: 'Meeting', email: 'Email thread', ticket: 'Support ticket' } as Record<string, string>)[channelOf(e.text, '')] ?? 'Account update'
+  // same one-line summary the Activity tab uses, so an event reads the same everywhere
+  return summarise(e.text, 70) || 'Account update'
 }
 export function activityItems(): ActivityItem[] {
   const ev = evidence().filter(v => v.date), used = new Set<Evidence>()
@@ -175,12 +176,12 @@ export function activityItems(): ActivityItem[] {
     return {
       id: 'k' + e.iso + e.text.slice(0, 12), date: e.date, kind: e.kind, key: true, title: e.text,
       desc: match ? match.text : sourceLabel(e.source) + '.', source: sourceLabel(e.source),
-      channel: channelOf(match ? match.text : e.text, e.source), who: match?.who ?? [], tickets: match?.tickets ?? [],
+      channel: channelOf(match ? match.text : e.text, e.source, match?.tickets), who: match?.who ?? [], tickets: match?.tickets ?? [],
     }
   })
   ev.filter(v => !used.has(v)).forEach(v => items.push({
     id: 's' + v.date!.toISOString() + v.text.slice(0, 12), date: v.date!, kind: v.kind, key: false, title: statementTitle(v),
-    desc: v.text, source: 'Monthly summary, ' + ymLabel(v.ym), channel: channelOf(v.text, ''), who: v.who, tickets: v.tickets,
+    desc: v.text, source: 'Monthly summary, ' + ymLabel(v.ym), channel: channelOf(v.text, '', v.tickets), who: v.who, tickets: v.tickets,
   }))
   return items
 }

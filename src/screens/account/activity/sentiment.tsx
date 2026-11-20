@@ -6,6 +6,7 @@ import { BAND_LABEL, bandOf, bandText, isMissing, type Band } from '@/components
 import { TODAY } from '@/data/legacy'
 import { DeltaChip } from '@/components/page'
 import { cn } from '@/lib/utils'
+import { fmtMonthName, fmtMonthNarrow, fmtShort } from '@/lib/dates'
 import type { Evidence } from '../stakeholders/model'
 import type { JourneyMonth, SentimentMonth } from './model'
 import { fmtDY, ymLabel, ymLong } from './shared'
@@ -54,7 +55,7 @@ export function HealthRibbon({ months, renewal }: { months: JourneyMonth[]; rene
                   <TooltipContent className="max-w-64">{tip}</TooltipContent>
                 </Tooltip>
                 <span className={cn('text-center text-[10px] leading-none', isNow ? 'font-medium text-foreground' : 'text-muted-foreground')} aria-hidden="true">
-                  {new Date(+y, +m.ym.slice(5, 7) - 1, 1).toLocaleDateString('en-US', { month: 'narrow' })}
+                  {fmtMonthNarrow(m.ym)}
                 </span>
                 <span className="h-3 text-[10px] leading-none whitespace-nowrap text-muted-foreground" aria-hidden="true">
                   {isNow ? <span className="font-medium text-foreground">Today</span> : first ? y : ''}
@@ -68,7 +69,7 @@ export function HealthRibbon({ months, renewal }: { months: JourneyMonth[]; rene
         <span>Health by month</span>
         <span className="inline-flex items-center gap-1"><Triangle className="size-2.5 fill-bad text-bad" aria-hidden="true" />Risk event</span>
         <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-good" aria-hidden="true" />Positive event</span>
-        <span className="inline-flex items-center gap-1"><Flag className="size-3" aria-hidden="true" />{renewal.label}, {fmtDY(renewal.date).replace(/, \d{4}$/, '')}</span>
+        <span className="inline-flex items-center gap-1"><Flag className="size-3" aria-hidden="true" />{renewal.label}, {fmtShort(renewal.date)}</span>
       </p>
     </div>
   )
@@ -89,7 +90,7 @@ export function SentimentMonths({ months }: { months: SentimentMonth[] }) {
                 <h4 className="font-medium">{ymLong(m.ym)}</h4>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {isMissing(m.score) ? <span>No data</span> : <span className={cn('text-base tabular-nums font-medium', bandText[b])}>{m.score}</span>}
-                  {d != null && <DeltaChip value={d} health label={`vs ${ymLabel(prevYm(m.ym)).split(' ')[0]}`} />}
+                  {d != null && <DeltaChip value={d} health label={`vs ${fmtMonthName(prevYm(m.ym))}`} />}
                 </p>
               </div>
               <Drivers label="Positive" items={m.pos} dot="bg-good" />

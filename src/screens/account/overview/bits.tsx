@@ -3,18 +3,19 @@ import { setTab } from '../tab'
    widget load/empty/error states, collapsible section titles, evidence rows. */
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, CalendarClock, ChevronDown, DollarSign, Info, LifeBuoy, MessageSquare, TrendingUp, Users, type LucideIcon,
+  AlertTriangle, ArrowRight, CalendarClock, ChevronDown, DollarSign, Info, LifeBuoy, MessageSquare, TrendingUp, Users, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Empty } from '@/components/page'
-import { fmtDY, ymLabel, type AreaKey, type Evidence } from '../facts'
+import { fmtDY, score, ymLabel, type AreaKey, type Evidence } from '../facts'
 
 /* ---------- terms, codes and truncated text ---------- */
 
-/** One line per code or abbreviation the app shows. */
+/** One line per code or abbreviation the app shows. Daily CSM labels (NRR, GRR, CARR, MAU) stay on screen with this as their tooltip.
+ *  Internal codes (O7, TFC, PER) are written out in plain words on screen; the code only appears in the tooltip. */
 export const GLOSSARY: Record<string, string> = {
   NRR: 'Net revenue retention: revenue kept from existing customers, including expansion',
   GRR: 'Gross revenue retention: revenue kept from existing customers, before expansion',
@@ -22,7 +23,7 @@ export const GLOSSARY: Record<string, string> = {
   ARR: 'Annual recurring revenue',
   MAU: 'Monthly active users',
   PER: 'Product enhancement requests (open Jira tickets)',
-  O7: 'Renewal cap: renewal within 60 days with auto-renew off holds health at 50',
+  O7: 'Health cannot go above 50 when the contract renews within 60 days and auto-renew is off',
   TFC: 'Termination for convenience',
 }
 
@@ -46,6 +47,11 @@ export function Term({ children, tip, focusable = true, className }: {
   )
 }
 
+/** Plain-language name for the renewal cap, with the record's code in the tooltip. Use focusable={false} inside sheets and popovers. */
+export function CapTerm({ focusable = true, className, children = 'renewal cap' }: { focusable?: boolean; className?: string; children?: React.ReactNode }) {
+  return <Term focusable={focusable} className={className} tip={`${score.overrideCode}: ${GLOSSARY[score.overrideCode] ?? 'Caps the health score'}`}>{children}</Term>
+}
+
 const CODE_RE = new RegExp(`\\b(${Object.keys(GLOSSARY).join('|')})\\b`, 'g')
 
 /** Plain text with every known code (NRR, GRR, CARR, MAU, PER, O7...) wrapped in a `Term`. */
@@ -66,6 +72,20 @@ export function Truncate({ children, tip, className }: { children: React.ReactNo
       </TooltipTrigger>
       <TooltipContent className="max-w-80">{tip ?? children}</TooltipContent>
     </Tooltip>
+  )
+}
+
+/** Affordances. Opens a sheet: bordered pill (`Button variant="outline"`, rounded-full) or a hover-tinted row.
+ *  Navigates (another tab, a scroll target): `NavLink`, plain link text with a trailing arrow. Static fact: no button look, no hover. */
+export function NavLink({ children, onClick, className, ...aria }: {
+  children: React.ReactNode; onClick: () => void; className?: string; 'aria-label'?: string
+}) {
+  return (
+    <button type="button" onClick={onClick} {...aria}
+      className={cn('group/nav inline-flex cursor-pointer items-center gap-1 rounded-sm text-sm text-signal outline-none hover:underline hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring', className)}>
+      {children}
+      <ArrowRight className="size-3.5 transition-transform group-hover/nav:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+    </button>
   )
 }
 
@@ -192,21 +212,19 @@ export function SectionHead({ title, tip, open, onToggle, actions, id }: {
   return (
     <div className="mb-3 mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 first:mt-0">
       <h2 id={id} className="flex items-center gap-1.5 text-base font-medium">{title}{tip && <InfoTip text={tip} />}</h2>
-      <div className="ml-auto flex items-center gap-3">
-        {actions}
-        {onToggle && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-xs" onClick={onToggle} aria-expanded={open}
-                aria-label={`${open ? 'Collapse' : 'Expand'} ${typeof title === 'string' ? title : 'section'}`}
-                className="hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-                <ChevronDown className={cn('transition-transform duration-200', !open && '-rotate-90')} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{open ? 'Collapse' : 'Expand'}</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+      {onToggle && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" onClick={onToggle} aria-expanded={open}
+              aria-label={`${open ? 'Collapse' : 'Expand'} ${typeof title === 'string' ? title : 'section'}`}
+              className="-ml-1.5 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+              <ChevronDown className={cn('transition-transform duration-200', !open && '-rotate-90')} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{open ? 'Collapse' : 'Expand'}</TooltipContent>
+        </Tooltip>
+      )}
+      {actions && <div className="ml-auto flex items-center gap-3">{actions}</div>}
     </div>
   )
 }
