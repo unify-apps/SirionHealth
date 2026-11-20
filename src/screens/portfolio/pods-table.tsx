@@ -21,9 +21,11 @@ const COLS: { key: Key; label: string; tip?: string; num?: boolean }[] = [
   { key: 'health', label: 'Avg health', tip: 'Average health of scored accounts. Accounts with no score are left out.' },
   { key: 'carrAtRisk', label: 'CARR at risk', num: true, tip: 'CARR of accounts with health under 40' },
   { key: 'riskShare', label: 'Share of pod at risk', tip: 'CARR at risk as a share of the pod’s CARR' },
-  { key: 'renewing', label: 'Renewing <60d', num: true },
-  { key: 'renewalAtRisk', label: 'Renewal ARR at risk', num: true, tip: 'ARR renewing in 60 days that is at risk or unsigned' },
+  { key: 'renewing', label: 'Renewing in 60 days', num: true, tip: 'Accounts with a renewal date in the next 60 days' },
+  { key: 'renewalAtRisk', label: 'Renewing ARR at risk', num: true, tip: 'ARR renewing in 60 days that is at risk or unsigned' },
 ]
+/** Left-aligns the score in its slot so scores, "No data" and the header share one left edge. */
+const HEALTH_CELL = '[&>span:first-child]:text-left'
 /** One money format down every column: $ millions, two decimals. */
 const fmtM = (m: number) => (m === 0 ? '$0' : `$${m.toFixed(2)}M`)
 
@@ -103,7 +105,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
               <TableRow>
                 {COLS.map((c, i) => (
                   <SortHead key={c.key} active={sort.key === c.key} dir={sort.dir === 1 ? 'asc' : 'desc'} onSort={() => onSort(c.key)}
-                    numeric={c.num} sticky={i === 0} title={c.tip}>{c.label}</SortHead>
+                    numeric={c.num} sticky={i === 0} title={c.tip} className={i === 0 ? 'w-full' : undefined}>{c.label}</SortHead>
                 ))}
                 <TableHead className="w-8"><span className="sr-only">Open</span></TableHead>
               </TableRow>
@@ -118,7 +120,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
                   </TableCell>
                   <TableCell className="text-right">{p.accounts}</TableCell>
                   <TableCell className="text-right">{fmtM(p.carr)}</TableCell>
-                  <TableCell><HealthBar value={p.health} /></TableCell>
+                  <TableCell><HealthBar value={p.health} className={HEALTH_CELL} /></TableCell>
                   <TableCell className="text-right">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -129,7 +131,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-2">
-                      <span className="w-9 text-right">{p.riskShare}%</span>
+                      <span className="w-9">{p.riskShare}%</span>
                       <Meter value={p.carrAtRisk} max={p.carr || 1} label={`${p.riskShare}% of ${p.name}'s CARR is at risk`} className="w-16" />
                     </span>
                   </TableCell>
@@ -145,9 +147,9 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
                   <TableCell className={cn(stickyCol, 'bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))] font-medium [tr:hover_&]:bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))]')}>Total</TableCell>
                   <TableCell className="text-right">{total.accounts}</TableCell>
                   <TableCell className="text-right">{fmtM(total.carr)}</TableCell>
-                  <TableCell><HealthBar value={total.health} /></TableCell>
+                  <TableCell><HealthBar value={total.health} className={HEALTH_CELL} /></TableCell>
                   <TableCell className="text-right font-medium" title={`${total.atRisk} accounts under 40`}>{fmtM(total.carrAtRisk)}</TableCell>
-                  <TableCell><span className="inline-block w-9 text-right">{total.carr ? Math.round((total.carrAtRisk / total.carr) * 100) : 0}%</span></TableCell>
+                  <TableCell><span className="inline-block w-9">{total.carr ? Math.round((total.carrAtRisk / total.carr) * 100) : 0}%</span></TableCell>
                   <TableCell className="text-right">{total.renewing}</TableCell>
                   <TableCell className="text-right">{fmtM(total.renewalAtRisk)}</TableCell>
                   <TableCell />
