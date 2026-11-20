@@ -9,6 +9,7 @@ import { HealthRibbon, RibbonLegend, SentimentMonths } from './activity/sentimen
 import { ErrorState, useLoad } from './activity/shared'
 import { Timeline } from './activity/timeline'
 import { useRoles } from './stakeholders/store'
+import { renewal } from './facts'
 
 type View = 'timeline' | 'sentiment'
 
@@ -39,7 +40,7 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
     <>
       <Card className="gap-0 py-0">
         <BlockHeader icon={CalendarClock} title="Health to renewal" actions={<RibbonLegend />} />
-        <div className="px-5 pt-4 pb-3"><HealthRibbon months={months} renewal={{ label: 'Renewal $330K', date: new Date(2026, 11, 30) }} /></div>
+        <div className="px-5 pt-4 pb-3"><HealthRibbon months={months} renewal={{ label: `Renewal ${renewal.carrLabel}`, date: renewal.date }} /></div>
       </Card>
       <TabsContent value={view} className="grid">
       {/* overflow-visible: the card's default overflow-hidden would stop the month headers sticking */}

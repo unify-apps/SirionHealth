@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { money } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
-import { go } from '@/lib/route'
+import { hasPage, openAccount } from '@/lib/route'
 import { cn } from '@/lib/utils'
 import { Term } from '../account/overview/bits'
 import { carrK, isLive, moneyK, plural, renewal, type Row } from './data'
@@ -52,8 +52,8 @@ export function AccountsTable({ list, meta = META.podStage, grr = false, tags }:
   const [shown, setShown] = useState(PAGE)
   const rows = list.slice(0, shown)
   const more = Math.min(PAGE, list.length - shown)
-  // the chevron column exists only when a row can open an account page (TransAmerica is the one built so far)
-  const anyOpen = rows.some(r => r.name === 'TransAmerica')
+  // the chevron column exists only when a row can open an account page (TransAmerica plus the mock accounts)
+  const anyOpen = rows.some(r => hasPage(r.name))
   return (
     <>
       <Table className="[&_td:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:first-child]:pl-0 [&_th:last-child]:pr-0">
@@ -69,14 +69,14 @@ export function AccountsTable({ list, meta = META.podStage, grr = false, tags }:
         </TableHeader>
         <TableBody>
           {rows.map(r => {
-            const open = r.name === 'TransAmerica'
+            const open = hasPage(r.name)
             const rr = renewal(r)
             return (
-              <TableRow key={r.name} className={cn(open ? 'cursor-pointer' : 'hover:bg-transparent')} onClick={open ? () => go('account') : undefined}>
+              <TableRow key={r.name} className={cn(open ? 'cursor-pointer' : 'hover:bg-transparent')} onClick={open ? () => openAccount(r.name) : undefined}>
                 <TableCell className="max-w-72 font-medium">
                   <span className="flex min-w-0 items-center gap-2">
                     {open ? (
-                      <button type="button" className="truncate rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" onClick={e => { e.stopPropagation(); go('account') }}>
+                      <button type="button" className="truncate rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" onClick={e => { e.stopPropagation(); openAccount(r.name) }}>
                         {r.name}
                       </button>
                     ) : <span className="truncate">{r.name}</span>}

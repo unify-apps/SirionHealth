@@ -4,7 +4,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { HealthRing } from '@/components/health'
+import { bandOf, bandText, HealthRing } from '@/components/health'
+import { ACCOUNT, TA_RECORD } from '@/data/legacy'
 import { SirionLogo, SirionMark } from './logo'
 import { CommandMenu } from './command-menu'
 import { AskPanel } from './ask'
@@ -99,11 +100,11 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
           <SidebarGroupLabel>Recent</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <SidebarMenuButton isActive={route === 'account'} tooltip="TransAmerica · 50" onClick={() => nav('account')}>
-                <HealthRing value={50} size={16} stroke={2} label={false} />
-                <span>TransAmerica</span>
+              <SidebarMenuButton isActive={route === 'account'} tooltip={`${ACCOUNT.name} · ${TA_RECORD.finalHealth}`} onClick={() => nav('account')}>
+                <HealthRing value={TA_RECORD.finalHealth} size={16} stroke={2} label={false} />
+                <span>{ACCOUNT.name}</span>
               </SidebarMenuButton>
-              <SidebarMenuBadge className="text-warn">50</SidebarMenuBadge>
+              <SidebarMenuBadge className={bandText[bandOf(TA_RECORD.finalHealth)]}>{TA_RECORD.finalHealth}</SidebarMenuBadge>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
@@ -186,7 +187,7 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
   const [open, setOpen] = useSidebarOpen()
   const [cmd, setCmd] = useState(false)
   const [ask, setAsk] = useState(false)
-  useEffect(() => { document.title = route === 'account' ? 'TransAmerica · Sirion Account Health' : 'Sirion Account Health' }, [route])
+  useEffect(() => { document.title = route === 'account' ? `${ACCOUNT.name} · Sirion Account Health` : 'Sirion Account Health' }, [route])
   return (
     <SidebarProvider open={open} onOpenChange={setOpen}>
       <AppSidebar route={route} theme={theme} toggleTheme={toggleTheme} onFind={() => setCmd(true)} onAsk={() => setAsk(true)} />

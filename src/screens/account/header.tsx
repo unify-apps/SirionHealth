@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BAND_LABEL, bandOf, bandText, type Band } from '@/components/health'
 import {
-  AREA_KEYS, AREA_NAME, AREA_SHORT, areaDriver, fmtD, fmtDY, kpis, latest, months, renewal,
+  ACCT, AREA_KEYS, AREA_NAME, AREA_SHORT, areaDriver, fmtD, fmtDY, kpis, latest, months, renewal,
   score, strongThisMonth, type AreaKey, type Month,
 } from './facts'
 import { showTab, useWidget, WidgetBody } from './overview/bits'
@@ -26,7 +26,11 @@ import { HeaderSheets } from './overview/how-sheet'
 const CAUSE: Partial<Record<AreaKey, () => string>> = {
   engagement: () => 'Champion handed over',
   sentiment: () => { const n = strongThisMonth().length; return `${n} strong negative${n === 1 ? '' : 's'} this month` },
+  ...Object.fromEntries(Object.entries(ACCT.copy?.cause ?? {}).map(([k, v]) => [k, () => v])),
 }
+
+/** Initials for the page avatar: "Boston Scientific" -> BS, "Abellio" -> AB, "TransAmerica" -> TA. */
+const initials = (n: string) => { const w = n.split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : /[A-Z].*[A-Z]/.test(n.slice(1)) ? n[0] + n.slice(1).match(/[A-Z]/)![0] : n.slice(0, 2)).toUpperCase() }
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
@@ -93,10 +97,13 @@ function buildVerdict(r: Range) {
   const areas = AREA_KEYS.map(k => ({ k, v: latest.areas[k], d: latest.areas[k] - base.areas[k], drv: areaDriver(k) }))
   // the two biggest falls since last month drive the headline
   const drivers = areas.filter(x => x.d < 0).sort((a, b) => a.d - b.d).slice(0, 2)
+  const late = renewal.daysLeft < 0
   const atRisk = !renewal.signed && renewal.daysLeft <= 90
-  const title = atRisk ? 'Renewal at risk' : BAND_LABEL[bandOf(score.final)]
+  const title = late ? 'Renewal overdue' : atRisk ? 'Renewal at risk' : BAND_LABEL[bandOf(score.final)]
   const why = [
-    `${renewal.carrLabel} renews ${fmtD(renewal.date)} with nothing signed${renewal.autoRenew ? '' : ' and auto-renew off'}.`,
+    late ? `${renewal.carrLabel} was due ${fmtD(renewal.date)} and is still unsigned.`
+      : renewal.autoRenew ? `${renewal.carrLabel} renews ${fmtD(renewal.date)} on auto-renew, nothing signed yet.`
+      : `${renewal.carrLabel} renews ${fmtD(renewal.date)} with nothing signed and auto-renew off.`,
     drivers.length ? `${drivers.map(x => `${AREA_SHORT[x.k]} fell ${Math.abs(x.d)}`).join(' and ')} since ${fmtMonth(base.ym)}${CAUSE[drivers[0].k] ? `: ${CAUSE[drivers[0].k]!().toLowerCase()}` : ''}.` : '',
   ].filter(Boolean).join(' ')
   // the brief's "Next" line, first sentence, citations stripped
@@ -151,10 +158,12 @@ export function StickyPageHeader({ joined = false }: { joined?: boolean }) {
         <PageHeader
           compact={compact}
           back={{ label: 'My accounts', onClick: () => go('accounts') }}
-          lead="TA"
-          title="TransAmerica"
-          sub="Financial services · Enterprise · North America · BAU"
-          compactSub={<><span className={cn('font-medium tabular-nums', bandText[b])}>{score.final} {BAND_LABEL[b]}</span> · Renews in <span className="tabular-nums text-bad">{renewal.daysLeft} days</span></>}
+          lead={initials(ACCT.name)}
+          title={ACCT.name}
+          sub={[ACCT.ind, ACCT.seg, ACCT.region, ACCT.stage].join(' · ')}
+          compactSub={<><span className={cn('font-medium tabular-nums', bandText[b])}>{score.final} {BAND_LABEL[b]}</span> · {renewal.daysLeft < 0
+            ? <>Renewal <span className="tabular-nums text-bad">{-renewal.daysLeft} days overdue</span></>
+            : <>Renews in <span className={cn('tabular-nums', renewal.daysLeft <= 90 && 'text-bad')}>{renewal.daysLeft} days</span></>}</>}
           actions={<DateRangeMenu />}
         />
       </div>
@@ -210,7 +219,7 @@ function Verdict({ d, onHow }: { d: ReturnType<typeof buildVerdict>; onHow: () =
             <ScoreRing value={score.final} size={72} stroke={5} />
           </button>
         </TooltipTrigger>
-        <TooltipContent>{BAND_LABEL[b]} · weighted {score.weighted}, −{score.cap} renewal cap</TooltipContent>
+        <TooltipContent>{BAND_LABEL[b]} · {score.cap ? <>weighted {score.weighted}, −{score.cap} renewal cap</> : 'weighted average, no cap'}</TooltipContent>
       </Tooltip>
       <div className="min-w-0 flex-1">
         <h2 id="h-verdict" className="flex items-baseline gap-2 text-lg font-medium tracking-[-0.01em]">
@@ -276,15 +285,16 @@ function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: 
 
 /* ---------- renewal: days left, date and value, auto-renew ---------- */
 function RenewalZone() {
+  const late = renewal.daysLeft < 0
   return (
     <section aria-labelledby="h-renew" className="flex flex-col gap-3 p-5">
       <ZoneLabel id="h-renew" icon={CalendarClock}
-        right={!renewal.autoRenew && <span className="text-xs text-bad">Auto-renew off</span>}>Renewal</ZoneLabel>
+        right={renewal.autoRenew ? <span className="text-xs">Auto-renew on</span> : <span className="text-xs text-bad">Auto-renew off</span>}>Renewal</ZoneLabel>
       <button type="button" onClick={() => showTab('overview', 'runway')}
-        aria-label={`${renewal.daysLeft} days left to renewal on ${fmtDY(renewal.date)}. Go to the renewal runway`}
+        aria-label={`${late ? `${-renewal.daysLeft} days overdue since` : `${renewal.daysLeft} days left to`} renewal on ${fmtDY(renewal.date)}. Go to the renewal runway`}
         className={cn('group/nav flex items-baseline gap-1.5 self-start rounded-md text-left', focusRing)}>
-        <span className="text-2xl font-normal tabular-nums tracking-[-0.02em] text-bad">{renewal.daysLeft}</span>
-        <span className="text-sm text-muted-foreground group-hover/nav:text-foreground">days left</span>
+        <span className={cn('text-2xl font-normal tabular-nums tracking-[-0.02em]', (late || renewal.daysLeft <= 90) && 'text-bad')}>{Math.abs(renewal.daysLeft)}</span>
+        <span className="text-sm text-muted-foreground group-hover/nav:text-foreground">{late ? 'days overdue' : 'days left'}</span>
         <ArrowRight className="size-3.5 self-center text-muted-foreground transition-transform group-hover/nav:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
       </button>
       <p className="text-sm tabular-nums text-muted-foreground">{fmtDY(renewal.date)} · {renewal.carrLabel}</p>
@@ -303,7 +313,7 @@ function Metrics() {
     { icon: RefreshCw, label: 'Net retention', value: `${kpis.nrr}%`, hint: `GRR ${kpis.grr}% · flat on last month`, tip: 'Net and gross revenue retention, last 12 months. Over 100% means the account grew.', tone: sign(kpis.nrr - 100) },
     { icon: Users, label: 'Active users', value: kpis.mau, hint: `${Math.abs(kpis.mauChange)}% ${kpis.mauChange < 0 ? 'below' : 'above'} the 12-month average`, tip: `Monthly active users; 12-month average ${kpis.mauAvg}`, tone: sign(kpis.mauChange), trend: kpis.mauChange },
     { icon: Gauge, label: 'Licence use', value: `${l.pct}%`, hint: over > 0 ? `${over} seats over the ${l.bought} bought` : `${l.used} of ${l.bought} seats`, tip: 'Seats in use against seats bought. Over 100% is an upsell signal; under 70% is shelfware risk.', tone: l.pct >= 100 ? 'good' : l.pct < 70 ? 'bad' : undefined, trend: over },
-    { icon: DollarSign, label: 'Open expansion', value: renewal.expansionLabel, hint: 'Unsigned, on top of the renewal', tip: 'Open expansion opportunity on this account', tone: undefined },
+    { icon: DollarSign, label: 'Open expansion', value: renewal.expansionLabel, hint: renewal.expansionLabel === '$0' ? 'No opportunity open' : 'Unsigned, on top of the renewal', tip: 'Open expansion opportunity on this account', tone: undefined },
   ]
   return (
     <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">

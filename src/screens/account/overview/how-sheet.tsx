@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Meter } from '@/components/charts'
 import { BAND_LABEL, bandBg, bandOf, bandText, HealthPill } from '@/components/health'
 import {
-  AREA_KEYS, AREA_NAME, AREA_SHORT, AREA_SOURCE, areaDriver, fmtD, fmtDY, latest, RENEWAL, runway, score, SCORED_LINE,
+  ACCT, AREA_KEYS, AREA_NAME, AREA_SHORT, AREA_SOURCE, areaDriver, fmtD, fmtDY, latest, RENEWAL, renewal, runway, score, SCORED_LINE,
   TODAY, ymLabel, type AreaKey,
 } from '../facts'
 import { AREA_ICON, CapTerm } from './bits'
@@ -65,7 +65,7 @@ function HowScoresBody({ onOpenArea }: { onOpenArea: (k: AreaKey) => void }) {
         <RecordSheetHeader eyebrow="Method" title="How scores work" meta={SCORED_LINE} />
         <RecordSheetBody>
         <div className="flex flex-col gap-6 p-6">
-          <ol aria-label={`Weighted ${score.weighted} minus cap ${score.cap} equals ${score.final}`}>
+          <ol aria-label={score.cap ? `Weighted ${score.weighted} minus cap ${score.cap} equals ${score.final}` : `Weighted ${score.weighted}, no cap, equals ${score.final}`}>
             <Step n="1" title="Area Scores">
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {AREA_KEYS.map(k => <AreaTile key={k} k={k} onOpen={() => onOpenArea(k)} />)}
@@ -74,9 +74,10 @@ function HowScoresBody({ onOpenArea }: { onOpenArea: (k: AreaKey) => void }) {
             <Step n="2" title="Weighted Average" value={score.weighted}>
               <p className="text-muted-foreground">Sirion CS ops set each area's weight; the weights aren't stored in the health record.</p>
             </Step>
-            <Step n="3" title={<CapTerm focusable={false}>Renewal Cap</CapTerm>} value={`−${score.cap}`}>
+            <Step n="3" title={<CapTerm focusable={false}>Renewal Cap</CapTerm>} value={score.cap ? `−${score.cap}` : '0'}>
               <p className="line-clamp-2 text-muted-foreground">
-                Renewal {score.snapshotDays} days out with auto-renew off holds health at 50. It lifts once signed or auto-renew is on.
+                {score.cap ? `Renewal ${score.snapshotDays} days out with auto-renew off holds health at 50. It lifts once signed or auto-renew is on.`
+                  : renewal.autoRenew ? 'No cap: auto-renew is on.' : renewal.daysLeft < 0 ? 'No cap: the cap only applies in the 60 days before a renewal, and this one has passed.' : 'No cap: the renewal is more than 60 days out.'}
               </p>
             </Step>
             <Step n="=" title={<span className="flex items-center gap-2">Health Score<HealthPill value={score.final} /></span>} value={score.final} valueClass={cn('font-medium', bandText[bandOf(score.final)])} last />
@@ -89,7 +90,7 @@ function HowScoresBody({ onOpenArea }: { onOpenArea: (k: AreaKey) => void }) {
               <BandScale />
             </InfoCard>
             {runway && (
-              <InfoCard title="Renewal Runway" aside={<span className="tabular-nums"><span className="font-medium text-bad">{runway.left} days</span> left</span>}>
+              <InfoCard title="Renewal Runway" aside={<span className="tabular-nums"><span className="font-medium text-bad">{Math.abs(runway.left)} days</span> {runway.left < 0 ? 'overdue' : 'left'}</span>}>
                 <RunwayTimeline />
               </InfoCard>
             )}
@@ -150,8 +151,8 @@ function BandScale() {
   return (
     <div className="space-y-3">
       <div className="relative pt-5">
-        <Marker at={score.final} label={`${score.final}`} tip={`TransAmerica: ${score.final}, after the renewal cap`} />
-        <Marker at={score.weighted} label={`${score.weighted}`} hollow tip={`Uncapped weighted score: ${score.weighted}`} />
+        <Marker at={score.final} label={`${score.final}`} tip={`${ACCT.name}: ${score.final}${score.cap ? ', after the renewal cap' : ''}`} />
+        {score.cap > 0 && <Marker at={score.weighted} label={`${score.weighted}`} hollow tip={`Uncapped weighted score: ${score.weighted}`} />}
         <div className="flex h-2.5 gap-0.5">
           {ZONES.map(z => (
             <span key={z.label} className={cn('h-full first:rounded-l-full last:rounded-r-full', z.fill)} style={{ width: `${z.to - z.from}%` }} />
@@ -189,20 +190,21 @@ function Marker({ at, label, tip, hollow }: { at: number; label: string; tip: st
 /* ---------- renewal runway: flagged -> cleared -> today -> renewal ---------- */
 function RunwayTimeline() {
   const r = runway!
-  const t0 = +r.firstFlag, t1 = +RENEWAL
+  const t0 = +r.firstFlag, t1 = Math.max(+RENEWAL, +TODAY)
   const at = (d: Date) => Math.min(100, Math.max(0, ((+d - t0) / (t1 - t0)) * 100))
   const points: { d: Date; top: string; sub: string; kind: 'flag' | 'clear' | 'today' | 'end' }[] = [
-    { d: r.firstFlag, top: 'Flagged', sub: fmtD(r.firstFlag), kind: 'flag' },
+    { d: r.firstFlag, top: 'Flagged', sub: fmtD(r.firstFlag), kind: 'flag' as const },
     ...r.cleared.map(c => ({ d: c.date, top: `Cleared at ${c.final}`, sub: ymLabel(c.ym), kind: 'clear' as const })),
-    { d: TODAY, top: 'Today', sub: fmtD(TODAY), kind: 'today' },
-    { d: RENEWAL, top: 'Renewal', sub: fmtD(RENEWAL), kind: 'end' },
-  ]
-  const usedPct = at(TODAY)
+    { d: TODAY, top: 'Today', sub: fmtD(TODAY), kind: 'today' as const },
+    { d: RENEWAL, top: r.left < 0 ? 'Renewal passed' : 'Renewal', sub: fmtD(RENEWAL), kind: 'end' as const },
+  ].sort((a, b) => +a.d - +b.d)
+  // grey up to today (or up to the renewal once it has passed); red is the time left, or the time overdue
+  const usedPct = at(new Date(Math.min(+TODAY, +RENEWAL)))
   return (
     <div className="grid gap-2">
       {/* one track: time used in grey, time left in red, events as dots on it with their labels underneath */}
       <div className="relative mx-1.5 mt-1 mb-9">
-        <div className="flex h-2 overflow-hidden rounded-full" role="img" aria-label={`${r.used} days used, ${r.left} left of ${r.total}`}>
+        <div className="flex h-2 overflow-hidden rounded-full" role="img" aria-label={r.left < 0 ? `Renewal passed ${-r.left} days ago` : `${r.used} days used, ${r.left} left of ${r.total}`}>
           <span className="h-full bg-foreground/25" style={{ width: `${usedPct}%` }} />
           <span className="h-full flex-1 bg-bad/35" />
         </div>

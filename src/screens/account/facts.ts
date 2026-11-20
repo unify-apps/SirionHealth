@@ -1,7 +1,7 @@
 /* Shared TransAmerica account facts, ported from legacy/src/screen-account.js (facts, areaInputs, areaDriver,
    coverage, inputsFlat, topInputs, evidenceFor, jrItems). Pure TS: no DOM, no React. Other tabs may import these. */
 import {
-  AREAS, DAY, daysBetween, money, RULES, TA_EVENTS, TA_RECORD, TODAY, taEpisode, taFlags,
+  ACCOUNT, AREAS, DAY, daysBetween, money, RULES, TA_EVENTS, TA_RECORD, TODAY, taEpisode, taFlags,
 } from '@/data/legacy'
 import { summarise } from './activity/model'
 import { evidence as stakeEvidence } from './stakeholders/model'
@@ -92,7 +92,7 @@ export const renewal = {
   signed: TA_RECORD.signedCommitment as boolean,
   tfc: TA_RECORD.tfc as boolean,
   expansionLabel: money(TA_RECORD.expansion / 1000) as string,
-  orderForms: [{ id: 'CU0213 OF 001', value: 275 }, { id: 'CU0213 OF 002', value: 55 }],
+  orderForms: ACCOUNT.facts.orderForms as { id: string; value: number }[],
   /** the last 90 days before the renewal */
   windowStart: new Date(RENEWAL.getTime() - 90 * DAY),
 }
@@ -187,15 +187,37 @@ export function activityItems(): ActivityItem[] {
 }
 
 /* ---------- KPI strip (renderAccount) ---------- */
-const mau = areaInputs('adoption').find(k => k.field === 'mauHealth')?.note ?? ''
-const [, mauNow, mauAvg] = (/(\d+) users \(12-mo avg (\d+)\)/.exec(mau) ?? []).map(Number)
+const [mauNow, mauAvg] = ACCOUNT.facts.mau as [number, number]
 export const kpis = {
   nrr: TA_RECORD.nrr as number, grr: TA_RECORD.grr as number,
   mau: mauNow, mauAvg, mauChange: Math.round((mauNow / mauAvg - 1) * 100),
-  licence: { pct: 111, used: 663, bought: 593 },
+  licence: ACCOUNT.facts.licence as { pct: number; used: number; bought: number },
   emails: TA_RECORD.emailsThisMonth as number,
   openJira: TA_RECORD.openJira as number, perAging: TA_RECORD.perAging as number,
   approvalCycles: TA_RECORD.approvalCycles as [number, number],
 }
 
 export { TODAY }
+
+/** The account this page shows: TransAmerica, or a mock pack (data/mock-accounts.js). `copy` is null for TransAmerica,
+ *  whose prose lives in the screen modules; a mock pack brings its own. */
+export type AccountCopy = {
+  keyCopy: Record<string, [string, string]>; insight: string
+  brief: [string, string][]; well: [string, string, string, AreaKey][]; attn: [string, string, string, AreaKey][]
+  refs: Record<string, { kind: 'person'; email: string } | { kind: 'ev'; match: string }>
+  cause: Partial<Record<AreaKey, string>>
+}
+export type Account = {
+  id: string; name: string; ind: string; seg: string; region: string; stage: string
+  sponsorEmail: string | null; sponsorNote: string
+  facts: {
+    licence: { pct: number; used: number; bought: number }; mau: [number, number]; onboarding: number
+    contracts: [number, number]; approvals: [number, number]; sla: number; reopen: number
+    orderForms: { id: string; value: number }[]; repository: [number, number]; priority: [number, number, number, number]
+    themeCount: number; ticketsThisMonth: number; tickets: string; exec: string
+  }
+  copy: AccountCopy | null
+}
+export const ACCT = ACCOUNT as unknown as Account
+/** Renewal already passed (the contract is running unsigned). */
+export const overdue = () => renewal.daysLeft < 0
