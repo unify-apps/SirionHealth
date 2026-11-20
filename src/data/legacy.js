@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* Generated from legacy/src/{data,data-ta,ta,lib}.js by tools/port-data.sh — fixtures captured from the live AHI tenant, 19 Nov 2026. Customer data: keep the repo private. */
 /* data.js: fixtures captured from the live AHI tenant on 19 Nov 2026. Customer data: keep the repo private. */
+import { ACCOUNT_ID, MOCK_ACCOUNTS } from './mock-accounts.js';
 const TODAY = new Date(2026,10,19);
 // 25 real rows from the live AHI account list (ahiDashboardTable), 19 Nov 2026
 const ROWS = [
@@ -187,7 +188,7 @@ function taEvidence(){
   const out = [];
   TA_REAL.sentiment.forEach(([ym,pos,neg]) => {
     [["pos",pos],["neg",neg]].forEach(([kind,text]) => {
-      text.split(/(?<=\.)\s+(?=[A-Z])/).forEach(s => {
+      text.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean).forEach(s => {
         const dm = s.match(new RegExp("(" + MONTHS.join("|") + ")\\s+(\\d{1,2})"));
         const y = +ym.slice(0,4);
         const date = dm ? new Date(y, MONTHS.indexOf(dm[1]), +dm[2]) : null;
@@ -236,7 +237,7 @@ function taPeople(){
     const conf = mentions.length>=6 ? "high" : mentions.length>=3 ? "medium" : mentions.length ? "low" : null;
     return { ...p, name, sources:[...p.sources], mentions:mentions.length, lastMentioned:last,
       tagged: p.role || null, suggested: s ? s[0] : null, basis: s ? s[1] : null, confidence: s ? (conf||"low") : null,
-      customer: /Transamerica|Aegon/.test(p.org) };
+      customer: CUSTOMER.test(p.org) };
   });
 }
 
@@ -261,6 +262,36 @@ const TA_EXAMPLE = {
     { at:"2026-11-01T06:00", what:"Approval cycles fell from 12 to 0", why:"Active workflows score 2; contracts processed 155 vs 171 average.", go:"s-adoption", example:true },
   ],
 };
+
+/* ---- account switch: a mock pack (mock-accounts.js) replaces TransAmerica's data in place, so every reader stays as is ---- */
+let CUSTOMER = /Transamerica|Aegon/;
+const TA_ACCOUNT = {
+  id:"ta", name:"TransAmerica", ind:"Financial services", seg:"Enterprise", region:"North America", stage:"BAU",
+  sponsorEmail:"lawrence.kane@transamerica.com", sponsorNote:"no executive contact this month (12-month average 11)",
+  facts:{ licence:{pct:111,used:663,bought:593}, mau:[222,215], onboarding:97.4, contracts:[155,171], approvals:[0,12], sla:95, reopen:2,
+    orderForms:[{id:"CU0213 OF 001",value:275},{id:"CU0213 OF 002",value:55}], repository:[3461,2553], priority:[0,7,29,90], themeCount:16, ticketsThisMonth:1,
+    tickets:"P1 0, P2 7, P3 29, P4 90", exec:"Executive sponsor engagement 0 this month (12-month average 11). CSM touchpoints 5 (12-month average 199)." },
+  copy:null,
+};
+let ACCOUNT = TA_ACCOUNT;
+const PACK = MOCK_ACCOUNTS[ACCOUNT_ID];
+if (PACK) {
+  const { record, monthly, sentiment, contacts, org, suggest, events, newsPeople, T: t, customer, ...meta } = PACK;
+  ACCOUNT = { id: ACCOUNT_ID, ...meta };
+  CUSTOMER = customer;
+  for (const k of Object.keys(TA_RECORD)) delete TA_RECORD[k];
+  Object.assign(TA_RECORD, record);
+  Object.assign(TA_REAL, { monthly, sentiment, contacts });
+  for (const k of Object.keys(ORG)) delete ORG[k];
+  Object.assign(ORG, org);
+  for (const k of Object.keys(SUGGEST)) delete SUGGEST[k];
+  Object.assign(SUGGEST, suggest);
+  TA_EVENTS.splice(0, TA_EVENTS.length, ...events);
+  TA_NEWS_PEOPLE.splice(0, TA_NEWS_PEOPLE.length, ...newsPeople);
+  Object.assign(T, t);
+}
+/** Rows with a detail page: name -> account id. */
+const ACCOUNT_IDS = { TransAmerica:"ta", ...Object.fromEntries(Object.entries(MOCK_ACCOUNTS).map(([id, a]) => [a.name, id])) };
 /* lib.js: shared helpers (formatting, health bands, mini ring). */
 const band=s=>s==null?"":s>=70?"g":s>=40?"w":"b";
 const col=s=>({g:"var(--good)",w:"var(--warn)",b:"var(--bad)"})[band(s)]||"var(--faint)";
@@ -270,4 +301,4 @@ function rel(d){const days=Math.round((d-TODAY)/864e5); if(days<0){const m=Math.
   if(days<=60) return {t:`${days} days`,c:"b",days}; if(days<=180) return {t:`${Math.round(days/30)} months`,c:"w",days};
   if(days<730) return {t:`${Math.round(days/30)} months`,c:"",days}; return {t:"2+ years",c:"",days}}
 
-export { AREAS, band, bestName, col, DAY, daysBetween, displayName, fmtDate, money, monthEnd, MONTHS, ORG, P, rel, ROWS, RULES, STRONG, SUGGEST, SYSTEM, T, TA_EVENTS, TA_EXAMPLE, TA_NEWS_PEOPLE, TA_REAL, TA_RECORD, taEpisode, taEvidence, taFlags, taMonths, taPeople, taPeopleIndex, TODAY }
+export { ACCOUNT, ACCOUNT_IDS, AREAS, band, bestName, col, DAY, daysBetween, displayName, fmtDate, money, monthEnd, MONTHS, ORG, P, rel, ROWS, RULES, STRONG, SUGGEST, SYSTEM, T, TA_EVENTS, TA_EXAMPLE, TA_NEWS_PEOPLE, TA_REAL, TA_RECORD, taEpisode, taEvidence, taFlags, taMonths, taPeople, taPeopleIndex, TODAY }

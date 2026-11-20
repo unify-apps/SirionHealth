@@ -5,7 +5,7 @@ import {
 } from '@/components/ui/command'
 import { HealthRing } from '@/components/health'
 import { ROWS } from '@/data/legacy'
-import { go } from '@/lib/route'
+import { go, hasPage, openAccount } from '@/lib/route'
 
 
 export function CommandMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -19,7 +19,7 @@ export function CommandMenu({ open, onOpenChange }: { open: boolean; onOpenChang
 
   const run = (fn: () => void) => { onOpenChange(false); fn() }
   const rows = ROWS.map(r => ({ name: String(r.name), ind: String(r.ind ?? ''), health: r.health as number | null }))
-    .filter(r => r.name !== 'TransAmerica').sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => +hasPage(b.name) - +hasPage(a.name) || a.name.localeCompare(b.name))
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title="Find an account" description="Search accounts and pages" className="sm:max-w-2xl [&_[cmdk-list]]:max-h-[60vh]">
@@ -28,17 +28,12 @@ export function CommandMenu({ open, onOpenChange }: { open: boolean; onOpenChang
       <CommandList>
         <CommandEmpty>No account matches.</CommandEmpty>
         <CommandGroup heading="Accounts">
-          <CommandItem value="TransAmerica Financial services" onSelect={() => run(() => go('account'))}>
-            <HealthRing value={50} size={22} stroke={2} />
-            TransAmerica
-            <span className="text-muted-foreground">Financial services</span>
-            <CommandShortcut>Open</CommandShortcut>
-          </CommandItem>
           {rows.map(r => (
-            <CommandItem key={r.name} value={`${r.name} ${r.ind}`} onSelect={() => run(() => go('account'))}>
+            <CommandItem key={r.name} value={`${r.name} ${r.ind}`} onSelect={() => run(() => openAccount(r.name))}>
               <HealthRing value={r.health} size={22} stroke={2} />
               {r.name}
               <span className="text-muted-foreground">{r.ind}</span>
+              {hasPage(r.name) && <CommandShortcut>Open</CommandShortcut>}
             </CommandItem>
           ))}
         </CommandGroup>

@@ -6,7 +6,7 @@ import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { titleCase } from '@/lib/text'
-import { go } from '@/lib/route'
+import { openAccount } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
 import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
 import { Button } from '@/components/ui/button'
@@ -138,8 +138,8 @@ export function AccountsScreen() {
     if (!priority && sortKey === k) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(k); setSortDir(FIRST_DIR[k]) }
   }
-  // every account opens its account page (only TransAmerica has data in this build)
-  const openRow = useCallback((_r: Row) => { setIns(null); go('account') }, [])
+  // every account opens an account page: its own for TransAmerica and the mock accounts, TransAmerica's otherwise
+  const openRow = useCallback((r: Row) => { setIns(null); openAccount(r.name) }, [])
   const changeFilters = (f: FilterState) => {
     const removed = filterCount(f) < nFilters
     setFilters(f)

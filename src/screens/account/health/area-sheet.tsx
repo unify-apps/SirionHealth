@@ -159,7 +159,7 @@ export function AreaSheetBody({ area, data }: { area: Area; data: HealthData }) 
         ) : <Empty title="No inputs with data" sub="Every input in this area sent no value, so nothing can be named as a driver." className="py-6" />}
       </Section>
 
-      {area.key === 'commercial' && (
+      {area.key === 'commercial' && CAP.reason && (
         <Section title="Renewal cap">
           <p className="text-sm"><CapTerm focusable={false}>Renewal cap</CapTerm>: {CAP.reason}.</p>
           <p className="mt-1 text-xs text-muted-foreground tabular-nums">Weighted health {CAP.weighted}, capped to {CAP.final}.</p>

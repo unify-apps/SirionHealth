@@ -1,6 +1,14 @@
 /* Activity: every dated statement from Sirion's monthly summaries plus the key events from the order forms and the
    scored record. Ported from legacy screen-account.js (JR, jrChannel, jrTitle, jrItems, jrText, KEY_COPY, renderJourney). */
-import { DAY, TA_EVENTS, TA_REAL, TA_RECORD, taFlags, TODAY } from '@/data/legacy'
+import { ACCOUNT, DAY, money, TA_EVENTS, TA_REAL, TA_RECORD, taFlags, TODAY } from '@/data/legacy'
+import type { Account } from '../facts'
+
+// not from ../facts: facts imports this module, so reading it here at load time would hit the cycle
+const ACCT = ACCOUNT as unknown as Account
+const renewal = {
+  date: new Date(TA_RECORD.renewal + 'T00:00:00'), carrLabel: money(TA_RECORD.carr / 1000) as string,
+  autoRenew: TA_RECORD.autoRenew as boolean, signed: TA_RECORD.signedCommitment as boolean, orderForms: ACCT.facts.orderForms,
+}
 import { evidence, isGone, people, peopleIndex, shortRole, type Evidence } from '../stakeholders/model'
 import type { RoleState } from '../stakeholders/store'
 import { dayISO, ymLabel } from './shared'
@@ -47,16 +55,16 @@ function jrTitle(e: Evidence) {
 const srcLabel = (s: string) => { s = s.replace(/^sentiment /, 'Monthly summary, ').replace(/^AHI record/, 'Health record'); return s[0].toUpperCase() + s.slice(1) }
 
 /** Plain-language copy for key events that come from the record rather than a summary. */
-const KEY_COPY: Record<string, [string, string]> = {
+const KEY_COPY: Record<string, [string, string]> = ACCT.copy?.keyCopy ?? {
   '2026-10-31': ['Health capped at 50', 'Renewal in 59 days with auto-renew off · health record, Oct 31'],
   '2026-12-30': ['Renewal due · $330K CARR', '2 order forms, auto-renew off'],
   '2026-11-26': ['Commitment target date', 'Suggested by the account insight: get a signed renewal commitment'],
 }
 /** What the record itself says, for events that come from it rather than from a summary. */
 const RECORD_DETAIL = {
-  record: ['Scored health record, Oct 31 snapshot', `Final health ${TA_RECORD.finalHealth}, weighted ${TA_RECORD.weightedHealth}. Renewal cap: ${String(TA_RECORD.overrideReason).replace(/\s*\(max [\d.]+\)/, '')}.`],
-  file: ['Order forms and health record', 'Renewal Dec 30, 2026 for $330K CARR (CU0213 OF 001 $275K, OF 002 $55K). Auto-renew: No. Signed commitment: No.'],
-  ai: ['Account insight', '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”'],
+  record: ['Scored health record, Oct 31 snapshot', TA_RECORD.overrideReason ? `Final health ${TA_RECORD.finalHealth}, weighted ${TA_RECORD.weightedHealth}. Renewal cap: ${String(TA_RECORD.overrideReason).replace(/\s*\(max [\d.]+\)/, '')}.` : `Final health ${TA_RECORD.finalHealth}. No cap applies.`],
+  file: ['Order forms and health record', `Renewal ${renewal.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} for ${renewal.carrLabel} CARR (${renewal.orderForms.map(o => `${o.id} $${o.value}K`).join(', ')}). Auto-renew: ${renewal.autoRenew ? 'Yes' : 'No'}. Signed commitment: ${renewal.signed ? 'Yes' : 'No'}.`],
+  ai: ['Account insight', ACCT.copy?.insight ?? '“Within 7 days, engage contact stakeholders to secure signed renewal commitment for the $330,000 CARR prior to the Dec 30, 2026 renewal date (42 days remaining).”'],
 } as Partial<Record<Channel, [string, string]>>
 
 export interface Item {
@@ -129,7 +137,7 @@ export function journey(): JourneyMonth[] {
   const fl = taFlags() as { ym: string; final: number }[], by = Object.fromEntries(fl.map(f => [f.ym, f.final]))
   const nowYm = dayISO(TODAY).slice(0, 7), out: JourneyMonth[] = []
   const events = TA_EVENTS as unknown as [string, EventKind, string, string][]
-  for (let m = new Date(2025, 4, 1); m <= new Date(2026, 11, 30); m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+  for (let m = new Date(2025, 4, 1); m <= (renewal.date > TODAY ? renewal.date : TODAY); m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
     const ym = dayISO(m).slice(0, 7), ev = events.filter(e => e[0].startsWith(ym) && e[1] !== 'end' && !/engagement snapshot/.test(e[3]))
     const state = ym === nowYm ? 'now' : ym > nowYm ? 'up' : ev.some(e => e[1] === 'neg') ? 'neg' : ev.some(e => e[1] === 'pos') ? 'pos' : 'quiet'
     out.push({ ym, state, health: by[ym] ?? null, events: ev.map(e => e[2]), neg: ev.filter(e => e[1] === 'neg' || e[1] === 'flag').length, pos: ev.filter(e => e[1] === 'pos').length })

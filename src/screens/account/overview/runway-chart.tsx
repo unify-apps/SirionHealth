@@ -25,7 +25,8 @@ const cfg = {
   proj: { label: 'Held by the cap', color: 'var(--chart-axis)' },
 } satisfies ChartConfig
 
-const T0 = +new Date(2025, 4, 1), T1 = +new Date(2027, 0, 6)
+// the axis runs from the first scored month (May 2025 at the earliest) to a week past the renewal, Jan 2027 at the least
+const T0 = +new Date(2025, 4, 1), T1 = Math.max(+new Date(2027, 0, 6), +RENEWAL + 7 * 864e5)
 /** Left edge for a range: the start of the month the range begins in, never before the first scored month. */
 const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
 
@@ -53,8 +54,8 @@ function buildRows(): Row[] {
   const at = (t: number) => map.get(t) ?? (map.set(t, { t }), map.get(t)!)
   months.forEach(m => Object.assign(at(mid(m)), { health: m.final, month: m }))
   const last = months[months.length - 1]
-  at(mid(last)).proj = last.final
-  at(+RENEWAL).proj = last.final
+  // the dashed hold-line runs to an upcoming renewal; a passed one has nothing ahead to project
+  if (+RENEWAL > mid(last)) { at(mid(last)).proj = last.final; at(+RENEWAL).proj = last.final }
   events.forEach(e => Object.assign(at(+e.date), { ev: Math.round(healthAt(+e.date)), event: e }))
   return [...map.values()].sort((a, b) => a.t - b.t)
 }
@@ -236,7 +237,7 @@ function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | nu
               {event.kind === 'flag' && (
                 <section className="min-w-0">
                   <h3 className="text-sm font-medium">Score</h3>
-                  <p className="mt-1 tabular-nums">Weighted {score.weighted} → final {score.final} (<CapTerm focusable={false} />)</p>
+                  <p className="mt-1 tabular-nums">{score.cap ? <>Weighted {score.weighted} → final {score.final} (<CapTerm focusable={false} />)</> : <>Health {score.final}</>}</p>
                 </section>
               )}
               <section className="min-w-0">

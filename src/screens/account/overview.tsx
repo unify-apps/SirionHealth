@@ -19,7 +19,7 @@ import { rangeStart, useRange } from '@/lib/range'
 import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { activityTotal } from './activity/model'
 import {
-  activityItems, AREA_NAME, evidence, TODAY, ymLabel, type AreaKey, type Channel,
+  ACCT, activityItems, AREA_NAME, evidence, TODAY, ymLabel, type AreaKey, type Channel,
 } from './facts'
 import { AREA_ICON, EvidenceRow, Glossed, ListRow, NavLink, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
 import { ACT_STATUS, ActivitySheet } from './overview/activity-sheet'
@@ -145,7 +145,7 @@ const briefText = (d: [string, string][]) =>
 
 async function copyBrief(d: [string, string][]) {
   try {
-    await navigator.clipboard.writeText(`TransAmerica account brief\n${briefText(d)}`)
+    await navigator.clipboard.writeText(`${ACCT.name} account brief\n${briefText(d)}`)
     toast('Brief copied')
   } catch {
     toast.error("Couldn't copy the brief", { description: 'The browser blocked clipboard access.' })

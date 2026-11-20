@@ -11,6 +11,7 @@ import { loadIntel, type Theme } from './intelligence/model'
 import { loadBase, stakeRows } from './stakeholders/model'
 import { PersonSheet } from './stakeholders/person-sheet'
 import { useRoles } from './stakeholders/store'
+import { ACCT } from './facts'
 
 export function IntelligenceTab() {
   const load = useLoad(() => ({ intel: loadIntel(), base: loadBase() }), undefined, 'intelligence')
@@ -39,7 +40,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
   const pager = listPager(themes, live, t => t.title, t => openSheet('news', t.title, { replace: true }), 'theme')
   const news = base.news[0]
   const ranked = themes.filter(t => t.relevance != null).sort((a, b) => b.relevance! - a.relevance!)
-  if (!ranked.length) return <Empty title="No news found" sub="Nothing public about Transamerica or Aegon this year." />
+  if (!ranked.length) return <Empty title="No news found" sub={`Nothing public about ${ACCT.name} this year.`} />
   return (
     <div className="grid gap-3">
       <ul className="grid gap-3 md:grid-cols-2">

@@ -1,6 +1,6 @@
 /* People model for TransAmerica: who is who, their role tags, how recently Sirion's monthly summaries named them,
    and the tone of what was said. Ported from legacy screen-account.js (stakeRows, orbitPeople, lastNamed…). */
-import { daysBetween, monthEnd, TA_NEWS_PEOPLE, taEvidence, taMonths, taPeople, taPeopleIndex, TODAY } from '@/data/legacy'
+import { ACCOUNT, daysBetween, monthEnd, TA_NEWS_PEOPLE, taEvidence, taMonths, taPeople, taPeopleIndex, TODAY } from '@/data/legacy'
 import { fmtDY } from '../activity/shared'
 import type { RoleState } from './store'
 
@@ -68,7 +68,7 @@ export const ENG_LABEL: Record<Engagement, string> = { active: 'Active', warm: '
 export const TONE_LABEL: Record<Tone, string> = { pos: 'Positive', neg: 'Negative', mix: 'Mixed', none: 'No data' }
 export const KIND_LABEL: Record<Kind, string> = { tagged: 'Tagged', suggested: 'Suggested', departed: 'Departed', other: 'No role' }
 
-const SPONSOR_EMAIL = 'lawrence.kane@transamerica.com'
+const { sponsorEmail: SPONSOR_EMAIL, sponsorNote: SPONSOR_NOTE } = ACCOUNT as unknown as { sponsorEmail: string | null; sponsorNote: string }
 
 export interface Base { people: Person[]; ev: Evidence[]; months: string[]; news: NewsPerson[]; idx: Record<string, string> }
 export const loadBase = (): Base => ({ people: people(), ev: evidence(), months: MONTHS_18(), news: newsPeople(), idx: peopleIndex() })
@@ -86,7 +86,7 @@ export function stakeRows(b: Base, st: RoleState): StakeRow[] {
     const tone: Tone = !said.length ? 'none' : pos && !neg ? 'pos' : neg && !pos ? 'neg' : 'mix'
     const months = b.months.map(ym => said.filter(e => e.ym === ym).length)
     const tagLabel = roleCase((p.tagged || '').replace(' / CXO', ''))
-    const gap: [GapLevel, string] = p.email === SPONSOR_EMAIL ? ['warn', `Executive Sponsor last named ${last ? fmtDY(last) : 'never'}; no executive contact this month (12-month average 11)`]
+    const gap: [GapLevel, string] = p.email === SPONSOR_EMAIL ? ['warn', `Executive Sponsor last named ${last ? fmtDY(last) : 'never'}${SPONSOR_NOTE ? `; ${SPONSOR_NOTE}` : ''}`]
       : p.tagged && !isGone(p.tagged) && (days == null || days > 90) ? ['warn', `Tagged ${tagLabel} but ${days == null ? 'never named in a summary' : 'not named since ' + fmtDY(last!)}`]
       : gone || (p.tagged && isGone(p.tagged)) ? ['warn', 'Left the role: hand over the relationship']
       : p.suggested && !conf && !mine ? ['info', `Suggested from ${p.mentions} summar${p.mentions === 1 ? 'y' : 'ies'}; confirm the role`]

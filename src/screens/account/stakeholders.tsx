@@ -22,6 +22,7 @@ import { Orbit } from './stakeholders/orbit'
 import { Avatar, EngagementPill, MonthStrip, RoleCell, TonePill } from './stakeholders/parts'
 import { GAP_ICON, PersonSheet } from './stakeholders/person-sheet'
 import { useRoles } from './stakeholders/store'
+import { ACCT } from './facts'
 
 const PER = 10
 /** The roles a renewal needs covered; Coverage shows who holds each. */
@@ -245,7 +246,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
           </ToggleGroup>
           <Tip tip="Export CSV">
             <Button variant="ghost" size="icon" aria-label="Export CSV" disabled={!list.length}
-              onClick={() => { download('transamerica-stakeholders.csv', toCsv(list)); toast.success(`Exported ${list.length} contact${list.length === 1 ? '' : 's'}`, { description: 'transamerica-stakeholders.csv' }) }}>
+              onClick={() => { download(`${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv`, toCsv(list)); toast.success(`Exported ${list.length} contact${list.length === 1 ? '' : 's'}`, { description: `${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv` }) }}>
               <Download />
             </Button>
           </Tip>

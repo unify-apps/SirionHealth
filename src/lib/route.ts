@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
+import { ACCOUNT, ACCOUNT_IDS } from '@/data/legacy'
 
 export type Route = 'accounts' | 'account' | 'portfolio' | 'states'
 const ROUTES: Route[] = ['accounts', 'account', 'portfolio', 'states']
@@ -15,6 +16,20 @@ const read = (): Route => {
 export function go(r: Route, query?: string) {
   location.hash = query ? `${r}?${query}` : r
   window.scrollTo(0, 0)
+}
+
+/** Accounts with a detail page; the rest have none yet. */
+export const hasPage = (name: string) => name in ACCOUNT_IDS
+
+/** Opens an account's detail page. The page's data is read once per load (data/mock-accounts.js), so a different
+ *  account reloads the page; the same one navigates in place. Accounts without a page open TransAmerica's. */
+export function openAccount(name: string) {
+  const id = (ACCOUNT_IDS as Record<string, string>)[name] ?? 'ta'
+  try { sessionStorage.setItem('sah-account', id) } catch { /* private mode: falls back to TransAmerica */ }
+  if (id === ACCOUNT.id) { go('account'); return }
+  history.pushState(null, '', '#account')
+  window.scrollTo(0, 0)
+  location.reload()
 }
 
 export function useRoute() {

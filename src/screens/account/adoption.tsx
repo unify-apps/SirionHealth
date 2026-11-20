@@ -13,13 +13,22 @@ import { LoadError, useLoad } from './health/load'
 import { loadAdoption, type StatRow } from './adoption/model'
 import type { Month } from './health/model'
 
+import { ACCT } from './facts'
 const fmt = (n: number) => n.toLocaleString('en-US')
 
-/** good / bad when a figure says something about the account; plain when it is just a fact. */
+/** good / bad when a figure says something about the account; plain when it is just a fact. Read off the account's figures. */
+const F = ACCT.facts
+const up = (now: number, avg: number) => (now >= avg ? 'good' : 'bad') as 'good' | 'bad'
 const TONE: Record<string, 'good' | 'bad' | undefined> = {
-  'Monthly active users': 'good', 'Licence use': 'good', 'Onboarding': 'good', 'Contracts processed': 'bad', 'Approval cycles closed': 'bad',
-  'SLA met': 'good', 'P1 incidents': 'good', 'Exec escalations': 'good', 'Reopen rate': 'good', 'Open enhancement requests': 'bad',
+  'Monthly active users': up(F.mau[0], F.mau[1]), 'Licence use': F.licence.pct >= 90 ? 'good' : F.licence.pct < 70 ? 'bad' : undefined,
+  'Onboarding': F.onboarding >= 90 ? 'good' : F.onboarding < 70 ? 'bad' : undefined,
+  'Contracts processed': up(F.contracts[0], F.contracts[1]), 'Approval cycles closed': up(F.approvals[0], F.approvals[1]),
+  'SLA met': F.sla >= 90 ? 'good' : 'bad', 'Reopen rate': F.reopen <= 5 ? 'good' : 'bad',
 }
+/** Counts where none is the good answer (P1s, escalations); a long open backlog is bad. */
+const toneOf = (label: string, value: string) => label in TONE ? TONE[label]
+  : /P1 incidents|Exec escalations/.test(label) ? (value === '0' ? 'good' : 'bad')
+  : label === 'Open enhancement requests' ? (+value > 10 ? 'bad' : undefined) : undefined
 
 export function AdoptionTab() {
   const load = useLoad(loadAdoption, undefined, 'adoption and support')
@@ -77,7 +86,7 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
         {stats.map(s => (
           <div key={s.label} className="grid min-w-0 content-start gap-0.5 px-5 py-3 xl:py-4 xl:[&:not(:first-child)]:border-l xl:[&:not(:first-child)]:border-hairline">
             <dt className="truncate text-xs text-muted-foreground" title={s.label}>{tc(s.label)}</dt>
-            <dd className={cn('text-xl font-normal tabular-nums tracking-[-0.02em]', TONE[s.label] === 'good' && 'text-good', TONE[s.label] === 'bad' && 'text-bad')}>{s.value}</dd>
+            <dd className={cn('text-xl font-normal tabular-nums tracking-[-0.02em]', toneOf(s.label, s.value) === 'good' && 'text-good', toneOf(s.label, s.value) === 'bad' && 'text-bad')}>{s.value}</dd>
             {s.hint && <Tip tip={s.hint}><dd tabIndex={0} className="truncate rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{s.hint}</dd></Tip>}
           </div>
         ))}

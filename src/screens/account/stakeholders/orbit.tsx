@@ -2,6 +2,7 @@
 import { cn } from '@/lib/utils'
 import { fmtDY, initials } from '../activity/shared'
 import { RINGS, type OrbitPerson } from './model'
+import { ACCOUNT } from '@/data/legacy'
 
 const W = 760, H = 770, CX = 380, CY = 385, R = [118, 218, 312]
 
@@ -16,7 +17,7 @@ export function Orbit({ people, onOpen }: { people: OrbitPerson[]; onOpen: (key:
   return (
     <div className="grid gap-3">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto block h-auto w-full min-w-[520px] max-w-[680px]" role="group" aria-label="Relationship orbit for TransAmerica key people">
+        <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto block h-auto w-full min-w-[520px] max-w-[680px]" role="group" aria-label={`Relationship orbit for ${ACCOUNT.name} key people`}>
           {R.map((r, i) => (
             <g key={r}>
               <circle cx={CX} cy={CY} r={r} fill="none" className="stroke-border" strokeDasharray={i === 2 ? '2 5' : undefined} />
