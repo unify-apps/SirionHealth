@@ -14,7 +14,7 @@ import { carrK, isLive, moneyK, plural, renewal, type Row } from './data'
 /** A health score as a number in its band colour; "No data" when unscored. */
 export function HealthValue({ value }: { value: number | null }) {
   if (isMissing(value)) return <span className="text-muted-foreground">No data</span>
-  return <span className={cn('font-medium tabular-nums', bandText[bandOf(value)])}>{value}</span>
+  return <span className={cn('num font-medium', bandText[bandOf(value)])}>{value}</span>
 }
 
 /** Heading over a sheet's account list: what is listed, how many, their CARR and how many are the signed-in person's. */
@@ -56,7 +56,7 @@ export function AccountsTable({ list, meta = META.podStage, grr = false, tags }:
   const anyOpen = rows.some(r => hasPage(r.name))
   return (
     <>
-      <Table className="[&_td:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:first-child]:pl-0 [&_th:last-child]:pr-0">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Account</TableHead>
@@ -106,7 +106,7 @@ export function AccountsTable({ list, meta = META.podStage, grr = false, tags }:
       {more > 0 && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs tabular-nums text-muted-foreground">Showing {shown} of {plural(list.length, 'account')}</span>
-          <Button variant="outline" size="sm" className="rounded-full" onClick={() => setShown(s => s + PAGE)}>Show {more} more</Button>
+          <Button variant="outline" size="sm" onClick={() => setShown(s => s + PAGE)}>Show {more} more</Button>
         </div>
       )}
     </>

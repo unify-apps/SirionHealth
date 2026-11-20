@@ -114,19 +114,20 @@ export const brief = (r: Row) => (isTA(r) ? BRIEF : null)
 
 /* ---------- why a row needs attention: the main reason in full, plus the next step ---------- */
 export type Group = 'renewal' | 'health'
-export type Reason = { tone: Tone; text: string; next?: string; group?: Group }
+/** The bucket a row sits in, shown in the Category column. `group` drives the "Needs me first" order. */
+export type Category = 'Renewal risk' | 'Low health' | 'Contracting' | 'Expanding' | 'On track' | 'Churned'
+export type Reason = { tone: Tone; text: string; next?: string; group?: Group; category: Category }
 export function reason(r: Row): Reason {
-  if (!live(r)) return { tone: 'neutral', text: 'Churned this year' }
+  if (!live(r)) return { tone: 'neutral', text: 'Churned this year', category: 'Churned' }
   const rr = runway(r), d = rr.days
-  if (isTA(r)) return { tone: 'bad', text: `Renewal unsigned, champion handed over`, next: 'Get a signed commitment this week', group: 'renewal' }
-  if (d < 0) return { tone: 'bad', text: `Renewal ${rr.t.toLowerCase()}`, next: 'Chase the signature', group: 'renewal' }
-  if (d <= 90) return { tone: 'warn', text: `Renews in ${rr.t}`, next: 'Confirm the paper path', group: 'renewal' }
-  if (lt(r, 40)) return { tone: 'bad', text: `Health ${h(r)}, under 40`, next: 'Book a recovery call', group: 'health' }
-  if (r.nrr != null && r.nrr < 100) return { tone: 'warn', text: `NRR ${r.nrr}%, contracting`, next: 'Review the downsell' }
-  if (r.nrr != null && r.nrr > 100) return { tone: 'good', text: `NRR ${r.nrr}%, expanding`, next: 'Look for expansion' }
-  return { tone: 'neutral', text: 'Nothing urgent' }
+  if (isTA(r)) return { tone: 'bad', text: `Renewal unsigned, champion handed over`, next: 'Get a signed commitment this week', group: 'renewal', category: 'Renewal risk' }
+  if (d < 0) return { tone: 'bad', text: `Renewal ${rr.t.toLowerCase()}`, next: 'Chase the signature', group: 'renewal', category: 'Renewal risk' }
+  if (d <= 90) return { tone: 'warn', text: `Renews in ${rr.t}`, next: 'Confirm the paper path', group: 'renewal', category: 'Renewal risk' }
+  if (lt(r, 40)) return { tone: 'bad', text: `Health ${h(r)}, under 40`, next: 'Book a recovery call', group: 'health', category: 'Low health' }
+  if (r.nrr != null && r.nrr < 100) return { tone: 'warn', text: `NRR ${r.nrr}%, contracting`, next: 'Review the downsell', category: 'Contracting' }
+  if (r.nrr != null && r.nrr > 100) return { tone: 'good', text: `NRR ${r.nrr}%, expanding`, next: 'Look for expansion', category: 'Expanding' }
+  return { tone: 'neutral', text: 'Nothing urgent', category: 'On track' }
 }
-export const GROUP_LABEL: Record<Group, string> = { renewal: 'Renewals at risk', health: 'Low health' }
 
 /* ---------- headline tiles: computed from the same 25 rows as the table, so the numbers reconcile ---------- */
 const sum = (l: Row[]) => l.reduce((a, r) => a + r.carr, 0)

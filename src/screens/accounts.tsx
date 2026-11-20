@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, CalendarClock, Columns3, Copy, ExternalLink, HeartPulse, LayoutList, Pin, PinOff, RotateCcw, Search, X } from 'lucide-react'
+import { AlertTriangle, Ban, CalendarClock, CircleCheck, Columns3, Copy, ExternalLink, HeartPulse, RotateCcw, Search, TrendingDown, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
@@ -20,8 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  DEFAULT_HIDDEN, filterCount, FIRST_DIR, GROUP_LABEL, NO_FILTERS, OPTIONAL_COLS, OWNER, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
-  type ColId, type FilterState, type Row, type SortKey, type ViewId,
+  DEFAULT_HIDDEN, filterCount, FIRST_DIR, NO_FILTERS, OPTIONAL_COLS, OWNER, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
+  type Category, type ColId, type FilterState, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
   AccountFilter, BandSplit, FilterChips, InsightsPopover, NrrCell, ReasonCell, RunwayCell, TableSkeleton, TilesSkeleton,
@@ -56,44 +56,17 @@ function useAccounts() {
 
 const today = fmtFull(TODAY)
 
-/** Group header: a tinted row with an icon tile, the group name, its count and what puts a row there. */
-const GROUP_LOOK = {
-  pinned: { icon: Pin, label: 'Pinned', hint: 'Kept at the top by you', tile: 'text-signal', row: 'bg-signal-soft/40' },
-  renewal: { icon: CalendarClock, label: titleCase(GROUP_LABEL.renewal), hint: 'Renews within 90 days or overdue', tile: 'text-warn', row: 'bg-warn-soft/40' },
-  health: { icon: HeartPulse, label: titleCase(GROUP_LABEL.health), hint: 'Health under 40', tile: 'text-bad', row: 'bg-bad-soft/40' },
-  rest: { icon: LayoutList, label: '', hint: '', tile: 'text-muted-foreground', row: 'bg-surface-2/60' },
-} as const
-function GroupRow({ group, count, first, restLabel }: { group: keyof typeof GROUP_LOOK; count: number; first: boolean; restLabel: string }) {
-  const g = GROUP_LOOK[group], I = g.icon
-  const label = titleCase(group === 'rest' ? `Other ${restLabel === 'All accounts' ? 'accounts' : restLabel.toLowerCase()}` : g.label)
-  return (
-    <TableRow className={cn('hover:bg-transparent', g.row, !first && 'border-t-8 border-t-card')}>
-      <TableCell colSpan={99} className="h-10 py-1.5">
-        <span className="flex items-center gap-2">
-          <I className={cn('size-4 shrink-0', g.tile)} aria-hidden="true" />
-          <span className="text-sm font-medium">{label}</span>
-          <span className="rounded-sm bg-card px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
-          {g.hint && <span className="text-xs text-muted-foreground max-sm:hidden">· {g.hint}</span>}
-        </span>
-      </TableCell>
-    </TableRow>
-  )
+/** Category chip: neutral on purpose (green/amber/red mean health only); the icon carries the kind. */
+const CATEGORY_ICON: Record<Category, LucideIcon> = {
+  'Renewal risk': CalendarClock, 'Low health': HeartPulse, Contracting: TrendingDown, Expanding: TrendingUp, 'On track': CircleCheck, Churned: Ban,
 }
-
-/** Pinned accounts lead the list in every view. Remembered in this browser; TransAmerica starts pinned. */
-const PIN_KEY = 'sah-pins'
-function usePins() {
-  const [pins, setPins] = useState<Set<string>>(() => {
-    try { const v = localStorage.getItem(PIN_KEY); return new Set(v ? JSON.parse(v) : ['TransAmerica']) } catch { return new Set(['TransAmerica']) }
-  })
-  const toggle = (name: string) => {
-    const n = new Set(pins)
-    if (n.has(name)) n.delete(name); else n.add(name)
-    setPins(n)
-    try { localStorage.setItem(PIN_KEY, JSON.stringify([...n])) } catch {}
-    toast(n.has(name) ? `Pinned ${name}` : `Unpinned ${name}`)
-  }
-  return [pins, toggle] as const
+function CategoryChip({ c }: { c: Category }) {
+  const I = CATEGORY_ICON[c]
+  return (
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-muted px-2 text-xs whitespace-nowrap text-foreground">
+      <I className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />{c}
+    </span>
+  )
 }
 
 export function AccountsScreen() {
@@ -110,7 +83,6 @@ export function AccountsScreen() {
   const [pinned, setPinned] = useState(true)
   const [hidden, setHidden] = useState<Set<ColId>>(() => new Set(DEFAULT_HIDDEN))
   const filterBtn = useRef<HTMLButtonElement>(null)
-  const [pins, togglePin] = usePins()
 
   const priority = pinned && view === 'needs'
   const query = q.trim().toLowerCase()
@@ -120,9 +92,8 @@ export function AccountsScreen() {
     const f = data.filter(v.test)
       .filter(r => passes(r, filters))
       .filter(r => !query || `${r.name} ${r.ind} ${r.seg}`.toLowerCase().includes(query))
-    const sorted = sortRows(f, sortKey, sortDir, priority)
-    return [...sorted.filter(r => pins.has(r.name)), ...sorted.filter(r => !pins.has(r.name))] // pinned rows lead in every view
-  }, [data, view, filters, query, sortKey, sortDir, priority, pins])
+    return sortRows(f, sortKey, sortDir, priority)
+  }, [data, view, filters, query, sortKey, sortDir, priority])
 
   const sum = useMemo(() => summary(data), [data])
   const nFilters = filterCount(filters)
@@ -167,13 +138,17 @@ export function AccountsScreen() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts" sub={`${OWNER}'s book · ${today} · ${data.length} accounts`}
+      <PageHeader title="My accounts" sub={`${OWNER}'s book · as of ${today}`}
         actions={status === 'ready' && (
-          // the book's size sits opposite the title as one figure, so it reads at a glance instead of trailing the meta line
-          <div className="grid justify-items-end leading-tight">
-            <span className="text-xs text-muted-foreground">Total ARR</span>
-            <span className="text-2xl font-normal tabular-nums tracking-[-0.02em]">{money(sum.arr)}</span>
-          </div>
+          // the book's size as two small facts in the KPI label style, so it reads with the title instead of floating alone
+          <dl className="flex items-center divide-x divide-hairline rounded-md border border-hairline">
+            {[['Accounts', String(data.length)], ['Total ARR', money(sum.arr)]].map(([k, v]) => (
+              <div key={k} className="grid gap-0.5 px-4 py-2">
+                <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{k}</dt>
+                <dd className="num text-base leading-none font-medium">{v}</dd>
+              </div>
+            ))}
+          </dl>
         )} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
@@ -204,7 +179,7 @@ export function AccountsScreen() {
       )}
 
       {status === 'error' ? (
-        <Card className="min-w-0 gap-0 py-0">
+        <Card data-block className="min-w-0 gap-0 py-0">
           <div className="p-4 sm:p-5">
             <Empty title="Couldn't load your accounts" sub="The account list didn't respond. Your filters are kept; try again." />
             <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={retry}><RotateCcw />Try again</Button></div>
@@ -291,7 +266,7 @@ export function AccountsScreen() {
               </div>
             )}
 
-            <Card className="min-w-0 gap-0 py-0">
+            <Card data-block className="min-w-0 gap-0 py-0">
             <div>
               {status === 'loading' ? <TableSkeleton /> : !data.length ? (
                 <div className="p-4 sm:p-5"><Empty title="No accounts in your book yet" sub="Accounts assigned to you will appear here with their health and renewal." /></div>
@@ -302,13 +277,14 @@ export function AccountsScreen() {
                   <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={reset}><RotateCcw />Reset search and filters</Button></div>
                 </div>
               ) : (
-                <Table aria-label="Accounts" className="min-w-[760px] sm:[&_td:first-child]:pl-5 sm:[&_td:last-child]:pr-5 sm:[&_th:first-child]:pl-5 sm:[&_th:last-child]:pr-5">
+                <Table aria-label="Accounts" className="min-w-[760px]">
                   <TableHeader>
                     <TableRow>
                       {sortHead('name', 'Account', { sticky: true })}
+                      <TableHead>Category</TableHead>
                       {sortHead('health', 'Health')}
                       {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date' })}
-                      {sortHead('carr', 'ARR', { numeric: true, tip: 'Contracted annual recurring revenue (CARR)' })}
+                      {sortHead('carr', 'ARR', { tip: 'Contracted annual recurring revenue (CARR)' })}
                       {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover' })}
                       <TableHead>Why it's here</TableHead>
                       {show('stage') && <TableHead>Stage</TableHead>}
@@ -317,42 +293,22 @@ export function AccountsScreen() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {list.map((r, i) => {
+                    {list.map(r => {
                       const b = bandOf(r.health)
-                      const pin = pins.has(r.name)
-                      // pinned rows lead; the rest split by reason under "Needs me first", else sit under one "rest" header
-                      const hasPinned = pins.has(list[0].name)
-                      const groupOf = (x: Row) => (pins.has(x.name) ? 'pinned' : priority ? reason(x).group : hasPinned ? 'rest' : undefined)
-                      const grp = groupOf(r)
-                      const newGroup = grp && grp !== (i ? groupOf(list[i - 1]) : undefined)
                       return (
-                        <Fragment key={r.name}>
-                        {newGroup && (
-                          <GroupRow group={grp} count={list.filter(x => groupOf(x) === grp).length} first={i === 0} restLabel={viewLabel} />
-                        )}
-                        <ContextMenu>
+                        <ContextMenu key={r.name}>
                         <ContextMenuTrigger asChild>
                         <TableRow tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
-                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-14 [&>td]:py-2"
+                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:py-2"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
                           <TableCell className={cn(stickyCol, 'max-w-72')}>
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate font-medium">{r.name}</span>
-                              {pin && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" aria-label={`Unpin ${r.name}`} onClick={e => { e.stopPropagation(); togglePin(r.name) }}
-                                      className="grid size-5 shrink-0 place-items-center rounded-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
-                                      <Pin className="size-3.5" aria-hidden="true" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Pinned · click to unpin</TooltipContent>
-                                </Tooltip>
-                              )}
                               <span className="truncate text-xs text-muted-foreground">{r.ind}</span>
                             </span>
                           </TableCell>
+                          <TableCell><CategoryChip c={reason(r).category} /></TableCell>
                           <TableCell onClick={e => { e.stopPropagation(); clearTimeout(timer.current); setIns({ name: r.name, focus: true }) }}>
                             <InsightsPopover row={r} open={ins?.name === r.name} focusOnOpen={!!ins?.focus}
                               onOpenChange={o => setIns(o ? { name: r.name, focus: true } : null)}
@@ -362,12 +318,12 @@ export function AccountsScreen() {
                                 onFocus={() => setIns(s => (s?.name === r.name ? s : { name: r.name, focus: false }))}
                                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setIns({ name: r.name, focus: true }) } }}>
                                 {isMissing(r.health) ? <span className="text-muted-foreground">No data</span>
-                                  : <span className={cn('font-medium tabular-nums', bandText[b])}>{r.health}</span>}
+                                  : <span className={cn('num font-medium', bandText[b])}>{r.health}</span>}
                               </span>
                             </InsightsPopover>
                           </TableCell>
                           <TableCell><RunwayCell row={r} /></TableCell>
-                          <TableCell className="text-right">{money(r.carr)}</TableCell>
+                          <TableCell className="num">{money(r.carr)}</TableCell>
                           {show('nrr') && <TableCell className="text-right"><NrrCell row={r} /></TableCell>}
                           <TableCell className="max-w-80"><ReasonCell row={r} /></TableCell>
                           {show('stage') && <TableCell className="text-muted-foreground">{r.stage}</TableCell>}
@@ -383,11 +339,9 @@ export function AccountsScreen() {
                           <ContextMenuItem onSelect={() => openRow(r)}><ExternalLink />Open account</ContextMenuItem>
                           <ContextMenuItem onSelect={() => setIns({ name: r.name, focus: true })}><HeartPulse />Show health insights</ContextMenuItem>
                           <ContextMenuSeparator />
-                          <ContextMenuItem onSelect={() => togglePin(r.name)}>{pin ? <><PinOff />Unpin</> : <><Pin />Pin to top</>}</ContextMenuItem>
                           <ContextMenuItem onSelect={() => { navigator.clipboard?.writeText(r.name); toast('Account name copied') }}><Copy />Copy name</ContextMenuItem>
                         </ContextMenuContent>
                         </ContextMenu>
-                        </Fragment>
                       )
                     })}
                   </TableBody>
@@ -395,7 +349,7 @@ export function AccountsScreen() {
               )}
             </div>
             {status === 'ready' && list.length > 0 && (
-              <TableFooterBar shown={list.length} total={data.length} className="sm:px-5">
+              <TableFooterBar shown={list.length} total={data.length}>
                 <span aria-live="polite">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
               </TableFooterBar>
             )}

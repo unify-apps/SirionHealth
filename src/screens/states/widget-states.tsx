@@ -86,7 +86,7 @@ export function KpiSkeleton({ className }: { className?: string }) {
 export function SplitSkeleton() {
   return (
     <div className="grid gap-3" aria-hidden="true">
-      <Skeleton className="h-3 w-full rounded-full" />
+      <Skeleton className="h-3 w-full rounded-sm" />
       <div className="grid gap-3 sm:grid-cols-3">
         {[0, 1, 2].map(i => <div key={i} className="grid gap-1.5 px-2.5 py-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-20" /><Skeleton className="h-3 w-28" /></div>)}
       </div>

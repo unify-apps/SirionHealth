@@ -107,7 +107,7 @@ function SentimentReads({ lastYm }: { lastYm: string }) {
       {earlier.length > 0 && (
         <>
           {more && <ul className="mt-3 divide-y divide-hairline border-t border-hairline pt-3">{earlier.map((s, i) => <StatementItem key={i} s={s} />)}</ul>}
-          <Button variant="outline" size="sm" className="mt-3 ml-2 rounded-full" onClick={() => setMore(m => !m)} aria-expanded={more}>
+          <Button variant="outline" size="sm" className="mt-3 ml-2" onClick={() => setMore(m => !m)} aria-expanded={more}>
             {more ? 'Hide earlier' : `Show ${earlier.length} earlier, since ${ymLabel(earlier[earlier.length - 1].ym)}`}
           </Button>
         </>

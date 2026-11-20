@@ -29,8 +29,8 @@ export function BarValue({ value, max, fill = 'bg-chart-1', text }: { value: num
   const pct = max > 0 ? Math.min(100, Math.max(value > 0 ? 3 : 0, (value / max) * 100)) : 0
   return (
     <span className="inline-flex items-center justify-end gap-2.5">
-      <span className="block h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <span className={cn('block h-full rounded-full', fill)} style={{ width: `${pct}%` }} />
+      <span className="block h-1.5 w-12 overflow-hidden rounded-[2px] bg-muted" aria-hidden="true">
+        <span className={cn('block h-full', fill)} style={{ width: `${pct}%` }} />
       </span>
       <span className="w-9 text-right">{text}</span>
     </span>
@@ -90,7 +90,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
     setSort(s => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'name' ? 1 : -1 }))
 
   return (
-    <Card className="gap-0 py-0">
+    <Card data-block className="gap-0 py-0">
       <BlockHeader icon={Users} title="Pods" count={status === 'ready' ? list.length : undefined}
         sub={`Sorted by ${sortLabel.replace(/^(?!CARR|ARR|GRR)([A-Z])/, c => c.toLowerCase())}${sort.dir === 1 ? ', ascending' : ''}`}
         actions={controls && status === 'ready' ? (
@@ -129,7 +129,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
             </TableHeader>
             <TableBody>
               {list.map(p => (
-                <TableRow key={p.name} className="cursor-pointer [&>td]:h-12" onClick={() => openSheet('pod', p.name)}>
+                <TableRow key={p.name} className="cursor-pointer" onClick={() => openSheet('pod', p.name)}>
                   <TableCell className={cn(stickyCol, 'truncate')}>
                     <button type="button" aria-haspopup="dialog" onClick={e => { e.stopPropagation(); openSheet('pod', p.name) }}
                       className="rounded-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">{p.name}</button>

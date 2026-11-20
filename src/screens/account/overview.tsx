@@ -152,7 +152,7 @@ async function copyBrief(d: [string, string][]) {
   }
 }
 
-function Brief() {
+export function Brief() {
   const w = useWidget(() => BRIEF)
   const ready = w.status === 'ready' && !!w.data?.length
   return (
@@ -197,7 +197,7 @@ const listSkeleton = (n: number) => (
 )
 
 /* ---------- going well / needs attention ---------- */
-function ListCard({ title, items, tone, onArea }: {
+export function ListCard({ title, items, tone, onArea }: {
   title: string; items: ListItem[]; tone: 'good' | 'bad'; onArea: (k: AreaKey) => void
 }) {
   const w = useWidget(() => items)
@@ -271,7 +271,7 @@ const CLM_ICON = [FileText, FileSignature, FileX]
 // status wording by tone: a bad commitment is "Unsigned", a good one "Signed"
 const CLM_STATUS = { good: 'Signed', bad: 'Unsigned', warn: 'Pending' } as const
 
-function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
+export function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
   const w = useWidget(() => CLM)
   return (
     <Card className="gap-0 py-0">

@@ -137,7 +137,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
           <span className={cn('text-2xl font-normal tabular-nums', active30 + active90 <= 1 && 'text-warn')}>{active30 + active90}</span>
           <span className="text-xs text-muted-foreground">{active30 + active90 <= 1 ? 'active in 90 days · single-threaded' : 'active in 90 days'}</span>
         </div>
-        <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={cov.map(([l, v]) => `${l}: ${v}`).join(', ')}>
+        <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-[2px]" role="img" aria-label={cov.map(([l, v]) => `${l}: ${v}`).join(', ')}>
           {cov.filter(([, v]) => v > 0).map(([l, v, c]) => <span key={l} className={cn('h-full', c)} style={{ width: `${(v / total) * 100}%` }} />)}
         </div>
         <ul className="grid grid-cols-3 gap-2 text-xs">
@@ -279,11 +279,12 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
                   <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-hover [&>td]:h-14 [&>td]:py-2"
                     aria-label={`${r.name}, open detail`}
                     onClick={() => onOpen(r.key, list.map(x => x.key))} onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(r.key, list.map(x => x.key)) } }}>
-                    <TableCell className={cn(stickyCol, 'max-w-72')}>
+                    <TableCell className={cn(stickyCol, 'max-w-96')}>
                       <span className="flex min-w-48 items-center gap-3">
                         <Avatar name={r.name} />
-                        <span className="grid min-w-0 leading-tight">
-                        <span className="flex min-w-0 items-center gap-1.5">
+                        {/* one line: name (+ gap flag), then the title muted; the title truncates first */}
+                        <span className="flex min-w-0 items-center gap-2">
+                        <span className="flex shrink-0 items-center gap-1.5">
                         <span className="truncate font-medium">{r.name}</span>
                         {r.gap[0] === 'warn' && (
                           <Tooltip>
@@ -292,7 +293,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
                           </Tooltip>
                         )}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">{r.title || r.sen || r.org}</span>
+                        <span className="min-w-0 truncate text-muted-foreground">{r.title || r.sen || r.org}</span>
                         </span>
                       </span>
                     </TableCell>
@@ -378,7 +379,7 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
         </TableHeader>
         <TableBody>
           {list.length ? list.map(r => (
-            <TableRow key={r.key} className="hover:bg-transparent [&>td]:h-11 [&>td]:py-1.5">
+            <TableRow key={r.key} className="hover:bg-transparent">
               <TableCell className={cn(stickyColStatic, 'max-w-80')}>
                 <span className="flex min-w-48 items-center gap-2">
                   <Avatar name={r.name} className="size-5 text-[10px]" />

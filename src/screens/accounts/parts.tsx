@@ -25,24 +25,23 @@ const DOT: Record<Tone, string> = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-go
 export function ReasonCell({ row }: { row: Row }) {
   const r = reason(row)
   return (
-    <span className="grid min-w-0 gap-0.5">
-      <span className="inline-flex min-w-0 items-center gap-1.5">
-        <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
-        <span className={cn('truncate', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
-      </span>
-      {r.next && <span className="truncate pl-3 text-xs text-muted-foreground">→ {r.next}</span>}
+    // one line: the reason, then the next step muted after it; the step truncates first
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
+      <span className={cn('shrink-0', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
+      {r.next && <span className="min-w-0 truncate text-muted-foreground">→ {r.next}</span>}
     </span>
   )
 }
 
-/** Renewal date with the time to it underneath. Red only within 60 days or overdue. */
+/** Renewal date and the time to it, on one line. Red only within 60 days or overdue. */
 export function RunwayCell({ row }: { row: Row }) {
   if (!live(row)) return <span className="text-muted-foreground">Churned</span>
   const rr = runway(row)
   return (
-    <span className="grid gap-0.5 tabular-nums">
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap tabular-nums">
       <span>{fmtShort(row.renew)}</span>
-      <span className={cn('text-xs', rr.c === 'b' ? 'text-bad' : 'text-muted-foreground')}>{rr.days < 0 ? rr.t : `in ${rr.t}`}</span>
+      <span className={rr.c === 'b' ? 'text-bad' : 'text-muted-foreground'}>· {rr.days < 0 ? rr.t : `in ${rr.t}`}</span>
     </span>
   )
 }
@@ -194,7 +193,7 @@ export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n
     <span className="flex h-1.5 w-full gap-0.5" role="img" aria-label={bands.map(b => `${BAND_NAME[b.band]} ${b.n}`).join(', ')}>
       {bands.filter(b => b.n).map(b => (
         <Tip key={b.band} tip={`${BAND_NAME[b.band]}: ${b.n} accounts`}>
-          <span className={cn('h-full rounded-full', BAND_FILL[b.band])} style={{ width: `${(b.n / total) * 100}%` }} />
+          <span className={cn('h-full rounded-[1px]', BAND_FILL[b.band])} style={{ width: `${(b.n / total) * 100}%` }} />
         </Tip>
       ))}
     </span>

@@ -50,7 +50,7 @@ export function StagesChart({ status, onRetry }: { status: WidgetStatus; onRetry
   const [hot, setHot] = useState<string | null>(null)
 
   return (
-    <Card className="gap-0 py-0">
+    <Card data-block className="gap-0 py-0">
       <BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} />
       <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="CARR by stage" /><SplitSkeleton /></>}

@@ -204,7 +204,7 @@ function RunwayTimeline() {
     <div className="grid gap-2">
       {/* one track: time used in grey, time left in red, events as dots on it with their labels underneath */}
       <div className="relative mx-1.5 mt-1 mb-9">
-        <div className="flex h-2 overflow-hidden rounded-full" role="img" aria-label={r.left < 0 ? `Renewal passed ${-r.left} days ago` : `${r.used} days used, ${r.left} left of ${r.total}`}>
+        <div className="flex h-2 overflow-hidden rounded-[2px]" role="img" aria-label={r.left < 0 ? `Renewal passed ${-r.left} days ago` : `${r.used} days used, ${r.left} left of ${r.total}`}>
           <span className="h-full bg-foreground/25" style={{ width: `${usedPct}%` }} />
           <span className="h-full flex-1 bg-bad/35" />
         </div>

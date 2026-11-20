@@ -145,7 +145,7 @@ export function DeltaChip({ value, format, label, health, className }: Delta & {
 /** KPI tile with one fixed structure so tiles in a row line up: icon + label, value (+ delta, + aside),
  *  a visual row that is always 20px tall (reserved when empty), and a one-line truncated hint.
  *  Tiles fill their grid cell, so a row of tiles is equal height. `tone` colours the value only (health semantics). */
-export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onOpen, openLabel = 'See details', className }: {
+export function Stat({ label, value, hint, tone, delta, aside, visual, onOpen, openLabel = 'See details', className }: {
   label: React.ReactNode; value: React.ReactNode; hint?: React.ReactNode
   tone?: 'good' | 'warn' | 'bad'
   /** a lucide component (rendered 16px muted) or a ready node */
@@ -161,9 +161,10 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
   className?: string
 }) {
   return (
-    <Card onClick={onOpen} className={cn('h-full gap-1.5 p-5', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
-      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <IconSlot icon={icon} /><span className="truncate">{tc(label)}</span>
+    <Card onClick={onOpen} className={cn('h-full gap-2 p-4', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
+      {/* ponytail: `icon` is accepted but not drawn (cleaner label); drop the prop once callers stop passing it */}
+      <div className="flex h-4 min-w-0 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+        <span className="truncate">{tc(label)}</span>
         {onOpen && (
           <Tip tip={openLabel}>
             <button type="button" aria-haspopup="dialog" aria-label={openLabel} onClick={e => { e.stopPropagation(); onOpen() }}
@@ -175,7 +176,7 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
       </div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
-          <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
+          <div className={cn('num truncate text-[26px] leading-none font-light',
             tone === 'good' && 'text-good', tone === 'warn' && 'text-warn', tone === 'bad' && 'text-bad')}>{value}</div>
           {delta && <DeltaChip {...delta} className="shrink-0" />}
         </div>
@@ -210,8 +211,8 @@ export function Meter({ value, max = 100, tone, fill, label, showValue, tip: tip
   const bar = (
     <span role="meter" aria-label={label} tabIndex={tip && !showValue ? 0 : undefined} aria-valuemin={0} aria-valuemax={max} aria-valuenow={has ? value : undefined}
       aria-valuetext={has ? undefined : 'No data'}
-      className={cn('relative block h-1.5 w-full overflow-hidden rounded-full bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring/50', !showValue && className)}>
-      {has && <span className={cn('block h-full rounded-full', fill ?? (tone === 'good' ? 'bg-good' : tone === 'warn' ? 'bg-warn' : tone === 'bad' ? 'bg-bad' : 'bg-chart-1'))}
+      className={cn('relative block h-1 w-full overflow-hidden rounded-[1px] bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring/50', !showValue && className)}>
+      {has && <span className={cn('block h-full', fill ?? (tone === 'good' ? 'bg-good' : tone === 'warn' ? 'bg-warn' : tone === 'bad' ? 'bg-bad' : 'bg-chart-1'))}
         style={{ width: `${pct}%` }} />}
       {over && <span aria-hidden="true" className="absolute inset-y-0 w-px bg-card" style={{ left: `${(max / scale) * 100}%` }} />}
     </span>
@@ -241,7 +242,7 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
   const body = (
     <>
       {icon != null && (isIconComponent(icon)
-        ? <span className={cn('grid shrink-0 place-items-center rounded-full bg-muted', size === 'lg' ? 'size-8' : 'size-7')}><IconSlot icon={icon} /></span>
+        ? <span className={cn('grid shrink-0 place-items-center rounded-md bg-muted', size === 'lg' ? 'size-8' : 'size-7')}><IconSlot icon={icon} /></span>
         : icon)}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{title}</span>
@@ -288,7 +289,7 @@ export function MoreList<T>({ items, n = 3, render, className, noun = 'more' }: 
     <>
       <ul className={className}>{shown.map(render)}</ul>
       {items.length > n && (
-        <Button variant="outline" size="sm" className="mt-3 rounded-full" aria-expanded={all} onClick={() => setAll(v => !v)}>
+        <Button variant="outline" size="sm" className="mt-3" aria-expanded={all} onClick={() => setAll(v => !v)}>
           {all ? 'Show less' : `Show ${items.length - n} ${noun}`}
         </Button>
       )}
@@ -338,8 +339,8 @@ export function SortHead({ children, active, dir, onSort, numeric, sticky, title
     <TableHead aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={cn('p-0 first:pl-0 last:pr-0', numeric && 'text-right', sticky && stickyColStatic, className)}>
       <Tip tip={title}><button type="button" onClick={onSort}
-        className={cn('group/sort flex h-9 w-full items-center gap-1 px-3 text-[11px] font-normal uppercase tracking-[0.06em] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
-          '[th:first-child_&]:pl-4 [th:last-child_&]:pr-4', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>
+        className={cn('group/sort flex h-10 w-full items-center gap-1 px-4 text-[11px] font-medium uppercase tracking-[0.06em] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
+          '[th:first-child_&]:pl-5 [th:last-child_&]:pr-5', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>
         {children}
         <I className={cn('size-3 shrink-0', !active && 'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true" />
       </button></Tip>
@@ -378,7 +379,7 @@ export function TableFooterBar({ shown, total, children, className }: {
   shown: React.ReactNode; total: number; children?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-4 py-2.5 text-xs text-muted-foreground tabular-nums', className)}>
+    <div className={cn('flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-xs text-muted-foreground tabular-nums', className)}>
       <span>Showing {shown} of {total}</span>
       {children}
     </div>
