@@ -30,9 +30,6 @@ function useRetryToast(name: string, what: string) {
   return { status: w.status, retry }
 }
 
-/** A tile tooltip: what the metric is, then its source. */
-const tipText = (what: string) => <span className="grid gap-0.5"><span>{what}</span><span className="opacity-70">Source: portfolio view, {BOOK.asOf}</span></span>
-
 /** Focusable wrapper so a ring or meter in a tile carries its exact value in a tooltip. */
 function Tip({ tip, label, children }: { tip: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -67,20 +64,19 @@ export function PortfolioScreen() {
         )}
         {kpis.status === 'ready' && (
           <>
-            <Stat label={<Term tip={tipText('Mean health of scored live accounts; accounts with no score are left out')}>Average health</Term>} icon={HeartPulse}
-              value={KPIS.avgHealth}
+            <Stat label={<Term tip="Mean health of scored live accounts. Accounts with no score are left out.">Average health</Term>} icon={HeartPulse}
+              value={KPIS.avgHealth} hint="Across the book"
               aside={<Tip label={`Average health ${KPIS.avgHealth} of 100, ${BAND_LABEL[bandOf(KPIS.avgHealth)]}`}
-                tip={`${KPIS.avgHealth} of 100 · ${BAND_LABEL[bandOf(KPIS.avgHealth)]}`}>
+                tip={`${BAND_LABEL[bandOf(KPIS.avgHealth)]} band`}>
                 <HealthRing value={KPIS.avgHealth} size={36} stroke={3} label={false} />
               </Tip>} />
-            <Stat label={<Term tip={tipText('Accounts with a renewal date in the next 60 days')}>Renewing in 60 days</Term>} icon={CalendarClock}
+            <Stat label="Renewing in 60 days" icon={CalendarClock}
               value={KPIS.renewing60}
-              aside={<Term tip={tipText('ARR renewing in 60 days that is at risk or unsigned')}><span className="text-sm tabular-nums text-bad">{KPIS.arrAtRisk} at risk</span></Term>}
-              visual={<Meter value={KPIS.renewing60} max={BOOK.accounts} min={2}
-                tip={`${KPIS.renewing60} of ${BOOK.accounts} accounts renew in 60 days`} />}
+              aside={<Term tip="ARR renewing in 60 days on accounts that are at risk or unsigned"><span className="text-sm tabular-nums text-bad">{KPIS.arrAtRisk} at risk</span></Term>}
+              visual={<Meter value={KPIS.renewing60} max={BOOK.accounts} min={2} />}
               hint={`of ${BOOK.accounts} accounts`}
               onOpen={() => openSheet('renewals')} openLabel="See accounts renewing in 60 days" />
-            <Stat label={<>At 100%+ <Term tip={tipText('GRR: gross revenue retention, revenue kept from existing customers before expansion')}>GRR</Term></>} icon={ShieldCheck}
+            <Stat label={<>At 100%+ <Term tip="Gross revenue retention: revenue kept from existing customers, before expansion">GRR</Term></>} icon={ShieldCheck}
               value={KPIS.grr100}
               visual={<SplitBar label="Accounts by GRR band" legend={false} unit="accounts" ordinal="asc"
                 parts={GRR.map(g => ({ key: g.key, label: g.label, value: g.accounts }))} />}

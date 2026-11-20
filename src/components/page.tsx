@@ -165,10 +165,12 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
       <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground">
         <IconSlot icon={icon} /><span className="truncate">{tc(label)}</span>
         {onOpen && (
-          <button type="button" aria-haspopup="dialog" aria-label={openLabel} onClick={e => { e.stopPropagation(); onOpen() }}
-            className="-my-1 -mr-1.5 ml-auto grid size-6 shrink-0 place-items-center rounded-md outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </button>
+          <Tip tip={openLabel}>
+            <button type="button" aria-haspopup="dialog" aria-label={openLabel} onClick={e => { e.stopPropagation(); onOpen() }}
+              className="-my-1 -mr-1.5 ml-auto grid size-6 shrink-0 place-items-center rounded-md outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
+          </Tip>
         )}
       </div>
       <div className="flex min-h-8 items-center justify-between gap-3">
@@ -180,7 +182,7 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
         {aside}
       </div>
       <div className="flex h-5 min-w-0 items-center [&>*]:w-full" aria-hidden={visual ? undefined : true}>{visual}</div>
-      <div className="h-4 truncate text-xs text-muted-foreground" title={typeof hint === 'string' ? hint : undefined}>{hint}</div>
+      <div className="h-4 truncate text-xs text-muted-foreground">{hint}</div>
     </Card>
   )
 }

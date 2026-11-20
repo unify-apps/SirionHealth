@@ -9,7 +9,15 @@ import { STAGES } from './data'
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
-/** Shared card frame: same height side by side, body vertically centred. */
+/** Whole percent, with small non-zero shares shown as under 1%. */
+const share = (v: number, total: number) => { const p = Math.round((v / total) * 100); return p < 1 ? 'Under 1%' : `${p}%` }
+
+/** A tooltip only when there is something the row doesn't already show. */
+function Tip({ tip, children }: { tip?: string; children: React.ReactElement }) {
+  if (!tip) return children
+  return <Tooltip><TooltipTrigger asChild>{children}</TooltipTrigger><TooltipContent className="tabular-nums">{tip}</TooltipContent></Tooltip>
+}
+
 function ChartCard({ header, children }: { header: React.ReactNode; children: React.ReactNode }) {
   return (
     <Card className="h-full gap-0 py-0">
@@ -36,22 +44,17 @@ export function StagesChart({ status, onRetry }: { status: WidgetStatus; onRetry
         <ul className="grid gap-0.5" aria-label="CARR by stage">
           {data.map(d => (
             <li key={d.stage}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0} className={cn('grid grid-cols-[9.5rem_minmax(0,1fr)] items-center gap-3 rounded-md py-1.5 text-sm', focusRing)}>
-                    <span className="truncate">{d.stage}</span>
-                    <span className="flex min-w-0 items-center gap-2">
-                      {d.carr
-                        ? <span className="h-3 rounded-r-[3px] bg-chart-1" style={{ width: `${Math.max(1, (d.carr / max) * 80)}%` }} />
-                        : null}
-                      <span className={cn('shrink-0 text-xs tabular-nums', !d.carr && 'text-muted-foreground')}>{d.carr ? `$${d.carr}M` : '$0'}</span>
-                    </span>
+              <Tip tip={d.carr ? `${share(d.carr, total)} of CARR` : undefined}>
+                <span tabIndex={d.carr ? 0 : undefined} className={cn('grid grid-cols-[9.5rem_minmax(0,1fr)] items-center gap-3 rounded-md py-1.5 text-sm', focusRing)}>
+                  <span className="truncate">{d.stage}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {d.carr
+                      ? <span className="h-3 rounded-r-[3px] bg-chart-1" style={{ width: `${Math.max(1, (d.carr / max) * 80)}%` }} />
+                      : null}
+                    <span className={cn('shrink-0 text-xs tabular-nums', !d.carr && 'text-muted-foreground')}>{d.carr ? `$${d.carr}M` : '$0'}</span>
                   </span>
-                </TooltipTrigger>
-                <TooltipContent className="tabular-nums">
-                  {d.carr ? `${d.stage}: $${d.carr}M, ${Math.round((d.carr / total) * 100)}% of CARR` : `${d.stage}: no CARR`}
-                </TooltipContent>
-              </Tooltip>
+                </span>
+              </Tip>
             </li>
           ))}
         </ul>

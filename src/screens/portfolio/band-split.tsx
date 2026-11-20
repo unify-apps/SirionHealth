@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ArrowRight, ChevronRight, HeartPulse } from 'lucide-react'
 import { bandBg, bandOf, type Band } from '@/components/health'
 import { SplitBar } from '@/components/charts'
@@ -21,6 +22,8 @@ export function BandSplit({ status, onRetry }: { status: WidgetStatus; onRetry: 
   const sheet = useSheet()
   const band = sheet?.type === 'band' && BANDS.some(s => s.band === sheet.id) ? (sheet.id as LiveBand) : null
   const open = (b: LiveBand) => openSheet('band', b, { replace: !!band })
+  // hovering or focusing a row lights its segment in the bar, tying the two together without another tooltip
+  const [hot, setHot] = useState<LiveBand | null>(null)
 
   return (
     <Card className="gap-0 py-0">
@@ -34,11 +37,12 @@ export function BandSplit({ status, onRetry }: { status: WidgetStatus; onRetry: 
           <>
             <SplitBar label="ARR by health band" legend={false}
               parts={BANDS.map(s => ({ key: s.band, label: s.label, value: s.arr, color: BAND_COLOR[s.band] }))}
-              format={v => `$${v}M`} selected={band} onSelect={k => open(k as LiveBand)} />
+              format={v => `$${v}M`} selected={hot ?? band} onSelect={k => open(k as LiveBand)} />
             <ul className="mt-2 grid" aria-label="Health bands">
               {BANDS.map(s => (
                 <li key={s.band} className="border-b border-hairline last:border-b-0">
                   <button type="button" aria-haspopup="dialog" onClick={() => open(s.band)}
+                    onPointerEnter={() => setHot(s.band)} onPointerLeave={() => setHot(null)} onFocus={() => setHot(s.band)} onBlur={() => setHot(null)}
                     aria-label={`${s.label}, health ${s.range}: $${s.arr}M, ${share(s.arr)} of the book. See accounts`}
                     className="-mx-2 grid w-[calc(100%+1rem)] cursor-pointer grid-cols-[minmax(0,1fr)_auto_2.5rem_1rem] items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring">
                     <span className="flex min-w-0 items-center gap-2">

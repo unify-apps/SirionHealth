@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react'
-import { BAND_LABEL, bandOf, HealthBar } from '@/components/health'
+import { HealthBar } from '@/components/health'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { money } from '@/data/legacy'
@@ -58,12 +58,7 @@ export function AccountsTable({ list, col = 'stage' }: { list: Row[]; col?: 'sta
               </TableCell>
               <TableCell className={cn(col === 'grr' && 'tabular-nums')}>{col === 'grr' ? (r.grr == null ? 'No data' : `${r.grr}%`) : r.stage}</TableCell>
               <TableCell>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={open ? -1 : 0} className="inline-flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"><HealthBar value={r.health} /></span>
-                  </TooltipTrigger>
-                  <TooltipContent>Health {r.health} of 100 · {BAND_LABEL[bandOf(r.health)]}</TooltipContent>
-                </Tooltip>
+                <HealthBar value={r.health} />
               </TableCell>
               <TableCell className="text-right tabular-nums">{money(r.carr)}</TableCell>
               <TableCell className={cn('text-right tabular-nums', rr.days <= 60 && 'text-bad')}>
