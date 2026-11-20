@@ -108,7 +108,7 @@ export function ListRow({ icon: Icon, title, meta, status, onClick, label }: {
       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted" aria-hidden="true">
         <Icon className="size-4 text-muted-foreground" />
       </span>
-      <span className="min-w-0 flex-1">
+      <span className="grid min-w-0 flex-1 gap-0.5">
         <Truncate>{title}</Truncate>
         {meta && <Truncate className="text-xs tabular-nums text-muted-foreground">{meta}</Truncate>}
       </span>
@@ -128,7 +128,7 @@ export function ListRow({ icon: Icon, title, meta, status, onClick, label }: {
       )}
     </>
   )
-  const cls = '-mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-1.5 text-left'
+  const cls = '-mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2.5 text-left'
   return (
     <li>
       {onClick
@@ -162,19 +162,26 @@ export function SourceTag({ kind, className }: { kind: 'ai' | 'rule'; className?
 /* ---------- widget states ---------- */
 export type WidgetState<T> = { status: 'loading' | 'ready' | 'error'; data?: T; error?: string; retry: () => void }
 
-/** Builds a widget's data off the render path so every widget has real loading, ready and error states. */
-export function useWidget<T>(compute: () => T): WidgetState<T> {
+/** Review hook: `?widgets=loading|error` in the URL holds every widget in that state. */
+const forced = () => new URLSearchParams(location.search).get('widgets') as 'loading' | 'error' | null
+
+/** Builds a widget's data off the render path so every widget has real loading, ready and error states.
+ *  `deps` re-runs it, e.g. when the date range changes. */
+export function useWidget<T>(compute: () => T, deps: unknown[] = []): WidgetState<T> {
   const [run, setRun] = useState(0)
   const [s, set] = useState<Omit<WidgetState<T>, 'retry'>>({ status: 'loading' })
   useEffect(() => {
     let alive = true
+    const f = forced()
+    if (f === 'loading') return
+    if (f === 'error') { set({ status: 'error', error: 'Forced by ?widgets=error' }); return }
     const id = setTimeout(() => {
       try { const data = compute(); if (alive) set({ status: 'ready', data }) }
       catch (e) { if (alive) set({ status: 'error', error: e instanceof Error ? e.message : String(e) }) }
     }, 0)
     return () => { alive = false; clearTimeout(id) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run])
+  }, [run, ...deps])
   return { ...s, retry: () => { set({ status: 'loading' }); setRun(n => n + 1) } }
 }
 

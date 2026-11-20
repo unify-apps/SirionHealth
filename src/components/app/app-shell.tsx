@@ -177,7 +177,7 @@ export function AppShell({ route, children }: { route: Route; children: React.Re
   return (
     <SidebarProvider open={open} onOpenChange={setOpen}>
       <AppSidebar route={route} theme={theme} toggleTheme={toggleTheme} onFind={() => setCmd(true)} onAsk={() => setAsk(true)} />
-      <SidebarInset>
+      <SidebarInset className="overflow-x-clip">
         <CommandMenu open={cmd} onOpenChange={setCmd} />
         <AskPanel open={ask} onOpenChange={setAsk} />
         <main className="mx-auto w-full max-w-[1280px] px-4 pt-6 pb-10 sm:px-6 lg:px-8">{children}</main>

@@ -4,6 +4,7 @@ import { Fragment, memo, useMemo } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Scatter, XAxis, YAxis } from 'recharts'
 import { cn } from '@/lib/utils'
 import { fmtTick } from '@/lib/dates'
+import { rangeStart, useRange, type Range } from '@/lib/range'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import {
   ANIM_MS, AREA_FILL_OPACITY, activeDotProps, gridProps, refLabel, SERIES, thresholdLine, tooltipSurface, xAxisProps, yAxisProps,
@@ -25,12 +26,19 @@ const cfg = {
 } satisfies ChartConfig
 
 const T0 = +new Date(2025, 4, 1), T1 = +new Date(2027, 0, 6)
+/** Left edge for a range: the start of the month the range begins in, never before the first scored month. */
+const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
 
 type Row = { t: number; health?: number; proj?: number; month?: Month; ev?: number; event?: KeyEvent }
 
-/** Health at time t, read off the line (or the cap projection after the last month), so events sit on it. */
+/** Where a month's score sits on the time axis: mid-month, so it lines up under its month and inside its flagged band.
+ *  (The record dates each score at month end, which drew May's point under June.) */
+const mid = (m: Month) => +new Date(m.date.getFullYear(), m.date.getMonth(), 15)
+
+/** Health at time t, read off the line (or the cap projection after the last month), so events sit on it.
+ *  The line is drawn straight between months, so this linear read is exactly on it. */
 function healthAt(t: number): number {
-  const pts = months.map(m => [+m.date, m.final] as const)
+  const pts = months.map(m => [mid(m), m.final] as const)
   if (t <= pts[0][0]) return pts[0][1]
   for (let i = 1; i < pts.length; i++) {
     const [t0, v0] = pts[i - 1], [t1, v1] = pts[i]
@@ -43,9 +51,9 @@ function buildRows(): Row[] {
   if (!months.length) return []
   const map = new Map<number, Row>()
   const at = (t: number) => map.get(t) ?? (map.set(t, { t }), map.get(t)!)
-  months.forEach(m => Object.assign(at(+m.date), { health: m.final, month: m }))
+  months.forEach(m => Object.assign(at(mid(m)), { health: m.final, month: m }))
   const last = months[months.length - 1]
-  at(+last.date).proj = last.final
+  at(mid(last)).proj = last.final
   at(+RENEWAL).proj = last.final
   events.forEach(e => Object.assign(at(+e.date), { ev: Math.round(healthAt(+e.date)), event: e }))
   return [...map.values()].sort((a, b) => a.t - b.t)
@@ -55,15 +63,16 @@ function buildRows(): Row[] {
 function flaggedBands(): [number, number][] {
   const out: [number, number][] = []
   months.filter(m => m.model).forEach(m => {
-    const x1 = +new Date(m.date.getFullYear(), m.date.getMonth(), 1), x2 = +m.date
+    const x1 = +new Date(m.date.getFullYear(), m.date.getMonth(), 1), x2 = +new Date(m.date.getFullYear(), m.date.getMonth() + 1, 1)
     const prev = out[out.length - 1]
-    if (prev && x1 - prev[1] < 5 * 864e5) prev[1] = x2
+    if (prev && x1 === prev[1]) prev[1] = x2 // consecutive flagged months merge into one band
     else out.push([x1, x2])
   })
   return out
 }
 
-const TICKS = (() => { const out: number[] = []; for (let d = new Date(T0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + 3, 1)) out.push(+d); return out })()
+/** Month ticks from t0; every month on short ranges, every third on long ones. */
+const ticksFrom = (t0: number) => { const out: number[] = [], step = T1 - t0 < 200 * 864e5 ? 1 : 3; for (let d = new Date(t0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + step, 1)) out.push(+d); return out }
 
 /** Event markers, at most 8px: risk is a filled dot, positive a ring, everything else a small neutral dot. */
 const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: number }> = {
@@ -80,15 +89,16 @@ export function RunwayChart() {
   const sheet = useSheet()
   const open = sheet?.type === 'event' ? events.find(e => e.iso === sheet.id) ?? null : null
   const pager = listPager(events, open, e => e.iso, e => openSheet('event', e.iso, { replace: true }), 'event')
+  const range = useRange()
   const w = useWidget(buildRows)
+  const t0 = startFor(range)
   return (
     <>
       <WidgetBody w={w} what="the renewal runway" isEmpty={d => d.length === 0}
         empty={{ title: 'No data', sub: 'No monthly health has been scored for this account yet.' }}
         skeleton={<Skeleton className="h-[260px] w-full rounded-lg" />}>
-        {rows => <Plot rows={rows} onEvent={openEvent} />}
+        {rows => <><Plot rows={rows} t0={t0} onEvent={openEvent} /><Legend /></>}
       </WidgetBody>
-      <Legend />
       <EventSheet event={open} onOpenChange={sheetOpenChange} pager={pager} />
     </>
   )
@@ -98,32 +108,32 @@ export function RunwayChart() {
 const openEvent = (e: KeyEvent) => openSheet('event', e.iso)
 
 /* memo: the Scatter `shape` is an inline component, so a re-render (the sheet opening) would remount the dots and drop keyboard focus. */
-const Plot = memo(function Plot({ rows, onEvent }: { rows: Row[]; onEvent: (e: KeyEvent) => void }) {
-  const bands = useMemo(flaggedBands, [])
-  const label = `Monthly health from ${ymLabel(months[0].ym)} to ${ymLabel(months[months.length - 1].ym)}, with ${events.length} events up to the ${fmtDY(RENEWAL)} renewal.`
+const Plot = memo(function Plot({ rows: all, t0, onEvent }: { rows: Row[]; t0: number; onEvent: (e: KeyEvent) => void }) {
+  // the line keeps the point just before the window so it enters from the left edge instead of starting mid-chart
+  const firstIn = all.findIndex(r => r.t >= t0)
+  const rows = all.slice(Math.max(0, firstIn - 1)).filter(r => r.t >= t0 || r.health != null)
+  const bands = useMemo(() => flaggedBands().filter(([, x2]) => x2 > t0), [t0])
+  const label = `Monthly health from ${fmtTick(t0)} to ${ymLabel(months[months.length - 1].ym)}, with ${events.length} events up to the ${fmtDY(RENEWAL)} renewal.`
     + (runway ? ` First flagged ${fmtDY(runway.firstFlag)}.` : '')
   return (
     <div className="-mx-1 overflow-x-auto px-1" role="figure" aria-label={label}>
       <ChartContainer config={cfg} className="aspect-auto h-[260px] w-full min-w-[640px]">
         <ComposedChart data={rows} margin={{ top: 18, right: 16, bottom: 0, left: 0 }} accessibilityLayer>
           <CartesianGrid {...gridProps} />
-          <XAxis dataKey="t" type="number" scale="time" domain={[T0, T1]} ticks={TICKS} tickFormatter={fmtTick} {...xAxisProps} />
+          <XAxis dataKey="t" type="number" scale="time" domain={[t0, T1]} allowDataOverflow ticks={ticksFrom(t0)} tickFormatter={fmtTick} {...xAxisProps} />
           <YAxis domain={[0, 100]} ticks={[0, 40, 70, 100]} {...yAxisProps} />
 
           {bands.map(([x1, x2]) => (
-            <ReferenceArea key={x1} x1={x1} x2={x2} y1={0} y2={100} fill="var(--chart-axis)" fillOpacity={0.07} strokeOpacity={0} ifOverflow="hidden" />
+            <ReferenceArea key={x1} x1={Math.max(x1, t0)} x2={x2} y1={0} y2={100} fill="var(--chart-axis)" fillOpacity={0.07} strokeOpacity={0} ifOverflow="hidden" />
           ))}
-          <ReferenceLine y={70} {...thresholdLine} />
+          <ReferenceLine y={70} {...thresholdLine} label={refLabel('Healthy 70')} />
           <ReferenceLine x={+TODAY} {...thresholdLine} label={refLabel('Today', 'top')} />
           <ReferenceLine x={+RENEWAL} {...thresholdLine} label={refLabel('Renewal', 'top')} />
 
           <Line dataKey="proj" stroke="var(--color-proj)" strokeDasharray="3 3" strokeWidth={2} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
-          <Area dataKey="health" type="monotone" stroke="var(--color-health)" strokeWidth={2} fill="var(--color-health)" fillOpacity={AREA_FILL_OPACITY}
+          <Area dataKey="health" type="linear" stroke="var(--color-health)" strokeWidth={2} fill="var(--color-health)" fillOpacity={AREA_FILL_OPACITY}
             connectNulls activeDot={activeDotProps} animationDuration={ANIM_MS}
-            dot={(p: { cx?: number; cy?: number; payload?: Row; index?: number }) => {
-              if (p.cx == null || p.cy == null || !p.payload?.month?.model) return <g key={p.index} />
-              return <circle key={p.index} cx={p.cx} cy={p.cy} r={3.5} fill="var(--warn)" stroke="var(--card)" strokeWidth={2} />
-            }} />
+            dot={false} />
           <Scatter dataKey="ev" isAnimationActive={false}
             shape={(p: unknown) => <EventMark {...(p as { cx: number; cy: number; payload: Row })} onEvent={onEvent} />} />
 
@@ -179,6 +189,7 @@ function Legend() {
     [<span className="inline-block w-4 border-t-2 border-dotted border-chart-axis" />, 'Held by the renewal cap until signed'],
     [<span className="inline-block size-2 rounded-full bg-bad" />, 'Risk event'],
     [<span className="inline-block size-2 rounded-full border-2 border-good" />, 'Positive event'],
+    [<span className="inline-block size-1.5 rounded-full bg-chart-axis" />, 'Other event'],
   ]
   return (
     <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">

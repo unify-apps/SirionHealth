@@ -1,5 +1,5 @@
 import { isValidElement, useState } from 'react'
-import { ChevronLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, ArrowLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,33 +12,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
  * Compact page header in the body: one title row (2xl, regular weight) with a muted meta line, actions on the right
  * on the same row. ~64px tall. The top bar above keeps only the breadcrumb and global tools.
  */
-export function PageHeader({ eyebrow, title, sub, actions, lead, back }: {
+export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact = false, compactSub }: {
   eyebrow?: string; title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode
   /** small back link above the title, replaces the old breadcrumb bar */
   back?: { label: string; onClick: () => void }
   /** before the title: a string renders a monogram as tall as the title + meta lines; or pass any element */
   lead?: React.ReactNode
+  /** shrunk form for a sticky header once the page scrolls: back link folds away, smaller monogram and title */
+  compact?: boolean
+  /** meta line shown in the compact form instead of `sub` */
+  compactSub?: React.ReactNode
 }) {
+  const ease = 'transition-all duration-200 ease-out motion-reduce:transition-none'
   return (
-    <header className="pb-5">
-      <div className={cn('flex items-center gap-2', back ? 'mb-3' : 'mb-3 md:hidden')}>
-        <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
-        {back && (
-          <button type="button" onClick={back.onClick}
-            className="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-            <ChevronLeft className="size-4" aria-hidden="true" />{back.label}
-          </button>
-        )}
+    <header className={cn(ease, compact ? 'py-2' : 'pb-5')}>
+      <div className={cn('grid', ease, compact ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100', !back && 'md:hidden')} inert={compact}>
+        <div className="overflow-hidden">
+          <div className="mb-3 flex items-center gap-2">
+            <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
+            {back && (
+              <button type="button" onClick={back.onClick}
+                className="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                <ChevronLeft className="size-4" aria-hidden="true" />{back.label}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <div className="flex min-w-0 items-center gap-3">
-        {typeof lead === 'string'
-          ? <span aria-hidden="true" className="grid size-[52px] shrink-0 place-items-center rounded-full bg-muted text-base font-medium text-foreground">{lead}</span>
-          : lead}
+        {typeof lead === 'string' ? (() => {
+          const mono = cn('grid shrink-0 place-items-center rounded-full bg-muted font-medium text-foreground', ease, compact ? 'size-9 text-xs' : 'size-[52px] text-base')
+          // condensed, the back link folds away, so the monogram doubles as the back button (arrow on hover or focus)
+          return back && compact ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" onClick={back.onClick} aria-label={`Back to ${back.label}`}
+                  className={cn(mono, 'group/back outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring')}>
+                  <span className="group-hover/back:hidden group-focus-visible/back:hidden" aria-hidden="true">{lead}</span>
+                  <ArrowLeft className="hidden size-4 group-hover/back:block group-focus-visible/back:block" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Back to {back.label}</TooltipContent>
+            </Tooltip>
+          ) : <span aria-hidden="true" className={mono}>{lead}</span>
+        })() : lead}
         <div className="min-w-0">
-          {eyebrow && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
-          <h1 className="truncate text-2xl leading-tight font-normal tracking-[-0.02em]">{title}</h1>
-          {sub && <p className="mt-0.5 truncate text-sm text-muted-foreground">{sub}</p>}
+          {eyebrow && !compact && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
+          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{title}</h1>
+          {(compact ? compactSub ?? sub : sub) && <p className={cn('truncate text-muted-foreground', ease, compact ? 'text-xs' : 'mt-0.5 text-sm')}>{compact ? compactSub ?? sub : sub}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

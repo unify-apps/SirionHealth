@@ -1,25 +1,23 @@
-/* Account header: page title row, then one verdict card in three zones (score, areas, renewal) and the KPI strip.
-   One idea per zone, a visual instead of a sentence; the derivation and provenance live in the sheets. */
-import { useEffect, useState } from 'react'
-import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarClock, DollarSign, Gauge, HeartPulse, Layers, Mail, Minus, RefreshCw, TrendingDown, Users, type LucideIcon,
-} from 'lucide-react'
+/* Account header: page title row, then one verdict card. Top: the score, what it means and the next step.
+   Middle: area scores (colour only) and the renewal. Footer: the few metrics a CSM quotes. Derivation lives in the sheets. */
+import { useEffect, useRef, useState } from 'react'
+import { ArrowRight, CalendarClock, DollarSign, Gauge, Layers, RefreshCw, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fmtMonthName } from '@/lib/dates'
-import { Meter } from '@/components/charts'
+import { fmtMonth } from '@/lib/dates'
+import { useRange, type Range } from '@/lib/range'
 import { PageHeader } from '@/components/page'
 import { DateRangeMenu } from '@/components/app/date-range'
 import { go, openSheet } from '@/lib/route'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { BAND_LABEL, bandOf, bandText, HealthPill, type Band } from '@/components/health'
+import { BAND_LABEL, bandOf, bandText, type Band } from '@/components/health'
 import {
-  AREA_KEYS, AREA_NAME, AREA_SHORT, areaDelta, areaDriver, fmtD, fmtDY, kpis, latest, previous, RENEWAL, renewal, runway,
-  score, strongThisMonth, type AreaKey,
+  AREA_KEYS, AREA_NAME, AREA_SHORT, areaDriver, fmtD, fmtDY, kpis, latest, months, renewal,
+  score, strongThisMonth, type AreaKey, type Month,
 } from './facts'
-import { CapTerm, GLOSSARY, showTab, Term, useWidget, WidgetBody } from './overview/bits'
+import { showTab, useWidget, WidgetBody } from './overview/bits'
+import { BRIEF } from './overview/content'
 import { HeaderSheets } from './overview/how-sheet'
 
 /** Short cause per area, shown in a driver's tooltip. */
@@ -27,9 +25,6 @@ const CAUSE: Partial<Record<AreaKey, () => string>> = {
   engagement: () => 'Champion handed over',
   sentiment: () => { const n = strongThisMonth().length; return `${n} strong negative${n === 1 ? '' : 's'} this month` },
 }
-
-/** Area meter fill: the band colour at reduced intensity. */
-const SOFT_FILL: Record<Band, string> = { good: 'bg-good/80', warn: 'bg-warn/80', bad: 'bg-bad/80', none: 'bg-muted-foreground/40' }
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
@@ -85,51 +80,221 @@ function ScoreRing({ value, size = 88, stroke = 6 }: { value: number; size?: num
   )
 }
 
-function buildVerdict() {
-  const areas = AREA_KEYS.map(k => ({ k, v: latest.areas[k], drv: areaDriver(k) }))
-  const weakest = areas.reduce((a, b) => (b.v < a.v ? b : a)).k
-  // the two biggest falls since last month
-  const drivers = AREA_KEYS.map(k => ({ k, d: areaDelta(k) })).filter(x => x.d < 0).sort((a, b) => a.d - b.d).slice(0, 2)
-  return { areas, weakest, drivers }
+/** The month the range compares against: one month back for 30 days, three for 90 and so on; lifetime goes to the first. */
+function baseline(r: Range): Month {
+  const i = months.length - 1 - (r.months ?? months.length)
+  return months[Math.max(0, i)]
 }
 
-export function AccountHeader() {
-  const w = useWidget(buildVerdict)
-  // both sheets live in the URL; HeaderSheets renders them on every tab
-  const openArea = (k: AreaKey) => openSheet('area', k)
-  // hovering an area lights the ring; hovering the ring lights every area: the areas feed the score
-  const [hl, setHl] = useState<Link>(null)
+function buildVerdict(r: Range) {
+  const base = baseline(r)
+  const areas = AREA_KEYS.map(k => ({ k, v: latest.areas[k], d: latest.areas[k] - base.areas[k], drv: areaDriver(k) }))
+  // the two biggest falls since last month drive the headline
+  const drivers = areas.filter(x => x.d < 0).sort((a, b) => a.d - b.d).slice(0, 2)
+  const atRisk = !renewal.signed && renewal.daysLeft <= 90
+  const title = atRisk ? 'Renewal at risk' : BAND_LABEL[bandOf(score.final)]
+  const why = [
+    `${renewal.carrLabel} renews ${fmtD(renewal.date)} with nothing signed${renewal.autoRenew ? '' : ' and auto-renew off'}.`,
+    drivers.length ? `${drivers.map(x => `${AREA_SHORT[x.k]} fell ${Math.abs(x.d)}`).join(' and ')} since ${fmtMonth(base.ym)}${CAUSE[drivers[0].k] ? `: ${CAUSE[drivers[0].k]!().toLowerCase()}` : ''}.` : '',
+  ].filter(Boolean).join(' ')
+  // the brief's "Next" line, first sentence, citations stripped
+  const next = (BRIEF.find(([h]) => h === 'Next')?.[1] ?? '').replace(/\s?\{\w+\}/g, '').split(/(?<=\.)\s/)[0].replace(/\.$/, '')
+  return { areas, title, why, next, since: fmtMonth(base.ym) }
+}
 
+/** Shrinks the sticky page header once its sentinel scrolls off, and publishes the header height as --account-hdr
+ *  so the tab strip can stick right under it. */
+function useStickyHeader() {
+  const sentinel = useRef<HTMLDivElement>(null), bar = useRef<HTMLDivElement>(null)
+  const [compact, setCompact] = useState(false)
+  useEffect(() => {
+    const s = sentinel.current, b = bar.current
+    if (!s || !b) return
+    const io = new IntersectionObserver(([e]) => setCompact(!e.isIntersecting && e.boundingClientRect.top < 0))
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--account-hdr', `${b.offsetHeight}px`))
+    io.observe(s); ro.observe(b)
+    return () => { io.disconnect(); ro.disconnect(); document.documentElement.style.removeProperty('--account-hdr') }
+  }, [])
+  return { sentinel, bar, compact }
+}
+
+/** The page header, sticky for the whole account page: shrinks once the page scrolls; the tab strip sticks under it.
+ *  Rendered by the screen (not inside AccountHeader) because a sticky element only sticks within its parent. */
+export function StickyPageHeader({ joined = false }: { joined?: boolean }) {
+  const { sentinel, bar, compact } = useStickyHeader()
+  const b = bandOf(score.final)
+  return (
+    <>
+      <div ref={sentinel} aria-hidden="true" className="pointer-events-none h-0" />
+      <div ref={bar} className={cn(FULL_BLEED, 'sticky top-0 z-30', compact && 'before:bg-background/90 before:backdrop-blur-md',
+        // a hairline under the shrunk header until the tab strip docks under it and takes over the rule
+        compact && !joined && 'after:pointer-events-none after:absolute after:bottom-0 after:-inset-x-[100vmax] after:h-px after:bg-hairline')}>
+        <PageHeader
+          compact={compact}
+          back={{ label: 'My accounts', onClick: () => go('accounts') }}
+          lead="TA"
+          title="TransAmerica"
+          sub="Financial services · Enterprise · North America · BAU"
+          compactSub={<><span className={cn('font-medium tabular-nums', bandText[b])}>{score.final} {BAND_LABEL[b]}</span> · Renews in <span className="tabular-nums text-bad">{renewal.daysLeft} days</span></>}
+          actions={<DateRangeMenu />}
+        />
+      </div>
+    </>
+  )
+}
+
+/** Background that runs edge to edge of the content area while the element keeps the page's column. */
+export const FULL_BLEED = 'relative before:pointer-events-none before:absolute before:inset-y-0 before:-inset-x-[100vmax] before:-z-10 before:transition-colors before:duration-200'
+
+export function AccountHeader() {
+  const range = useRange()
+  const w = useWidget(() => buildVerdict(range), [range.id])
+  const openArea = (k: AreaKey) => openSheet('area', k)
   return (
     <header className="flex flex-col gap-4">
-      <PageHeader
-        back={{ label: 'My accounts', onClick: () => go('accounts') }}
-        lead="TA"
-        title="TransAmerica"
-        sub="Financial services · Enterprise · North America · BAU"
-        actions={<DateRangeMenu />}
-      />
 
       <Card className="gap-0 py-0">
         <WidgetBody w={w} what="the health verdict" skeleton={<VerdictSkeleton />}>
           {d => (
-            <div className="grid divide-y divide-hairline md:grid-cols-12 md:divide-y-0">
-              <ScoreZone onHow={() => openSheet('how')} hl={hl} onHl={setHl} />
-              <AreasZone d={d} onArea={openArea} hl={hl} onHl={setHl} />
-              <RenewalZone />
-            </div>
+            <>
+              <Verdict d={d} onHow={() => openSheet('how')} />
+              <div className="grid divide-y divide-hairline border-t border-hairline lg:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] lg:divide-x lg:divide-y-0">
+                <AreasZone d={d} onArea={openArea} />
+                <RenewalZone />
+              </div>
+            </>
           )}
         </WidgetBody>
       </Card>
 
-      <KpiStrip />
+      <Metrics />
 
       <HeaderSheets />
     </header>
   )
 }
 
-/* ---------- zones: one label row each, then content on an 8px rhythm, all three top-aligned ---------- */
+/* ---------- verdict: score, what it means, the next step ---------- */
+function Verdict({ d, onHow }: { d: ReturnType<typeof buildVerdict>; onHow: () => void }) {
+  const b = bandOf(score.final)
+  return (
+    <section aria-labelledby="h-verdict" className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-6">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" onClick={onHow} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how scores work`}
+            className={cn('shrink-0 self-start rounded-full md:self-center', focusRing)}>
+            <ScoreRing value={score.final} size={72} stroke={5} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{BAND_LABEL[b]} · weighted {score.weighted}, −{score.cap} renewal cap</TooltipContent>
+      </Tooltip>
+      <div className="min-w-0 flex-1">
+        <h2 id="h-verdict" className="flex items-baseline gap-2 text-lg font-medium tracking-[-0.01em]">
+          {d.title}<span className={cn('text-sm font-normal', bandText[b])}>{BAND_LABEL[b]}</span>
+        </h2>
+        <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">{d.why}</p>
+        <button type="button" onClick={onHow} className={cn('mt-1 rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline', focusRing)}>
+          How the score works
+        </button>
+      </div>
+      {d.next && (
+        <div className="rounded-lg bg-surface-2 p-4 md:w-80 md:shrink-0">
+          <p className="text-xs text-muted-foreground">Next step</p>
+          <p className="mt-1 text-sm font-medium leading-snug">{d.next}</p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/* ---------- areas: name and score, the colour carries the band; falls since last month in red ---------- */
+function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void }) {
+  return (
+    <section aria-labelledby="h-areas" className="flex min-w-0 flex-col gap-2 p-5 pb-3">
+      <ZoneLabel id="h-areas" icon={Layers} right={<span>Change since {d.since}</span>}>Area scores</ZoneLabel>
+      <ul className="-mx-3 grid grid-cols-3 gap-1 xl:grid-cols-6">
+        {d.areas.map(a => {
+          const b: Band = bandOf(a.v)
+          const tip = a.drv ? `Weakest input: ${a.drv.name} ${a.drv.score}` : 'No input has data'
+          return (
+            <li key={a.k}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" onClick={() => onArea(a.k)} aria-label={`${AREA_NAME[a.k]} ${a.v}, ${BAND_LABEL[b]}. ${tip}. Open inputs`}
+                    className={cn('flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent/60', focusRing)}>
+                    <span className="truncate text-xs text-muted-foreground">{AREA_SHORT[a.k]}</span>
+                    <span className="flex items-baseline gap-1.5 tabular-nums">
+                      <span className={cn('text-xl font-medium tracking-[-0.02em]', bandText[b])}>{a.v}</span>
+                      {a.d !== 0 && <span className="text-xs text-muted-foreground">{a.d < 0 ? '−' : '+'}{Math.abs(a.d)}</span>}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{a.d ? `${a.d < 0 ? 'Down' : 'Up'} ${Math.abs(a.d)} since ${d.since} · ` : ''}{tip}</TooltipContent>
+              </Tooltip>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+/* ---------- renewal: days left, date and value, auto-renew ---------- */
+function RenewalZone() {
+  return (
+    <section aria-labelledby="h-renew" className="flex flex-col gap-3 p-5">
+      <ZoneLabel id="h-renew" icon={CalendarClock}
+        right={!renewal.autoRenew && <span className="text-xs text-bad">Auto-renew off</span>}>Renewal</ZoneLabel>
+      <button type="button" onClick={() => showTab('overview', 'runway')}
+        aria-label={`${renewal.daysLeft} days left to renewal on ${fmtDY(renewal.date)}. Go to the renewal runway`}
+        className={cn('group/nav flex items-baseline gap-1.5 self-start rounded-md text-left', focusRing)}>
+        <span className="text-2xl font-normal tabular-nums tracking-[-0.02em] text-bad">{renewal.daysLeft}</span>
+        <span className="text-sm text-muted-foreground group-hover/nav:text-foreground">days left</span>
+        <ArrowRight className="size-3.5 self-center text-muted-foreground transition-transform group-hover/nav:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+      </button>
+      <p className="text-sm tabular-nums text-muted-foreground">{fmtDY(renewal.date)} · {renewal.carrLabel}</p>
+    </section>
+  )
+}
+
+/* ---------- metrics: four cards of one shape (label, value, one plain line); no chips or meters ---------- */
+type Tone = 'good' | 'bad' | undefined
+
+function Metrics() {
+  const l = kpis.licence, over = l.used - l.bought
+  // tone: good / bad when the number says something about the account, none when it is flat or just a fact
+  const sign = (n: number): Tone => (n > 0 ? 'good' : n < 0 ? 'bad' : undefined)
+  const items: { icon: LucideIcon; label: string; value: React.ReactNode; hint: string; tip: string; tone: Tone; trend?: number }[] = [
+    { icon: RefreshCw, label: 'Net retention', value: `${kpis.nrr}%`, hint: `GRR ${kpis.grr}% · flat on last month`, tip: 'Net and gross revenue retention, last 12 months. Over 100% means the account grew.', tone: sign(kpis.nrr - 100) },
+    { icon: Users, label: 'Active users', value: kpis.mau, hint: `${Math.abs(kpis.mauChange)}% ${kpis.mauChange < 0 ? 'below' : 'above'} the 12-month average`, tip: `Monthly active users; 12-month average ${kpis.mauAvg}`, tone: sign(kpis.mauChange), trend: kpis.mauChange },
+    { icon: Gauge, label: 'Licence use', value: `${l.pct}%`, hint: over > 0 ? `${over} seats over the ${l.bought} bought` : `${l.used} of ${l.bought} seats`, tip: 'Seats in use against seats bought. Over 100% is an upsell signal; under 70% is shelfware risk.', tone: l.pct >= 100 ? 'good' : l.pct < 70 ? 'bad' : undefined, trend: over },
+    { icon: DollarSign, label: 'Open expansion', value: renewal.expansionLabel, hint: 'Unsigned, on top of the renewal', tip: 'Open expansion opportunity on this account', tone: undefined },
+  ]
+  return (
+    <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {items.map(k => (
+        <Card key={k.label} className="gap-1 p-5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={0} className={cn('flex items-center gap-1.5 self-start rounded-sm text-xs text-muted-foreground', focusRing)}>
+                <k.icon className="size-4 shrink-0" aria-hidden="true" />{k.label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{k.tip}</TooltipContent>
+          </Tooltip>
+          <span className={cn('mt-1 text-2xl font-normal tabular-nums tracking-[-0.02em]', k.tone === 'good' && 'text-good', k.tone === 'bad' && 'text-bad')}>{k.value}</span>
+          <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            {k.trend != null && k.trend !== 0 && (k.trend > 0
+              ? <TrendingUp className={cn('size-3.5 shrink-0', k.tone === 'good' ? 'text-good' : 'text-muted-foreground')} aria-hidden="true" />
+              : <TrendingDown className={cn('size-3.5 shrink-0', k.tone === 'bad' ? 'text-bad' : 'text-muted-foreground')} aria-hidden="true" />)}
+            <span className="truncate">{k.hint}</span>
+          </span>
+        </Card>
+      ))}
+    </section>
+  )
+}
+
 function ZoneLabel({ id, icon: Icon, children, right }: { id: string; icon: LucideIcon; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="flex h-5 items-center gap-1.5 text-xs text-muted-foreground">
@@ -140,273 +305,11 @@ function ZoneLabel({ id, icon: Icon, children, right }: { id: string; icon: Luci
   )
 }
 
-/* ---------- zone 1: score ---------- */
-type Link = 'ring' | 'areas' | null
-
-function ScoreZone({ onHow, hl, onHl }: { onHow: () => void; hl: Link; onHl: (l: Link) => void }) {
-  const b = bandOf(score.final)
-  return (
-    <section aria-labelledby="h-health" className="flex flex-col gap-2 p-5 md:col-span-4 lg:col-span-3">
-      <ZoneLabel id="h-health" icon={HeartPulse}
-        right={<Button variant="outline" size="xs" className="-my-1 rounded-full" onClick={onHow}>How scores work</Button>}>Health</ZoneLabel>
-      <div className="flex flex-1 flex-col items-center justify-center gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button type="button" onClick={onHow}
-              onPointerEnter={() => onHl('areas')} onPointerLeave={() => onHl(null)} onFocus={() => onHl('areas')} onBlur={() => onHl(null)}
-              aria-label={`Health ${score.final} of 100: weighted ${score.weighted} minus a ${score.cap}-point renewal cap. See how scores work`}
-              className={cn('grid aspect-square shrink-0 place-items-center rounded-full p-1 leading-none transition-shadow duration-200 hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_20%,transparent)]', focusRing,
-                hl === 'ring' && 'shadow-[0_0_0_4px_color-mix(in_oklab,var(--ring)_25%,transparent)]')}>
-              <ScoreRing value={score.final} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Health {score.final} of 100 · {BAND_LABEL[b]} · see how scores work</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0} className={cn('rounded-md', focusRing)}><HealthPill value={score.final} /></span>
-          </TooltipTrigger>
-          <TooltipContent>{BAND_LABEL[b]}: {b === 'good' ? '70 and above' : b === 'warn' ? '40 to 69' : 'under 40'}</TooltipContent>
-        </Tooltip>
-        <span className="flex items-center gap-1 text-xs tabular-nums" aria-label={`${score.weighted} weighted average, minus ${score.cap} renewal cap, equals ${score.final}`}>
-          <span className="text-foreground">{score.weighted}</span><span className="text-muted-foreground">avg</span>
-          <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
-          <CapTerm className="text-foreground">−{score.cap}</CapTerm><span className="text-muted-foreground">cap</span>
-          <ArrowRight className="size-3 text-muted-foreground" aria-hidden="true" />
-          <span className={cn('font-medium', bandText[b])}>{score.final}</span>
-        </span>
-      </div>
-    </section>
-  )
-}
-
-/* ---------- zone 2: areas ---------- */
-function AreasZone({ d, onArea, hl, onHl }: {
-  d: ReturnType<typeof buildVerdict>; onArea: (k: AreaKey) => void; hl: Link; onHl: (l: Link) => void
-}) {
-  const since = fmtMonthName(previous.ym)
-  const drawn = useDrawn()
-  return (
-    <section aria-labelledby="h-areas" className="relative flex min-w-0 flex-col gap-2 p-5 md:col-span-8 md:border-l md:border-hairline md:px-6 lg:col-span-6">
-      {/* sits on the divider: the areas feed the score on the left */}
-      <span aria-hidden="true"
-        className={cn('absolute top-1/2 -left-3 z-10 hidden size-6 -translate-y-1/2 place-items-center rounded-full border border-hairline bg-card text-muted-foreground transition-colors md:grid',
-          hl && 'border-ring/50 text-foreground')}>
-        <ArrowLeft className="size-3.5" />
-      </span>
-      <ZoneLabel id="h-areas" icon={Layers}>Area scores · weighted {score.weighted}</ZoneLabel>
-      <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-        {d.areas.map((a, i) => {
-          const weak = a.k === d.weakest
-          const tip = a.drv ? `Weakest input: ${a.drv.name} ${a.drv.score}` : 'No input has data'
-          return (
-            <li key={a.k}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" onClick={() => onArea(a.k)}
-                    onPointerEnter={() => onHl('ring')} onPointerLeave={() => onHl(null)} onFocus={() => onHl('ring')} onBlur={() => onHl(null)}
-                    aria-label={`${AREA_NAME[a.k]} ${a.v}${weak ? ', the lowest area' : ''}. ${tip}. Open inputs`}
-                    className={cn('-mx-2 flex w-[calc(100%+1rem)] flex-col gap-1 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent/60', focusRing, hl === 'areas' && 'bg-accent/40')}>
-                    <span className="flex h-5 items-center gap-2 text-xs">
-                      <span className="truncate text-muted-foreground">{AREA_SHORT[a.k]}</span>
-                      {weak && <span className="rounded bg-muted px-1 py-px text-[11px] leading-none text-foreground">Lowest</span>}
-                      <span className="ml-auto text-sm tabular-nums text-foreground">{a.v}</span>
-                    </span>
-                    <Meter value={drawn ? a.v : 0} min={drawn ? 2 : 0} delay={i * 40} fill={SOFT_FILL[bandOf(a.v)]} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{tip}</TooltipContent>
-              </Tooltip>
-            </li>
-          )
-        })}
-      </ul>
-      {d.drivers.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Main drivers">
-          <li className="mr-1 text-xs text-muted-foreground">Since {since}</li>
-          {d.drivers.map(x => (
-            <li key={x.k}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" onClick={() => onArea(x.k)}
-                    aria-label={`${AREA_NAME[x.k]} down ${Math.abs(x.d)} since ${since}${CAUSE[x.k] ? `: ${CAUSE[x.k]!()}` : ''}. Open inputs`}
-                    className={cn('inline-flex h-6 items-center gap-1 rounded-md border border-hairline px-1.5 text-xs transition-colors hover:bg-accent', focusRing)}>
-                    <TrendingDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                    {AREA_SHORT[x.k]} <span className="tabular-nums">−{Math.abs(x.d)}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{CAUSE[x.k]?.() ?? `${AREA_NAME[x.k]} fell ${Math.abs(x.d)} since ${since}`}</TooltipContent>
-              </Tooltip>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-/* ---------- zone 3: renewal ---------- */
-function RenewalZone() {
-  const r = runway
-  const drawn = useDrawn()
-  const pct = r ? Math.min(100, (100 * r.used) / r.total) : 0
-  const off = !renewal.autoRenew && (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} className={cn('rounded-md bg-bad-soft px-1.5 py-0.5 text-xs text-bad', focusRing)}>Auto-renew off</span>
-      </TooltipTrigger>
-      <TooltipContent>The contract won't renew on its own, so the renewal cap applies</TooltipContent>
-    </Tooltip>
-  )
-  return (
-    <section aria-labelledby="h-renew"
-      className="flex flex-col gap-2 p-5 md:col-span-12 md:border-t md:border-hairline md:px-6 lg:col-span-3 lg:border-t-0 lg:border-l">
-      <ZoneLabel id="h-renew" icon={CalendarClock} right={off}>Renewal</ZoneLabel>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button type="button" onClick={() => showTab('overview', 'runway')}
-            aria-label={`${renewal.daysLeft} days left to renewal on ${fmtDY(renewal.date)}. Go to the renewal runway`}
-            className={cn('group/nav flex cursor-pointer items-baseline gap-1.5 self-start rounded-md text-left leading-none', focusRing)}>
-            <span className="text-3xl leading-9 font-normal tabular-nums tracking-[-0.03em] text-bad">{renewal.daysLeft}</span>
-            <span className="text-sm text-muted-foreground group-hover/nav:text-foreground group-hover/nav:underline group-hover/nav:underline-offset-4">days left</span>
-            <ArrowRight className="size-3.5 self-center text-signal transition-transform group-hover/nav:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>Renews {fmtDY(renewal.date)} · go to the runway</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <p tabIndex={0} className={cn('self-start rounded-sm text-sm tabular-nums text-muted-foreground', focusRing)}>
-            {fmtDY(renewal.date)} · {renewal.carrLabel}
-          </p>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-72">{renewal.carrLabel} CARR · {GLOSSARY.CARR}</TooltipContent>
-      </Tooltip>
-      {r && (
-        <div className="mt-1 grid gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} role="img"
-                aria-label={`Renewal runway: ${r.used} of ${r.total} days used since first flagged ${fmtDY(r.firstFlag)}, ${r.left} left`}
-                className={cn('group/run relative block rounded-sm pt-4', focusRing)}>
-                <span className="absolute top-0 -translate-x-1/2 text-[10px] leading-3 text-muted-foreground" style={{ left: `${pct}%` }} aria-hidden="true">Today</span>
-                <span className="relative flex h-1.5 gap-0.5 overflow-visible">
-                  <span className="h-full rounded-l-full bg-foreground/60 transition-[width,opacity] duration-700 ease-out group-hover/run:opacity-80 motion-reduce:transition-none" style={{ width: `${drawn ? pct : 0}%` }} />
-                  <span className="h-full flex-1 rounded-r-full bg-bad/30" />
-                  <span className="absolute -top-0.5 h-2.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground" style={{ left: `${pct}%` }} aria-hidden="true" />
-                </span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="tabular-nums">{r.used} of {r.total} days used since first flag</TooltipContent>
-          </Tooltip>
-          <span className="flex justify-between text-xs tabular-nums text-muted-foreground">
-            <span>{fmtD(r.firstFlag)}</span><span>{fmtD(RENEWAL)}</span>
-          </span>
-        </div>
-      )}
-    </section>
-  )
-}
-
-/* ---------- KPI strip: label, value, at most one delta chip against a stated baseline ----------
-   The chip always means "change against <baseline>" and the baseline is in its tooltip; lineage lives in the label tooltip. */
-type Kpi = { icon: LucideIcon; label: React.ReactNode; key: string; tip: string; value: React.ReactNode; delta?: React.ReactNode; visual?: React.ReactNode; wide?: boolean }
-
-function Delta({ n, suffix = '', base, tip }: { n: number; suffix?: string; base: string; tip: string }) {
-  const Ic = n > 0 ? ArrowUp : n < 0 ? ArrowDown : Minus
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} className={cn('inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-xs whitespace-nowrap tabular-nums', focusRing)}>
-          <Ic className="size-3" aria-hidden="true" />{n === 0 ? 'Flat' : `${Math.abs(n)}${suffix}`}
-          <span className="text-muted-foreground">{base}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{tip}</TooltipContent>
-    </Tooltip>
-  )
-}
-
-/** Seats in use against seats bought. Past 100% the bar keeps the licence share in teal, adds a distinct
- *  overage segment after a marker at 100%. Neutral colours: going over is not a health band. */
-function LicenceMeter({ used, bought, pct }: { used: number; bought: number; pct: number }) {
-  const total = Math.max(used, bought)
-  const mark = (bought / total) * 100
-  const over = used > bought
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} role="img" aria-label={`${used} of ${bought} seats in use (${pct}%)${over ? `, ${used - bought} over the licence` : ''}`}
-          className="relative -my-2 block w-14 rounded-full py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="relative block h-1.5 overflow-hidden rounded-full bg-chart-5" aria-hidden="true">
-            <span className="absolute inset-y-0 left-0 bg-chart-1" style={{ width: `${over ? mark : (used / total) * 100}%` }} />
-            {over && <span className="absolute inset-y-0 right-0 bg-foreground/70" style={{ width: `${100 - mark}%` }} />}
-          </span>
-          {over && <span className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-foreground" style={{ left: `${mark}%` }} aria-hidden="true" />}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="tabular-nums">
-        {used} of {bought} seats in use ({pct}%){over ? `. ${used - bought} over the licence; the marker is 100%.` : ''}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-function KpiStrip() {
-  const { licence: l } = kpis
-  const over = l.used - l.bought
-  const w = useWidget((): Kpi[] => [
-    { icon: RefreshCw, key: 'ret', label: 'NRR / GRR', value: `${kpis.nrr}% / ${kpis.grr}%`,
-      tip: 'Net and gross revenue retention, last 12 months. Source: scored health record',
-      delta: <Delta n={0} base="vs last mo" tip="No change against last month" /> },
-    { icon: Users, key: 'mau', label: 'Monthly active users', value: kpis.mau,
-      tip: 'Monthly active users (MAU): users active in Sirion this month. Source: adoption inputs',
-      delta: <Delta n={kpis.mauChange} suffix="%" base="vs avg" tip={`${Math.abs(kpis.mauChange)}% ${kpis.mauChange < 0 ? 'below' : 'above'} the 12-month average of ${kpis.mauAvg}`} /> },
-    { icon: Gauge, key: 'lic', label: 'Licence use', value: `${l.pct}%`,
-      tip: 'Seats in use against seats bought. Source: adoption inputs',
-      delta: over !== 0 ? <Delta n={over} base="seats" tip={`${Math.abs(over)} seats ${over > 0 ? 'over' : 'under'} the ${l.bought} bought`} /> : undefined,
-      visual: <LicenceMeter used={l.used} bought={l.bought} pct={l.pct} /> },
-    { icon: DollarSign, key: 'exp', label: 'Expansion', value: renewal.expansionLabel,
-      tip: 'Open expansion opportunity on this account. Source: scored health record' },
-    { icon: Mail, key: 'mail', label: 'Emails this month', value: kpis.emails, wide: true,
-      tip: 'Customer emails this month; they feed the sentiment score. Source: monthly email summaries' },
-  ])
-  // five across from 1200px; below that the strip wraps to two or three per row instead of truncating values
-  const grid = 'grid grid-cols-2 gap-3 sm:grid-cols-3 min-[75rem]:grid-cols-5'
-  return (
-    <section aria-label="Key metrics">
-      <WidgetBody w={w} what="key metrics" isEmpty={d => d.length === 0} empty={{ title: 'No metrics' }}
-        skeleton={<div className={grid}>{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[72px] rounded-xl" />)}</div>}>
-        {d => (
-          <div className={grid}>
-            {d.map(k => (
-              <Card key={k.key} className={cn('gap-1.5 px-4 py-3', k.wide && 'col-span-2 sm:col-span-1')}>
-                <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                  <k.icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 truncate"><Term tip={k.tip}>{k.label}</Term></span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-xl font-normal whitespace-nowrap tabular-nums tracking-[-0.02em]">{k.value}</span>
-                  {k.delta}
-                  {k.visual && <span className="ml-auto shrink-0">{k.visual}</span>}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </WidgetBody>
-    </section>
-  )
-}
-
 function VerdictSkeleton() {
   return (
-    <div className="grid gap-6 p-5 md:grid-cols-12">
-      <div className="flex flex-col items-center gap-2 md:col-span-4 lg:col-span-3"><Skeleton className="h-5 w-16 self-start" /><Skeleton className="size-[96px] rounded-full" /><Skeleton className="h-5 w-16" /><Skeleton className="h-3 w-24" /></div>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 md:col-span-8 lg:col-span-6">
-        {AREA_KEYS.map(k => <div key={k} className="space-y-2"><Skeleton className="h-3 w-full" /><Skeleton className="h-1 w-full" /></div>)}
-      </div>
-      <div className="space-y-3 md:col-span-12 lg:col-span-3"><Skeleton className="h-8 w-40" /><Skeleton className="h-4 w-44" /><Skeleton className="h-1 w-full" /></div>
+    <div className="grid gap-4 p-5">
+      <div className="flex items-center gap-6"><Skeleton className="size-[72px] rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-5 w-48" /><Skeleton className="h-4 w-full max-w-md" /></div><Skeleton className="hidden h-16 w-80 md:block" /></div>
+      <div className="grid grid-cols-3 gap-3">{AREA_KEYS.map(k => <Skeleton key={k} className="h-5" />)}</div>
     </div>
   )
 }

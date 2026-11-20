@@ -2,7 +2,6 @@ import { ListTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RecordSheet, listPager, useKept } from '@/components/app/record-sheet'
 import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
-import { Skeleton } from '@/components/ui/skeleton'
 import { BAND_LABEL, bandBg, bandOf, type Band } from '@/components/health'
 import { Empty, SectionTitle } from '@/components/page'
 import { cn } from '@/lib/utils'
@@ -15,17 +14,15 @@ import { loadHealth, type AreaKey, type HealthData } from './health/model'
 
 function Summary({ data }: { data: HealthData }) {
   const counts = data.areas.reduce((m, a) => { const b = bandOf(a.score); m[b] = (m[b] ?? 0) + 1; return m }, {} as Partial<Record<Band, number>>)
-  const scored = data.inputs.filter(i => i.score != null).length
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-foreground">
       {(['bad', 'warn', 'good'] as Band[]).filter(b => counts[b]).map(b => (
         <span key={b} className="inline-flex items-center gap-1.5">
           <span className={cn('size-1.5 rounded-full', bandBg[b])} aria-hidden="true" />
           <span className="tabular-nums">{counts[b]}</span> {BAND_LABEL[b].toLowerCase()}
         </span>
       ))}
-      <span className="text-muted-foreground">· {scored} of {data.inputs.length} {data.inputs.length === 1 ? 'input has' : 'inputs have'} data</span>
-    </div>
+    </span>
   )
 }
 
@@ -50,7 +47,7 @@ export function HealthTab() {
 
   return (
     <div>
-      <SectionTitle title="Six health areas" sub="Select an area for its inputs"
+      <SectionTitle title="Six health areas" sub={data ? <Summary data={data} /> : undefined} className="mb-4 items-center"
         actions={
           <Button variant="outline" size="sm" disabled={!data} onClick={() => openSheet('inputs')}>
             <ListTree />All {total} inputs
@@ -59,14 +56,12 @@ export function HealthTab() {
 
       {load.status === 'loading' && (
         <div aria-busy="true" aria-label="Loading health areas">
-          <Skeleton className="mb-4 h-4 w-72" />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <AreaCardSkeleton key={i} />)}</div>
         </div>
       )}
       {load.status === 'error' && <LoadError what="health areas" error={load.error} retry={load.retry} />}
       {data && (data.areas.length ? (
         <>
-          <Summary data={data} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.areas.map(a => (
               <AreaCard key={a.key} area={a} prevLabel={prevLabel} labels={data.months.map(m => m.label)} onOpen={() => openSheet('area', a.key)} />
