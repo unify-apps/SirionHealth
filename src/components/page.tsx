@@ -320,8 +320,9 @@ export function Tip({ tip, children, side }: { tip?: React.ReactNode; children: 
 
 /* ---------- tables: the base look lives in ui/table.tsx; these are the shared pieces on top ---------- */
 
-/** First column stays put on horizontal scroll. Its background follows the row hover tint. */
-export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--foreground)_3.5%,var(--card))]'
+/** First column stays put on horizontal scroll. Its background follows the row hover tint, and fades with it:
+ *  the row animates its colour, so an instant change here would leave the two out of step mid-hover. */
+export const stickyCol = 'sticky left-0 z-10 bg-card transition-colors [tr:hover_&]:bg-[color-mix(in_oklab,var(--foreground)_3.5%,var(--card))]'
 /** Sticky first column for tables whose rows aren't clickable: no hover tint. */
 export const stickyColStatic = 'sticky left-0 z-10 bg-card'
 
