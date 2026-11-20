@@ -163,7 +163,14 @@ export function AccountsScreen() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts" sub={`${OWNER}'s book · ${today} · ${data.length} accounts`} />
+      <PageHeader title="My accounts" sub={`${OWNER}'s book · ${today} · ${data.length} accounts`}
+        actions={status === 'ready' && (
+          // the book's size sits opposite the title as one figure, so it reads at a glance instead of trailing the meta line
+          <div className="grid justify-items-end leading-tight">
+            <span className="text-xs text-muted-foreground">Total ARR</span>
+            <span className="text-2xl font-normal tabular-nums tracking-[-0.02em]">{money(sum.arr)}</span>
+          </div>
+        )} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
         <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
