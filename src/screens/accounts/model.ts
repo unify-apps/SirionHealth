@@ -19,7 +19,7 @@ export const renewing90 = (r: Row) => live(r) && runway(r).days <= 90
 export const lowHealth = (r: Row) => live(r) && lt(r, 40)
 
 /* ---------- saved views (legacy order; "Needs me first" is the landing view) ---------- */
-export type ViewId = 'needs' | 'all' | 'risk' | 'watch' | 'healthy' | 'renew'
+export type ViewId = 'needs' | 'all' | 'risk' | 'watch' | 'healthy' | 'renew' | 'impl'
 export const VIEWS: { id: ViewId; label: string; band?: Band; test: (r: Row) => boolean }[] = [
   { id: 'needs', label: 'Needs me first', test: r => isTA(r) || renewing90(r) || lowHealth(r) },
   { id: 'all', label: 'All accounts', test: () => true },
@@ -27,6 +27,7 @@ export const VIEWS: { id: ViewId; label: string; band?: Band; test: (r: Row) => 
   { id: 'watch', label: 'Watch', band: 'warn', test: r => live(r) && h(r) != null && h(r)! >= 40 && h(r)! < 70 },
   { id: 'healthy', label: 'Healthy', band: 'good', test: r => live(r) && h(r) != null && h(r)! >= 70 },
   { id: 'renew', label: 'Renewing in 90 days', test: renewing90 },
+  { id: 'impl', label: 'In implementation', test: r => /Implementation/.test(r.stage) },
 ]
 
 /* ---------- filters: dimension -> checkable options (any of the checked values matches) ---------- */

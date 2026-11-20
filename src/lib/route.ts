@@ -79,12 +79,35 @@ function write(path: string, params: URLSearchParams, mode: 'push' | 'replace') 
   window.dispatchEvent(new HashChangeEvent('hashchange'))
 }
 
+/** The query without the sheet's own params. */
+const withoutSheet = (params: URLSearchParams) => {
+  const next = new URLSearchParams(params)
+  next.delete('sheet'); next.delete('from')
+  return next
+}
+
+/** One query param of the current screen, e.g. useParam('scope') on `#portfolio?scope=pod:Eigen`. */
+export function useParam(key: string): string | null {
+  return useSyncExternalStore(subscribe, () => split().params.get(key))
+}
+
+/** Sets (string) or removes (null) query params on the current screen, replacing the history entry rather than
+ *  pushing one. Removing `sheet` this way closes the open sheet in place. */
+export function setParams(updates: Record<string, string | null>) {
+  const { path, params } = split()
+  const next = new URLSearchParams(params)
+  for (const [k, v] of Object.entries(updates)) { if (v == null) next.delete(k); else next.set(k, v) }
+  if (!next.get('sheet')) pushed = false
+  write(path, next, 'replace')
+}
+
 /** Opens a sheet. `replace` swaps the open one in place (paging, drilling in, back); `from` makes it nested;
  *  `tab` opens it on another account tab (a person link opens on Stakeholders). */
 export function openSheet(type: string, id = '', opts: { from?: SheetRef | null; replace?: boolean; tab?: string } = {}) {
   const { path, params } = split()
   const target = opts.tab ? (opts.tab === 'overview' ? 'account' : `account/${opts.tab}`) : path
-  const next = new URLSearchParams()
+  // params the sheet doesn't own (e.g. the Portfolio scope) stay while it stays on the same screen
+  const next = target === path ? withoutSheet(params) : new URLSearchParams()
   next.set('sheet', refText({ type, id }))
   if (opts.from) next.set('from', refText(opts.from))
   const replace = !!opts.replace && !!readSheet()
@@ -97,8 +120,8 @@ export function openSheet(type: string, id = '', opts: { from?: SheetRef | null;
 export function closeSheet() {
   if (!readSheet()) return
   if (pushed) { pushed = false; history.back(); return }
-  const { path } = split()
-  write(path, new URLSearchParams(), 'replace')
+  const { path, params } = split()
+  write(path, withoutSheet(params), 'replace')
 }
 
 /** onOpenChange for a URL-driven sheet. */
