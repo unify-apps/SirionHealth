@@ -35,7 +35,7 @@ export function PodSheet({ pod: current, list }: { pod: Pod | null; list: Pod[] 
               <Fact label="Average health" value={pod.health == null ? 'No data' : <HealthBar value={pod.health} />}
                 sub={pod.health == null ? 'No account in this pod is scored' : BAND_LABEL[bandOf(pod.health)]} />
               <Fact label="CARR at risk" value={<span className={cn(pod.carrAtRisk > 0 && 'text-bad')}>{moneyM(pod.carrAtRisk)}</span>}
-                sub={`${pct(pod.carrAtRisk, pod.carr)}% of this pod · ${pod.atRisk} account${pod.atRisk === 1 ? '' : 's'} under 40`}>
+                sub={`${pod.riskShare}% of this pod · ${pod.atRisk} account${pod.atRisk === 1 ? '' : 's'} under 40`}>
                 <Meter value={pod.carrAtRisk} max={pod.carr || 1} label="Share of this pod's CARR at risk" className="w-full" />
               </Fact>
               <Fact label="Renewing in 60 days" value={pod.renewing}

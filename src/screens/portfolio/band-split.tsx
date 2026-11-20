@@ -4,12 +4,11 @@ import { SplitBar } from '@/components/charts'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BlockHeader } from '@/components/page'
-import { money } from '@/data/legacy'
 import { go, openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { listPager, RecordSheet, RecordSheetBody, RecordSheetFooter, RecordSheetHeader, useKept } from '@/components/app/record-sheet'
 import { cn } from '@/lib/utils'
 import { EmptyState, LoadingLabel, SplitSkeleton, WidgetError, type WidgetStatus } from '../states/widget-states'
-import { AccountsTable } from './accounts-table'
+import { AccountsTable, SheetListHead } from './accounts-table'
 import { BANDS, BOOK, isLive, rows } from './data'
 
 type LiveBand = Exclude<Band, 'none'>
@@ -80,15 +79,10 @@ function BandSheet({ band: current, onPage }: { band: LiveBand | null; onPage: (
       {band && info && (
         <>
           <RecordSheetHeader eyebrow="Health band"
-            title={<span className="flex items-center gap-2"><span className={cn('size-2.5 rounded-full', bandBg[band])} aria-hidden="true" />{info.label} · health {info.range}</span>}
-            meta={`$${info.arr}M across the book, ${share(info.arr)} of $${BOOK.arr}M`} />
-          <RecordSheetBody className="px-6 py-4">
-            <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-              <h3 className="text-sm font-medium">In My accounts</h3>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {list.length} of {live} · {money(list.reduce((a, r) => a + r.carr, 0))} CARR
-              </span>
-            </div>
+            title={<span className="flex items-center gap-2"><span className={cn('size-2.5 rounded-full', bandBg[band])} aria-hidden="true" />{info.label}</span>}
+            meta={`Health ${info.range} · $${info.arr}M · ${share(info.arr)} of the book`} />
+          <RecordSheetBody className="px-6 py-5">
+            <SheetListHead count={list.length} of={live} carr={list.reduce((a, r) => a + r.carr, 0)} title={`Your ${info.label.toLowerCase()} accounts`} />
             {list.length === 0 ? (
               <EmptyState title={`None of your accounts are ${info.label.toLowerCase()}`} sub="The figure above covers the whole book." />
             ) : (

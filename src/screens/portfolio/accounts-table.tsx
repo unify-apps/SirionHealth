@@ -9,10 +9,25 @@ import { cn } from '@/lib/utils'
 import { Term } from '../account/overview/bits'
 import { renewal, type Row } from './data'
 
+/** Heading over a sheet's account list. The page's figures cover the whole book; the list is the signed-in
+ *  person's own accounts (the ones on My accounts), so the heading says whose they are and how many. */
+export function SheetListHead({ title, count, of, carr }: { title: string; count: number; of: number; carr: number }) {
+  return (
+    <div className="mb-3">
+      <h3 className="text-sm font-medium">{title}</h3>
+      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+        {count} of the {of} accounts you manage · {money(carr)} CARR
+      </p>
+    </div>
+  )
+}
+
 /** The account list every Portfolio drill-down sheet shows. `col` picks the second column. */
 export function AccountsTable({ list, col = 'stage' }: { list: Row[]; col?: 'stage' | 'grr' }) {
+  // the chevron column exists only when a row can open an account page (TransAmerica is the one built so far)
+  const anyOpen = list.some(r => r.name === 'TransAmerica')
   return (
-    <Table>
+    <Table className="[&_td:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:first-child]:pl-0 [&_th:last-child]:pr-0">
       <TableHeader>
         <TableRow>
           <TableHead>Account</TableHead>
@@ -20,7 +35,7 @@ export function AccountsTable({ list, col = 'stage' }: { list: Row[]; col?: 'sta
           <TableHead>Health</TableHead>
           <TableHead className="text-right"><Term>CARR</Term></TableHead>
           <TableHead className="text-right">Renewal</TableHead>
-          <TableHead className="w-6"><span className="sr-only">Open</span></TableHead>
+          {anyOpen && <TableHead className="w-6"><span className="sr-only">Open</span></TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -59,7 +74,7 @@ export function AccountsTable({ list, col = 'stage' }: { list: Row[]; col?: 'sta
                   <TooltipContent>Renews {fmtFull(r.renew)}</TooltipContent>
                 </Tooltip>
               </TableCell>
-              <TableCell>{open && <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />}</TableCell>
+              {anyOpen && <TableCell>{open && <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />}</TableCell>}
             </TableRow>
           )
         })}

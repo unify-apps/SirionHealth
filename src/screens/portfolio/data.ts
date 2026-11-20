@@ -23,6 +23,8 @@ export const KPIS = {
 export type Pod = {
   name: string; region: string; accounts: number; carr: number; health: number | null
   atRisk: number; carrAtRisk: number; renewing: number; renewalAtRisk: number
+  /** carrAtRisk as a percentage of the pod's CARR */
+  riskShare: number
 }
 
 const REGION: Record<string, string> = {
@@ -40,6 +42,7 @@ export const PODS: Pod[] = (P.pods as (string | number | null)[][]).map(p => ({
   carrAtRisk: p[5] as number,
   renewing: p[6] as number,
   renewalAtRisk: p[7] as number,
+  riskShare: p[2] ? Math.round(((p[5] as number) / (p[2] as number)) * 100) : 0,
 }))
 
 

@@ -13,13 +13,14 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PodSheet } from './pod-sheet'
 
 type Key = Exclude<keyof Pod, 'region'>
-/** Seven columns; the at-risk account count lives in the CARR-at-risk tooltip. */
+/** One fact per column, each header aligned with its own content: numbers right, number-plus-bar left. */
 const COLS: { key: Key; label: string; tip?: string; num?: boolean }[] = [
   { key: 'name', label: 'Pod' },
   { key: 'accounts', label: 'Accounts', num: true },
   { key: 'carr', label: 'CARR', num: true, tip: 'Contracted annual recurring revenue' },
-  { key: 'health', label: 'Avg health', num: true, tip: 'Average health of scored accounts. Accounts with no score are left out.' },
-  { key: 'carrAtRisk', label: 'CARR at risk', num: true, tip: 'CARR of accounts with health under 40, and its share of the pod’s CARR' },
+  { key: 'health', label: 'Avg health', tip: 'Average health of scored accounts. Accounts with no score are left out.' },
+  { key: 'carrAtRisk', label: 'CARR at risk', num: true, tip: 'CARR of accounts with health under 40' },
+  { key: 'riskShare', label: 'Share of pod at risk', tip: 'CARR at risk as a share of the pod’s CARR' },
   { key: 'renewing', label: 'Renewing <60d', num: true },
   { key: 'renewalAtRisk', label: 'Renewal ARR at risk', num: true, tip: 'ARR renewing in 60 days that is at risk or unsigned' },
 ]
@@ -52,7 +53,6 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
   const reset = () => { setQ(''); setRegion('all') }
   const sheet = useSheet()
   const openPod = sheet?.type === 'pod' ? list.find(p => p.name === sheet.id) ?? PODS.find(p => p.name === sheet.id) ?? null : null
-  const riskShare = (p: { carr: number; carrAtRisk: number }) => (p.carr ? Math.round((p.carrAtRisk / p.carr) * 100) : 0)
   const sortLabel = COLS.find(c => c.key === sort.key)!.label
 
   const scored = list.filter(p => p.health != null)
@@ -90,7 +90,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
           </div>
         ) : undefined} />
       <CardContent className="px-0">
-        {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton cols={7} /></>}
+        {status === 'loading' && <><LoadingLabel what="pods" /><TableSkeleton cols={8} /></>}
         {status === 'error' && (
           <WidgetError className="m-5" title="Pod data didn't load" sub="The CS roster service timed out after 20 seconds. Other sections are up to date." onRetry={onRetry} />
         )}
@@ -98,7 +98,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
           <EmptyState className="m-5" title="No pods match" sub="Search and region narrow this table." action={narrowed ? 'Reset' : undefined} onAction={reset} />
         )}
         {status === 'ready' && list.length > 0 && (
-          <Table aria-label="Pods" className="min-w-[720px]">
+          <Table aria-label="Pods" className="min-w-[860px]">
             <TableHeader>
               <TableRow>
                 {COLS.map((c, i) => (
@@ -118,18 +118,20 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
                   </TableCell>
                   <TableCell className="text-right">{p.accounts}</TableCell>
                   <TableCell className="text-right">{fmtM(p.carr)}</TableCell>
-                  <TableCell className="text-right"><HealthBar value={p.health} className="justify-end" /></TableCell>
+                  <TableCell><HealthBar value={p.health} /></TableCell>
                   <TableCell className="text-right">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span tabIndex={0} className="inline-flex items-center justify-end gap-2 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-                          <Meter value={p.carrAtRisk} max={p.carr || 1} label={`${p.name} share of CARR at risk`} className="w-14" />
-                          <span className="w-9 text-xs text-muted-foreground">{riskShare(p)}%</span>
-                          <span className="w-14 font-medium">{fmtM(p.carrAtRisk)}</span>
-                        </span>
+                        <span tabIndex={0} className="rounded-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">{fmtM(p.carrAtRisk)}</span>
                       </TooltipTrigger>
-                      <TooltipContent>{riskShare(p)}% of this pod's CARR · {p.atRisk} account{p.atRisk === 1 ? '' : 's'} under 40</TooltipContent>
+                      <TooltipContent>{p.atRisk} account{p.atRisk === 1 ? '' : 's'} under 40</TooltipContent>
                     </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-2">
+                      <span className="w-9 text-right">{p.riskShare}%</span>
+                      <Meter value={p.carrAtRisk} max={p.carr || 1} label={`${p.riskShare}% of ${p.name}'s CARR is at risk`} className="w-16" />
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">{p.renewing}</TableCell>
                   <TableCell className="text-right">{fmtM(p.renewalAtRisk)}</TableCell>
@@ -143,8 +145,9 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
                   <TableCell className={cn(stickyCol, 'bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))] font-medium [tr:hover_&]:bg-[color-mix(in_oklab,var(--surface-2)_60%,var(--card))]')}>Total</TableCell>
                   <TableCell className="text-right">{total.accounts}</TableCell>
                   <TableCell className="text-right">{fmtM(total.carr)}</TableCell>
-                  <TableCell className="text-right"><HealthBar value={total.health} className="justify-end" /></TableCell>
-                  <TableCell className="text-right" title={`${total.atRisk} accounts under 40`}><span className="mr-2 inline-block w-9 text-xs font-normal text-muted-foreground">{riskShare(total)}%</span><span className="inline-block w-14 font-medium">{fmtM(total.carrAtRisk)}</span></TableCell>
+                  <TableCell><HealthBar value={total.health} /></TableCell>
+                  <TableCell className="text-right font-medium" title={`${total.atRisk} accounts under 40`}>{fmtM(total.carrAtRisk)}</TableCell>
+                  <TableCell><span className="inline-block w-9 text-right">{total.carr ? Math.round((total.carrAtRisk / total.carr) * 100) : 0}%</span></TableCell>
                   <TableCell className="text-right">{total.renewing}</TableCell>
                   <TableCell className="text-right">{fmtM(total.renewalAtRisk)}</TableCell>
                   <TableCell />

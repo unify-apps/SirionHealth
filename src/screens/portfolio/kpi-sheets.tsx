@@ -1,32 +1,28 @@
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RecordSheet, RecordSheetBody, RecordSheetFooter, RecordSheetHeader } from '@/components/app/record-sheet'
-import { money } from '@/data/legacy'
 import { go, sheetOpenChange, useSheet } from '@/lib/route'
 import { EmptyState } from '../states/widget-states'
-import { AccountsTable } from './accounts-table'
+import { AccountsTable, SheetListHead } from './accounts-table'
 import { BOOK, GRR, isLive, KPIS, renewal, rows, type Row } from './data'
 
 const live = rows.filter(isLive)
-const sumCarr = (list: Row[]) => money(list.reduce((a, r) => a + r.carr, 0))
 
 /** Book-level figure in the header, the matching rows from My accounts in the body. */
-function Frame({ type, eyebrow, title, meta, lead, list, col, empty, view }: {
+function Frame({ type, eyebrow, title, meta, lead, list, col, empty, view, listTitle }: {
   type: string; eyebrow: string; title: string; meta: string; lead?: React.ReactNode
   list: Row[]; col?: 'stage' | 'grr'; empty: string
   /** the My accounts saved view to land on */
   view?: string
+  listTitle: string
 }) {
   const open = useSheet()?.type === type
   return (
     <RecordSheet open={open} onOpenChange={sheetOpenChange} size="lg">
       <RecordSheetHeader eyebrow={eyebrow} title={title} meta={meta} />
-      <RecordSheetBody className="px-6 py-4">
+      <RecordSheetBody className="px-6 py-5">
         {lead}
-        <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-          <h3 className="text-sm font-medium">In My accounts</h3>
-          <span className="text-xs tabular-nums text-muted-foreground">{list.length} of {live.length} · {sumCarr(list)} CARR</span>
-        </div>
+        <SheetListHead count={list.length} of={live.length} carr={list.reduce((a, r) => a + r.carr, 0)} title={listTitle} />
         {list.length === 0
           ? <EmptyState title={empty} sub="The figure above covers the whole book." />
           : <AccountsTable list={list} col={col} />}
@@ -44,7 +40,7 @@ export function RenewalsSheet() {
   return (
     <Frame type="renewals" eyebrow="Renewals" title="Renewing in 60 days"
       meta={`${KPIS.renewing60} of ${BOOK.accounts} accounts across the book · ${KPIS.arrAtRisk} at risk or unsigned`}
-      list={list} empty="None of your accounts renew in 60 days" view="renew" />
+      list={list} empty="None of your accounts renew in 60 days" view="renew" listTitle="Your accounts renewing in 60 days" />
   )
 }
 
@@ -65,6 +61,6 @@ export function RetentionSheet() {
           ))}
         </dl>
       }
-      list={list} col="grr" empty="All of your accounts retain 100% or more" />
+      list={list} col="grr" empty="All of your accounts retain 100% or more" listTitle="Your accounts below 100% GRR" />
   )
 }
