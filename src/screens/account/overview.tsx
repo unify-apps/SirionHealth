@@ -15,6 +15,7 @@ import { taPeople } from '@/data/legacy'
 import { listPager } from '@/components/app/record-sheet'
 import { DateText } from '@/components/app/date-text'
 import { fmtWhen } from '@/lib/dates'
+import { rangeStart, useRange } from '@/lib/range'
 import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { activityTotal } from './activity/model'
 import {
@@ -42,10 +43,10 @@ export function OverviewTab() {
         </div>
       )}
 
-      <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-28">
-        <Card className="gap-0 py-0">
+      <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-40">
+        <Card data-block className="gap-0 py-0">
           <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
-            sub="Monthly health since May 2025 · select an event for its evidence" />
+            />
           <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
         </Card>
       </section>
@@ -82,7 +83,7 @@ function Cited({ text }: { text: string }) {
 /** What a footnote points at, for its tooltip. */
 function refName(k: string) {
   const r = SUM_REFS[k]
-  return !r ? 'Source' : r.kind === 'rec' ? r.label : r.kind === 'ev' ? 'Monthly summary (AI)' : 'Suggested role (AI)'
+  return !r ? 'Source' : r.kind === 'rec' ? r.label : r.kind === 'ev' ? 'Monthly summary' : 'Suggested role'
 }
 
 function Footnote({ k }: { k: string }) {
@@ -120,7 +121,7 @@ function RefBody({ k }: { k: string }) {
     const ev = evidence().filter(e => e.text.includes(r.match))
     return (
       <>
-        <p className="text-xs text-muted-foreground">Monthly summary (AI)</p>
+        <p className="text-xs text-muted-foreground">Monthly summary</p>
         {ev.length ? <div className="divide-y divide-hairline">{ev.map(e => <EvidenceRow key={e.text} e={e} />)}</div> : <p>No data</p>}
       </>
     )
@@ -130,7 +131,7 @@ function RefBody({ k }: { k: string }) {
   if (!p) return <p className="text-muted-foreground">No data</p>
   return (
     <>
-      <p className="text-xs text-muted-foreground">Suggested role (AI)</p>
+      <p className="text-xs text-muted-foreground">Suggested role</p>
       <p className="font-medium">{p.name}{p.suggested ? ` · ${p.suggested}` : ''}</p>
       {p.basis && <p className="leading-relaxed">{p.basis}</p>}
       <p className="text-xs text-muted-foreground">Named in {p.mentions} monthly summaries{p.lastMentioned ? `, last ${ymLabel(p.lastMentioned)}` : ''}.</p>
@@ -157,7 +158,7 @@ function Brief() {
   return (
     <section aria-labelledby="h-brief">
       <Card className="gap-0 py-0">
-      <BlockHeader icon={FileText} title={<span id="h-brief">Account brief</span>} actions={ready && (
+      <BlockHeader icon={FileText} title={<span id="h-brief">Account brief</span>} sub="From monthly summaries" actions={ready && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-xs" aria-label="Copy brief" onClick={() => copyBrief(w.data!)}
@@ -168,21 +169,19 @@ function Brief() {
           <TooltipContent>Copy brief</TooltipContent>
         </Tooltip>
       )} />
-      <div className="px-5 py-4">
+      <div className="px-5 py-2">
         <WidgetBody w={w} what="the account brief" isEmpty={d => d.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
           skeleton={<div className="grid gap-5 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
           {d => (
-            <>
-              <div className="grid gap-x-8 gap-y-4 md:grid-cols-3 md:divide-x md:divide-hairline">
-                {d.map(([h, t]) => (
-                  <div key={h} className="min-w-0 md:pl-8 md:first:pl-0">
-                    <h3 className="mb-1 text-xs text-muted-foreground">{h}</h3>
-                    <p className="leading-relaxed"><Cited text={t} /></p>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">From monthly summaries</p>
-            </>
+            <dl className="divide-y divide-hairline">
+              {/* the next step already leads the header, so the brief keeps the context around it */}
+              {d.filter(([h]) => h !== 'Next').map(([h, t]) => (
+                <div key={h} className="grid gap-1 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4">
+                  <dt className="text-sm text-muted-foreground">{h}</dt>
+                  <dd className="text-sm leading-relaxed"><Cited text={t} /></dd>
+                </div>
+              ))}
+            </dl>
           )}
         </WidgetBody>
       </div>
@@ -230,12 +229,14 @@ const CH_ICON: Record<Channel, LucideIcon> = {
 }
 
 function RecentActivity() {
+  const range = useRange()
   const w = useWidget(() => {
+    const from = rangeStart(range)
     // the header already states the health cap; engagement snapshots carry no content
-    const all = activityItems().filter(i => i.date <= TODAY && !/Engagement snapshot/.test(i.source) && i.kind !== 'flag')
+    const all = activityItems().filter(i => i.date <= TODAY && (!from || i.date >= from) && !/Engagement snapshot/.test(i.source) && i.kind !== 'flag')
       .sort((a, b) => +b.date - +a.date)
     return { top: all.slice(0, 5), all, total: activityTotal() }
-  })
+  }, [range.id])
   // the open item lives in the URL (?sheet=activity:<id>); prev/next steps through the five rows shown
   const sheet = useSheet()
   const d = w.status === 'ready' ? w.data! : null
@@ -247,7 +248,8 @@ function RecentActivity() {
         <NavLink onClick={() => showTab('activity')}>View all {w.data!.total}</NavLink>
       )} />
       <div className="px-5 py-2">
-      <WidgetBody w={w} what="recent activity" isEmpty={d => d.total === 0} empty={{ title: 'No activity yet' }} skeleton={listSkeleton(5)}>
+      <WidgetBody w={w} what="recent activity" isEmpty={d => d.all.length === 0}
+        empty={range.days == null ? { title: 'No activity yet' } : { title: `No activity in the ${range.label.toLowerCase()}`, sub: 'Pick a longer date range to see older activity.' }} skeleton={listSkeleton(5)}>
         {d => (
           <ul>
             {d.top.map(i => (

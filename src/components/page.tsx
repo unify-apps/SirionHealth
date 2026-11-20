@@ -1,6 +1,7 @@
 import { isValidElement, useState } from 'react'
-import { ChevronLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, ArrowLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -12,33 +13,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
  * Compact page header in the body: one title row (2xl, regular weight) with a muted meta line, actions on the right
  * on the same row. ~64px tall. The top bar above keeps only the breadcrumb and global tools.
  */
-export function PageHeader({ eyebrow, title, sub, actions, lead, back }: {
+export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact = false, compactSub }: {
   eyebrow?: string; title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode
   /** small back link above the title, replaces the old breadcrumb bar */
   back?: { label: string; onClick: () => void }
   /** before the title: a string renders a monogram as tall as the title + meta lines; or pass any element */
   lead?: React.ReactNode
+  /** shrunk form for a sticky header once the page scrolls: back link folds away, smaller monogram and title */
+  compact?: boolean
+  /** meta line shown in the compact form instead of `sub` */
+  compactSub?: React.ReactNode
 }) {
+  const ease = 'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none'
   return (
-    <header className="pb-5">
-      <div className={cn('flex items-center gap-2', back ? 'mb-3' : 'mb-3 md:hidden')}>
-        <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
-        {back && (
-          <button type="button" onClick={back.onClick}
-            className="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-            <ChevronLeft className="size-4" aria-hidden="true" />{back.label}
-          </button>
-        )}
+    <header className={cn(ease, compact ? 'py-2' : 'pb-5')}>
+      <div className={cn('grid', ease, compact ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100', !back && 'md:hidden')} inert={compact}>
+        <div className="overflow-hidden">
+          <div className="mb-3 flex items-center gap-2">
+            <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
+            {back && (
+              <button type="button" onClick={back.onClick}
+                className="-ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                <ChevronLeft className="size-4" aria-hidden="true" />{back.label}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <div className="flex min-w-0 items-center gap-3">
-        {typeof lead === 'string'
-          ? <span aria-hidden="true" className="grid size-[52px] shrink-0 place-items-center rounded-full bg-muted text-base font-medium text-foreground">{lead}</span>
-          : lead}
+        {typeof lead === 'string' ? (() => {
+          const mono = cn('grid shrink-0 place-items-center rounded-full bg-muted font-medium text-foreground', ease, compact ? 'size-9 text-xs' : 'size-[52px] text-base')
+          // condensed, the back link folds away, so the monogram doubles as the back button (arrow on hover or focus)
+          return back && compact ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" onClick={back.onClick} aria-label={`Back to ${back.label}`}
+                  className={cn(mono, 'group/back outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring')}>
+                  <span className="group-hover/back:hidden group-focus-visible/back:hidden" aria-hidden="true">{lead}</span>
+                  <ArrowLeft className="hidden size-4 group-hover/back:block group-focus-visible/back:block" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Back to {back.label}</TooltipContent>
+            </Tooltip>
+          ) : <span aria-hidden="true" className={mono}>{lead}</span>
+        })() : lead}
         <div className="min-w-0">
-          {eyebrow && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
-          <h1 className="truncate text-2xl leading-tight font-normal tracking-[-0.02em]">{title}</h1>
-          {sub && <p className="mt-0.5 truncate text-sm text-muted-foreground">{sub}</p>}
+          {eyebrow && !compact && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
+          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
+          {(compact ? compactSub ?? sub : sub) && <p className={cn('truncate text-muted-foreground', ease, compact ? 'text-xs' : 'mt-0.5 text-sm')}>{compact ? compactSub ?? sub : sub}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -48,18 +71,18 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back }: {
 }
 
 /**
- * Header for a card/block: icon + title (+ count) on the left, actions on the right, hairline under it.
- * Use as the first child of a Card with py-0 / gap-0 so the rule spans the card.
+ * Header for a card/block: icon + title (+ count) on the left, actions on the right. No rule under it: every card title row,
+ * this and the inline ones on small cards, reads the same. Use as the first child of a Card with py-0 / gap-0.
  */
 export function BlockHeader({ icon: Icon, title, count, sub, actions, className }: {
   icon?: LucideIcon; title: React.ReactNode; count?: React.ReactNode; sub?: React.ReactNode
   actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-3', className)}>
+    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
       <div className="flex min-w-0 items-center gap-2">
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-        <h3 className="truncate text-sm font-medium text-foreground">{title}</h3>
+        <h3 className="truncate text-sm font-medium text-foreground">{tc(title)}</h3>
         {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
         {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
       </div>
@@ -73,7 +96,7 @@ export function SectionTitle({ title, sub, actions, className }: {
 }) {
   return (
     <div className={cn('mb-3 mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
-      <h2 className="text-base font-medium">{title}</h2>
+      <h2 className="text-base font-medium">{tc(title)}</h2>
       {sub && <span className="text-sm text-muted-foreground">{sub}</span>}
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </div>
@@ -136,8 +159,8 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, cla
   className?: string
 }) {
   return (
-    <Card className={cn('h-full gap-1.5 px-5 py-4', className)}>
-      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{label}</span></div>
+    <Card className={cn('h-full gap-1.5 p-5', className)}>
+      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{tc(label)}</span></div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
           <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
@@ -221,7 +244,7 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
   if (!onClick) return <div className={cls}>{body}</div>
   return (
     <button type="button" onClick={onClick} {...aria}
-      className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring')}>
+      className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring')}>
       {body}
     </button>
   )
@@ -242,17 +265,6 @@ export function MeterValue({ value, max = 100, tone, label, tip, display, classN
   )
 }
 
-/** A long list in two columns on desktop: 32px apart with a hairline between them; one column on phones.
- *  Pass the rows (each already an <li>). The first half fills the left column. */
-export function ListColumns({ children, label, className }: { children: React.ReactNode[]; label?: string; className?: string }) {
-  const half = Math.ceil(children.length / 2)
-  return (
-    <div className={cn('grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-1 md:grid-cols-2', className)} aria-label={label} role={label ? 'group' : undefined}>
-      <ul className="grid grid-cols-[minmax(0,1fr)] content-start gap-1">{children.slice(0, half)}</ul>
-      <ul className="relative grid grid-cols-[minmax(0,1fr)] content-start gap-1 md:before:absolute md:before:inset-y-1 md:before:-left-4 md:before:w-px md:before:bg-hairline">{children.slice(half)}</ul>
-    </div>
-  )
-}
 
 /** Shows the first `n` items of a long list, then a "Show N more" outline pill. */
 export function MoreList<T>({ items, n = 3, render, className, noun = 'more' }: {
@@ -299,7 +311,7 @@ export function Tip({ tip, children, side }: { tip?: React.ReactNode; children: 
 /* ---------- tables: the base look lives in ui/table.tsx; these are the shared pieces on top ---------- */
 
 /** First column stays put on horizontal scroll. Its background follows the row hover tint. */
-export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--accent)_60%,var(--card))]'
+export const stickyCol = 'sticky left-0 z-10 bg-card [tr:hover_&]:bg-[color-mix(in_oklab,var(--foreground)_3.5%,var(--card))]'
 /** Sticky first column for tables whose rows aren't clickable: no hover tint. */
 export const stickyColStatic = 'sticky left-0 z-10 bg-card'
 
@@ -380,7 +392,7 @@ export function SheetBody({ facts, children, className }: { facts?: React.ReactN
 export function Fact({ label, children, wide }: { label: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className={cn('grid min-w-0 content-start gap-1', wide && 'col-span-2')}>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{tc(label)}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   )

@@ -28,7 +28,7 @@ export function StagesChart({ status, onRetry, stage, onStage }: {
   const max = Math.max(...data.map(d => d.carr), 0.0001)
   const pick = (s: string) => onStage(stage === s ? 'all' : s)
   return (
-    <ChartCard header={<BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} sub="$M · select a stage to filter" />}>
+    <ChartCard header={<BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} sub="$M" />}>
       {status === 'loading' && <><LoadingLabel what="CARR by stage" /><BarsSkeleton /></>}
       {status === 'error' && <WidgetError title="Stage data didn't load" sub="The stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
       {status === 'ready' && data.every(d => !d.carr) && <EmptyState title="No CARR by stage" sub="No live accounts carry CARR in any stage." />}
@@ -45,7 +45,7 @@ export function StagesChart({ status, onRetry, stage, onStage }: {
                     <button type="button" aria-pressed={on} disabled={empty} onClick={() => pick(d.stage)}
                       aria-label={`${d.stage}: ${empty ? 'no CARR' : `$${d.carr}M CARR`}. ${on ? 'Clear the filter' : 'Filter to this stage'}`}
                       className={cn('-mx-2 grid w-[calc(100%+1rem)] grid-cols-[9.5rem_minmax(0,1fr)] items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                        !empty && 'hover:bg-accent/60', on && 'bg-accent', focusRing, 'disabled:cursor-default')}>
+                        !empty && 'hover:bg-hover', on && 'bg-accent', focusRing, 'disabled:cursor-default')}>
                       <span className={cn('truncate', dim && 'opacity-60')}>{d.stage}</span>
                       <span className="flex min-w-0 items-center gap-2">
                         {empty

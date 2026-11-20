@@ -95,7 +95,7 @@ export function PortfolioScreen() {
         {kpis.status === 'ready' && (
           <>
             <Stat label={<Term tip={tipText('Mean health of scored live accounts; accounts with no score are left out')}>Average health</Term>} icon={HeartPulse}
-              value={KPIS.avgHealth} hint="Across the book"
+              value={KPIS.avgHealth}
               aside={<Tip label={`Average health ${KPIS.avgHealth} of 100, ${BAND_LABEL[bandOf(KPIS.avgHealth)]}`}
                 tip={`${KPIS.avgHealth} of 100 · ${BAND_LABEL[bandOf(KPIS.avgHealth)]}`}>
                 <HealthRing value={KPIS.avgHealth} size={36} stroke={3} label={false} />

@@ -1,35 +1,40 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, Building2, ChevronDown, Columns3, DollarSign, HeartPulse, Pin, RotateCcw, Search, Target, X } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Columns3, Copy, ExternalLink, HeartPulse, LayoutList, Pin, PinOff, RotateCcw, Search, X } from 'lucide-react'
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
 import { cn } from '@/lib/utils'
+import { titleCase } from '@/lib/text'
 import { go } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
-import { BlockHeader, Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
+import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
-  DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  BOOK, avgBand, DEFAULT_HIDDEN, filterCount, FIRST_DIR, isTA, NO_FILTERS, OPTIONAL_COLS, passes, rows as ALL_ROWS, sortRows, SORT_NAME, VIEWS,
+  DEFAULT_HIDDEN, filterCount, FIRST_DIR, GROUP_LABEL, NO_FILTERS, OPTIONAL_COLS, OWNER, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
   type ColId, type FilterState, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
-  AccountFilter, FilterChips, InsightsPopover, PodArrSplit, NrrCell, RunwayCell, SignalsCell, TableSkeleton, TilesSkeleton,
+  AccountFilter, BandSplit, FilterChips, InsightsPopover, NrrCell, ReasonCell, RunwayCell, TableSkeleton, TilesSkeleton,
 } from './accounts/parts'
 
 type Status = 'loading' | 'error' | 'ready'
 
-/** Views shown as segments; the rest sit in the More menu. */
-const PRIMARY: ViewId[] = ['needs', 'all', 'risk', 'watch', 'healthy']
+/** Views shown as tabs; the rest are opened from the tiles above and show as a removable tab. */
+const PRIMARY: ViewId[] = ['needs', 'all']
 const SHORT_VIEW: Partial<Record<ViewId, string>> = { all: 'All' }
+/** Always shown; listed in the Columns menu so it reads as the full set. */
+const FIXED_COLS = ['Account', 'Health', 'Renewal', 'ARR', "Why it's here"]
+const BAND_VIEW = { bad: 'risk', warn: 'watch', good: 'healthy' } as const
 
 /** Fixture "fetch". `?accounts=loading|error|empty` in the URL forces a state for review. */
 function useAccounts() {
@@ -51,6 +56,46 @@ function useAccounts() {
 
 const today = fmtFull(TODAY)
 
+/** Group header: a tinted row with an icon tile, the group name, its count and what puts a row there. */
+const GROUP_LOOK = {
+  pinned: { icon: Pin, label: 'Pinned', hint: 'Kept at the top by you', tile: 'text-signal', row: 'bg-signal-soft/40' },
+  renewal: { icon: CalendarClock, label: titleCase(GROUP_LABEL.renewal), hint: 'Renews within 90 days or overdue', tile: 'text-warn', row: 'bg-warn-soft/40' },
+  health: { icon: HeartPulse, label: titleCase(GROUP_LABEL.health), hint: 'Health under 40', tile: 'text-bad', row: 'bg-bad-soft/40' },
+  rest: { icon: LayoutList, label: '', hint: '', tile: 'text-muted-foreground', row: 'bg-surface-2/60' },
+} as const
+function GroupRow({ group, count, first, restLabel }: { group: keyof typeof GROUP_LOOK; count: number; first: boolean; restLabel: string }) {
+  const g = GROUP_LOOK[group], I = g.icon
+  const label = titleCase(group === 'rest' ? `Other ${restLabel === 'All accounts' ? 'accounts' : restLabel.toLowerCase()}` : g.label)
+  return (
+    <TableRow className={cn('hover:bg-transparent', g.row, !first && 'border-t-8 border-t-card')}>
+      <TableCell colSpan={99} className="h-10 py-1.5">
+        <span className="flex items-center gap-2">
+          <I className={cn('size-4 shrink-0', g.tile)} aria-hidden="true" />
+          <span className="text-sm font-medium">{label}</span>
+          <span className="rounded-sm bg-card px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
+          {g.hint && <span className="text-xs text-muted-foreground max-sm:hidden">· {g.hint}</span>}
+        </span>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+/** Pinned accounts lead the list in every view. Remembered in this browser; TransAmerica starts pinned. */
+const PIN_KEY = 'sah-pins'
+function usePins() {
+  const [pins, setPins] = useState<Set<string>>(() => {
+    try { const v = localStorage.getItem(PIN_KEY); return new Set(v ? JSON.parse(v) : ['TransAmerica']) } catch { return new Set(['TransAmerica']) }
+  })
+  const toggle = (name: string) => {
+    const n = new Set(pins)
+    if (n.has(name)) n.delete(name); else n.add(name)
+    setPins(n)
+    try { localStorage.setItem(PIN_KEY, JSON.stringify([...n])) } catch {}
+    toast(n.has(name) ? `Pinned ${name}` : `Unpinned ${name}`)
+  }
+  return [pins, toggle] as const
+}
+
 export function AccountsScreen() {
   const { status, data, retry } = useAccounts()
   const [view, setView] = useState<ViewId>('needs')
@@ -61,6 +106,7 @@ export function AccountsScreen() {
   const [pinned, setPinned] = useState(true)
   const [hidden, setHidden] = useState<Set<ColId>>(() => new Set(DEFAULT_HIDDEN))
   const filterBtn = useRef<HTMLButtonElement>(null)
+  const [pins, togglePin] = usePins()
 
   const priority = pinned && view === 'needs'
   const query = q.trim().toLowerCase()
@@ -70,9 +116,11 @@ export function AccountsScreen() {
     const f = data.filter(v.test)
       .filter(r => passes(r, filters))
       .filter(r => !query || `${r.name} ${r.ind} ${r.seg}`.toLowerCase().includes(query))
-    return sortRows(f, sortKey, sortDir, priority)
-  }, [data, view, filters, query, sortKey, sortDir, priority])
+    const sorted = sortRows(f, sortKey, sortDir, priority)
+    return [...sorted.filter(r => pins.has(r.name)), ...sorted.filter(r => !pins.has(r.name))] // pinned rows lead in every view
+  }, [data, view, filters, query, sortKey, sortDir, priority, pins])
 
+  const sum = useMemo(() => summary(data), [data])
   const nFilters = filterCount(filters)
   // Reset covers search, filters and sort; switching views is not something to reset
   const dirty = !!q || nFilters > 0 || !pinned || sortKey !== 'health' || sortDir !== 'asc'
@@ -115,25 +163,36 @@ export function AccountsScreen() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts"
-        sub={`${BOOK.owner}'s book · ${today} · ${BOOK.count} accounts`} />
+      <PageHeader title="My accounts" sub={`${OWNER}'s book · ${today} · ${data.length} accounts`} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
-        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat icon={DollarSign} label="Portfolio ARR" value={BOOK.arr} hint={`${BOOK.arrPer} per account`} visual={<PodArrSplit />} />
-          <Stat icon={AlertTriangle} label="ARR at risk" value={BOOK.atRisk} tone="bad" hint="Under 40 or unsigned"
-            visual={<Meter value={BOOK.atRiskM} max={BOOK.arrM} tone="bad" label="Share of ARR at risk" showValue={`${Math.round((BOOK.atRiskM / BOOK.arrM) * 100)}% of ARR`} />} />
-          <Stat icon={Target} label="Open pipeline" value={BOOK.pipeline} hint={`${BOOK.opps} opportunities`}
-            visual={<Meter value={BOOK.pipelineM} max={BOOK.arrM} label="Pipeline against ARR" showValue={`${Math.round((BOOK.pipelineM / BOOK.arrM) * 100)}% of ARR`} />} />
-          <Stat icon={HeartPulse} label="Average health" tone={avgBand === 'none' ? undefined : avgBand}
-            value={<>{BOOK.avgHealth}<span className="text-sm text-muted-foreground">/100</span></>} hint="Across the book"
-            visual={<Meter value={BOOK.avgHealth} tone={avgBand === 'none' ? undefined : avgBand} label="Average health out of 100" />} />
+        <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
+          <TileButton active={view === 'renew'} onClick={() => setView(v => (v === 'renew' ? 'needs' : 'renew'))} label="Show accounts renewing in 90 days">
+            <Stat icon={CalendarClock} label="Renewing in 90 days" value={money(sum.renew.arr)} tone={sum.renew.overdue ? 'bad' : undefined}
+              visual={<ShareMeter part={sum.renew.arr} of={sum.arr} />}
+              hint={`${sum.renew.n} accounts${sum.renew.overdue ? ` · ${sum.renew.overdue} overdue` : ''}`} />
+          </TileButton>
+          <TileButton active={view === 'risk'} onClick={() => setView(v => (v === 'risk' ? 'needs' : 'risk'))} label="Show accounts with health under 40">
+            <Stat icon={AlertTriangle} label="Low health, under 40" value={money(sum.low.arr)} tone={sum.low.n ? 'bad' : undefined}
+              visual={<ShareMeter part={sum.low.arr} of={sum.arr} />}
+              hint={`${sum.low.n} accounts`} />
+          </TileButton>
+          <Stat icon={HeartPulse} label="Average health" tone={sum.health.avg == null ? undefined : bandOf(sum.health.avg) === 'none' ? undefined : bandOf(sum.health.avg) as 'good' | 'warn' | 'bad'}
+            value={sum.health.avg == null ? 'No data' : <>{sum.health.avg}<span className="text-sm text-muted-foreground">/100</span></>}
+            visual={<BandSplit bands={sum.health.bands} />}
+            hint={<span className="flex gap-3">{sum.health.bands.map(b => {
+              const id = BAND_VIEW[b.band]
+              return (
+                <button key={b.band} type="button" onClick={() => setView(v => (v === id ? 'needs' : id))} aria-pressed={view === id}
+                  className={cn('rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50', view === id && 'font-medium text-foreground')}>
+                  {b.n} {b.band === 'bad' ? 'at risk' : b.band === 'warn' ? 'watch' : 'healthy'}
+                </button>
+              )
+            })}</span>} />
         </div>
       )}
 
       <Card className="min-w-0 gap-0 py-0">
-        <BlockHeader icon={Building2} title="Accounts" count={status === 'ready' ? list.length : undefined} />
-
         {status === 'error' ? (
           <div className="p-4 sm:p-5">
             <Empty title="Couldn't load your accounts" sub="The account list didn't respond. Your filters are kept; try again." />
@@ -143,41 +202,30 @@ export function AccountsScreen() {
           <>
             {/* one toolbar row: saved views left ("More" last); search, Filter, Columns, Reset right; all 32px.
                 On phones the views scroll and search drops below. */}
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5 lg:flex-nowrap">
+            <div className="flex flex-wrap items-center gap-2 p-4 sm:p-5 lg:flex-nowrap">
               <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto max-sm:basis-full">
-                <ToggleGroup type="single" spacing={1} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
+                <ToggleGroup type="single" variant="outline" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
                   onValueChange={v => v && setView(v as ViewId)}>
                   {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
-                    <ToggleGroupItem key={v.id} value={v.id} className="h-8 gap-1.5 px-2.5 data-[state=on]:text-foreground">
+                    <ToggleGroupItem key={v.id} value={v.id} className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">
                       {v.band && (
                         <Tooltip>
                           <TooltipTrigger asChild><span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" /></TooltipTrigger>
                           <TooltipContent>{v.band === 'bad' ? 'Health under 40' : v.band === 'warn' ? 'Health 40 to 69' : 'Health 70 or more'}</TooltipContent>
                         </Tooltip>
                       )}
-                      {SHORT_VIEW[v.id] ?? v.label}
+                      {titleCase(SHORT_VIEW[v.id] ?? v.label)}
                       <span className="tabular-nums text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
                     </ToggleGroupItem>
                   ))}
                 </ToggleGroup>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" aria-label="More saved views"
-                      className={cn('shrink-0 gap-1.5 px-2.5', moreView ? 'bg-muted text-foreground' : 'text-muted-foreground')}>
-                      {moreView ? <>{moreView.label}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span></> : 'More'}
-                      <ChevronDown />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuRadioGroup value={view} onValueChange={v => setView(v as ViewId)}>
-                      {VIEWS.filter(v => !PRIMARY.includes(v.id)).map(v => (
-                        <DropdownMenuRadioItem key={v.id} value={v.id}>
-                          {v.label}<span className="ml-auto tabular-nums text-xs text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {moreView && (
+                  <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-muted pl-2.5 pr-0.5 text-sm">
+                    {moreView.band && <span className={cn('size-1.5 rounded-full', bandBg[moreView.band])} aria-hidden="true" />}
+                    {titleCase(moreView.label)}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span>
+                    <Button variant="ghost" size="icon-xs" aria-label={`Clear ${moreView.label}`} onClick={() => setView('needs')}><X /></Button>
+                  </span>
+                )}
               </div>
 
               <div className="order-2 ml-auto flex shrink-0 items-center gap-2">
@@ -198,14 +246,19 @@ export function AccountsScreen() {
                     <TooltipContent>Columns</TooltipContent>
                   </Tooltip>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Show columns</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Columns</DropdownMenuLabel>
+                    {FIXED_COLS.map(c => (
+                      <DropdownMenuCheckboxItem key={c} checked disabled>{c}</DropdownMenuCheckboxItem>
+                    ))}
                     {OPTIONAL_COLS.map(c => (
                       <DropdownMenuCheckboxItem key={c.id} checked={show(c.id)} onSelect={e => e.preventDefault()}
                         onCheckedChange={on => setHidden(h => { const n = new Set(h); if (on) n.delete(c.id); else n.add(c.id); return n })}>
                         {c.label}
                       </DropdownMenuCheckboxItem>
                     ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={DEFAULT_HIDDEN.length === hidden.size && DEFAULT_HIDDEN.every(c => hidden.has(c))}
+                      onSelect={() => setHidden(new Set(DEFAULT_HIDDEN))}><RotateCcw />Reset columns</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 {dirty && <Button variant="ghost" onClick={reset}><RotateCcw />Reset</Button>}
@@ -236,7 +289,7 @@ export function AccountsScreen() {
                   <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={reset}><RotateCcw />Reset search and filters</Button></div>
                 </div>
               ) : (
-                <Table aria-label="Accounts" className="min-w-[760px]">
+                <Table aria-label="Accounts" className="min-w-[760px] sm:[&_td:first-child]:pl-5 sm:[&_td:last-child]:pr-5 sm:[&_th:first-child]:pl-5 sm:[&_th:last-child]:pr-5">
                   <TableHeader>
                     <TableRow>
                       {sortHead('name', 'Account', { sticky: true })}
@@ -244,19 +297,30 @@ export function AccountsScreen() {
                       {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date' })}
                       {sortHead('carr', 'ARR', { numeric: true, tip: 'Contracted annual recurring revenue (CARR)' })}
                       {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover' })}
-                      {show('signals') && <TableHead>Signal</TableHead>}
+                      <TableHead>Why it's here</TableHead>
                       {show('stage') && <TableHead>Stage</TableHead>}
                       {show('repo') && sortHead('repo', 'Repository', { numeric: true })}
                       {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought' })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {list.map(r => {
+                    {list.map((r, i) => {
                       const b = bandOf(r.health)
-                      const pin = isTA(r) && priority
+                      const pin = pins.has(r.name)
+                      // pinned rows lead; the rest split by reason under "Needs me first", else sit under one "rest" header
+                      const hasPinned = pins.has(list[0].name)
+                      const groupOf = (x: Row) => (pins.has(x.name) ? 'pinned' : priority ? reason(x).group : hasPinned ? 'rest' : undefined)
+                      const grp = groupOf(r)
+                      const newGroup = grp && grp !== (i ? groupOf(list[i - 1]) : undefined)
                       return (
-                        <TableRow key={r.name} tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
-                          className="cursor-pointer focus-visible:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-11 [&>td]:py-1.5"
+                        <Fragment key={r.name}>
+                        {newGroup && (
+                          <GroupRow group={grp} count={list.filter(x => groupOf(x) === grp).length} first={i === 0} restLabel={viewLabel} />
+                        )}
+                        <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                        <TableRow tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
+                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-14 [&>td]:py-2"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
                           <TableCell className={cn(stickyCol, 'max-w-72')}>
@@ -265,9 +329,12 @@ export function AccountsScreen() {
                               {pin && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span tabIndex={-1} aria-label="Pinned first" className="shrink-0"><Pin className="size-3.5 text-muted-foreground" aria-hidden="true" /></span>
+                                    <button type="button" aria-label={`Unpin ${r.name}`} onClick={e => { e.stopPropagation(); togglePin(r.name) }}
+                                      className="grid size-5 shrink-0 place-items-center rounded-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+                                      <Pin className="size-3.5" aria-hidden="true" />
+                                    </button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Pinned first because it changed since you last looked</TooltipContent>
+                                  <TooltipContent>Pinned · click to unpin</TooltipContent>
                                 </Tooltip>
                               )}
                               <span className="truncate text-xs text-muted-foreground">{r.ind}</span>
@@ -281,17 +348,15 @@ export function AccountsScreen() {
                                 className="inline-flex h-6 items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                                 onFocus={() => setIns(s => (s?.name === r.name ? s : { name: r.name, focus: false }))}
                                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setIns({ name: r.name, focus: true }) } }}>
-                                {isMissing(r.health) ? <span className="text-muted-foreground">No data</span> : <>
-                                  <span className={cn('w-6 text-right font-medium tabular-nums', bandText[b])}>{r.health}</span>
-                                  <Meter value={r.health} tone={b === 'none' ? undefined : b} className="w-10" />
-                                </>}
+                                {isMissing(r.health) ? <span className="text-muted-foreground">No data</span>
+                                  : <span className={cn('font-medium tabular-nums', bandText[b])}>{r.health}</span>}
                               </span>
                             </InsightsPopover>
                           </TableCell>
                           <TableCell><RunwayCell row={r} /></TableCell>
                           <TableCell className="text-right">{money(r.carr)}</TableCell>
                           {show('nrr') && <TableCell className="text-right"><NrrCell row={r} /></TableCell>}
-                          {show('signals') && <TableCell><SignalsCell row={r} /></TableCell>}
+                          <TableCell className="max-w-80"><ReasonCell row={r} /></TableCell>
                           {show('stage') && <TableCell className="text-muted-foreground">{r.stage}</TableCell>}
                           {show('repo') && <TableCell className="text-right">{r.repo.toLocaleString()}</TableCell>}
                           {show('lic') && (
@@ -300,6 +365,16 @@ export function AccountsScreen() {
                             </TableCell>
                           )}
                         </TableRow>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-52">
+                          <ContextMenuItem onSelect={() => openRow(r)}><ExternalLink />Open account</ContextMenuItem>
+                          <ContextMenuItem onSelect={() => setIns({ name: r.name, focus: true })}><HeartPulse />Show health insights</ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onSelect={() => togglePin(r.name)}>{pin ? <><PinOff />Unpin</> : <><Pin />Pin to top</>}</ContextMenuItem>
+                          <ContextMenuItem onSelect={() => { navigator.clipboard?.writeText(r.name); toast('Account name copied') }}><Copy />Copy name</ContextMenuItem>
+                        </ContextMenuContent>
+                        </ContextMenu>
+                        </Fragment>
                       )
                     })}
                   </TableBody>
@@ -318,3 +393,18 @@ export function AccountsScreen() {
     </div>
   )
 }
+
+/** A headline tile that filters the table; pressing it again goes back to "Needs me first". */
+function TileButton({ active, onClick, label, children }: { active: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} aria-label={label}
+      className={cn('h-full rounded-xl text-left outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring [&>*]:transition-shadow hover:[&>*]:shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_14%,transparent),0_4px_14px_rgb(11_24_33/0.07)]',
+        active && 'ring-2 ring-foreground/80')}>
+      {children}
+    </button>
+  )
+}
+
+const ShareMeter = ({ part, of }: { part: number; of: number }) => (
+  <Meter value={part} max={of || 1} tone="bad" label="Share of ARR" showValue={`${of ? Math.round((part / of) * 100) : 0}% of ARR`} />
+)

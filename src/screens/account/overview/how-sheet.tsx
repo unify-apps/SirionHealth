@@ -1,13 +1,11 @@
 /* openHow + breakdown, as a right side sheet: one vertical calculation (area scores -> weighted average -> renewal cap
    -> health score) with the numbers in one right-hand column, then Bands and Renewal runway as two equal cards,
    then the flag rules as two rule cards. */
-import { CalendarClock, CircleGauge, Gauge, Info, Layers, ShieldAlert, TrendingDown, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { RecordSheet, RecordSheetBody, RecordSheetHeader, useKept } from '@/components/app/record-sheet'
 import { openSheet, sheetOpenChange, useSheet } from '@/lib/route'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { BlockHeader } from '@/components/page'
 import { Meter } from '@/components/charts'
 import { BAND_LABEL, bandBg, bandOf, bandText, HealthPill } from '@/components/health'
 import {
@@ -24,26 +22,21 @@ function Step({ n, title, value, valueClass, children, last }: {
   n: string; title: React.ReactNode; value?: React.ReactNode; valueClass?: string; children?: React.ReactNode; last?: boolean
 }) {
   return (
-    <li className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_4rem] gap-x-4 pb-6 last:pb-0">
+    <li className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-4 pb-5 last:pb-0">
       {!last && <span className="absolute top-7 bottom-1 left-3 w-px -translate-x-1/2 bg-border" aria-hidden="true" />}
       <span className="relative z-10 grid size-6 place-items-center rounded-full bg-muted text-xs tabular-nums text-muted-foreground">{n}</span>
-      <div className="min-w-0 space-y-2 pt-0.5">
-        <div className="font-medium">{title}</div>
-        {children}
+      {/* title and value share one row, so the number sits right where you read the step, not in a far column */}
+      <div className="grid min-w-0 gap-2">
+        <div className="flex min-h-6 items-center gap-3">
+          <span className="font-medium">{title}</span>
+          {value != null && <span className={cn('ml-auto text-lg leading-6 tabular-nums tracking-tight', valueClass)}>{value}</span>}
+        </div>
+        {children && <div className="text-sm text-muted-foreground [&_p]:text-sm">{children}</div>}
       </div>
-      <span className={cn('pt-px text-right text-xl leading-6 tabular-nums tracking-tight', valueClass)}>{value}</span>
     </li>
   )
 }
 
-function SheetCard({ icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl border border-hairline">
-      <BlockHeader icon={icon} title={title} />
-      <div className="flex flex-1 flex-col justify-center p-5">{children}</div>
-    </section>
-  )
-}
 
 const isArea = (k: string): k is AreaKey => (AREA_KEYS as readonly string[]).includes(k)
 const HOW = { type: 'how', id: '' }
@@ -73,42 +66,47 @@ function HowScoresBody({ onOpenArea }: { onOpenArea: (k: AreaKey) => void }) {
         <RecordSheetBody>
         <div className="flex flex-col gap-6 p-6">
           <ol aria-label={`Weighted ${score.weighted} minus cap ${score.cap} equals ${score.final}`}>
-            <Step n="1" title="Area scores">
+            <Step n="1" title="Area Scores">
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {AREA_KEYS.map(k => <AreaTile key={k} k={k} onOpen={() => onOpenArea(k)} />)}
               </ul>
             </Step>
-            <Step n="2" title="Weighted average" value={score.weighted}>
+            <Step n="2" title="Weighted Average" value={score.weighted}>
               <p className="text-muted-foreground">Sirion CS ops set each area's weight; the weights aren't stored in the health record.</p>
             </Step>
-            <Step n="3" title={<CapTerm focusable={false}>Renewal cap</CapTerm>} value={`−${score.cap}`}>
+            <Step n="3" title={<CapTerm focusable={false}>Renewal Cap</CapTerm>} value={`−${score.cap}`}>
               <p className="line-clamp-2 text-muted-foreground">
                 Renewal {score.snapshotDays} days out with auto-renew off holds health at 50. It lifts once signed or auto-renew is on.
               </p>
             </Step>
-            <Step n="=" title="Health score" value={score.final} valueClass={cn('font-medium', bandText[bandOf(score.final)])} last>
-              <HealthPill value={score.final} />
-            </Step>
+            <Step n="=" title={<span className="flex items-center gap-2">Health Score<HealthPill value={score.final} /></span>} value={score.final} valueClass={cn('font-medium', bandText[bandOf(score.final)])} last />
           </ol>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <SheetCard icon={Gauge} title="Bands"><BandScale /></SheetCard>
-            {runway && <SheetCard icon={CalendarClock} title="Renewal runway"><RunwayTimeline /></SheetCard>}
+          {/* four equal cards on one structure: small title row, then the content. Bands and runway explain this
+              account's score; the two rule sets explain when any account is flagged. */}
+          <div className="grid auto-rows-fr gap-3 md:grid-cols-2">
+            <InfoCard title="Bands">
+              <BandScale />
+            </InfoCard>
+            {runway && (
+              <InfoCard title="Renewal Runway" aside={<span className="tabular-nums"><span className="font-medium text-bad">{runway.left} days</span> left</span>}>
+                <RunwayTimeline />
+              </InfoCard>
+            )}
+            <InfoCard title="Flag Rules" aside="In use">
+              <ul className="grid gap-2.5 text-sm">
+                <RuleRow>Composite under 70 <Arrow /> Watch</RuleRow>
+                <RuleRow>Composite under 40 <Arrow /> At risk</RuleRow>
+                <RuleRow>Renewal within 60 days, auto-renew off <Arrow /> capped at 50</RuleRow>
+              </ul>
+            </InfoCard>
+            <InfoCard title="Early Warning" aside={<Badge variant="outline" className="h-5 font-normal">Proposed</Badge>}>
+              <ul className="grid gap-2.5 text-sm">
+                <RuleRow>Any area under 50 <Arrow /> Flag</RuleRow>
+                <RuleRow>Composite down 8+ in a month <Arrow /> Flag</RuleRow>
+              </ul>
+            </InfoCard>
           </div>
-
-          <section className="space-y-3">
-            <h3 className="text-sm font-medium">Flag rules</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <RuleCard icon={CircleGauge} title="Current model" rows={[
-                { icon: CircleGauge, text: 'Composite < 70 → Watch' },
-                { icon: ShieldAlert, text: 'Composite < 40 → At risk' },
-              ]} note={<>Renewal within 60 days, auto-renew off → capped at 50</>} />
-              <RuleCard icon={TrendingDown} title="Early warning" proposed rows={[
-                { icon: Layers, text: 'Any area < 50 → Flag' },
-                { icon: TrendingDown, text: 'Composite −8 or more in a month → Flag' },
-              ]} />
-            </div>
-          </section>
         </div>
         </RecordSheetBody>
     </>
@@ -123,7 +121,7 @@ function AreaTile({ k, onOpen }: { k: AreaKey; onOpen: () => void }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" onClick={onOpen} aria-label={`${AREA_NAME[k]} ${v}, ${BAND_LABEL[b]}. ${tip}. Open inputs`}
-            className={cn('flex h-full w-full flex-col gap-2 rounded-lg border border-hairline p-3 text-left transition-colors hover:bg-accent/40', focusRing)}>
+            className={cn('flex h-full w-full flex-col gap-2.5 rounded-lg border border-hairline px-3 py-2.5 text-left text-foreground transition-colors hover:bg-hover', focusRing)}>
             <span className="flex items-start gap-2">
               <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span className="min-w-0 flex-1">
@@ -168,9 +166,6 @@ function BandScale() {
           </div>
         ))}
       </div>
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Info className="size-3.5 shrink-0" aria-hidden="true" />An input with no value is left out and never counts as healthy.
-      </p>
     </div>
   )
 }
@@ -202,24 +197,29 @@ function RunwayTimeline() {
     { d: TODAY, top: 'Today', sub: fmtD(TODAY), kind: 'today' },
     { d: RENEWAL, top: 'Renewal', sub: fmtD(RENEWAL), kind: 'end' },
   ]
-  const usedPct = (100 * r.used) / r.total
+  const usedPct = at(TODAY)
   return (
-    <div className="space-y-5">
-      <div className="relative mx-2 h-12">
-        <span className="absolute inset-x-0 top-[7px] h-px bg-border" aria-hidden="true" />
+    <div className="grid gap-2">
+      {/* one track: time used in grey, time left in red, events as dots on it with their labels underneath */}
+      <div className="relative mx-1.5 mt-1 mb-9">
+        <div className="flex h-2 overflow-hidden rounded-full" role="img" aria-label={`${r.used} days used, ${r.left} left of ${r.total}`}>
+          <span className="h-full bg-foreground/25" style={{ width: `${usedPct}%` }} />
+          <span className="h-full flex-1 bg-bad/35" />
+        </div>
         {points.map((p, i) => {
           const x = at(p.d)
-          const align = i === 0 ? 'items-start' : i === points.length - 1 ? 'items-end' : 'items-center'
-          const shift = i === 0 ? '-translate-x-[6px]' : i === points.length - 1 ? '-translate-x-[calc(100%-6px)]' : '-translate-x-1/2'
+          const align = i === 0 ? 'items-start -translate-x-[7px]' : i === points.length - 1 ? 'items-end -translate-x-[calc(100%-7px)]' : 'items-center -translate-x-1/2'
           return (
             <Tooltip key={i}>
               <TooltipTrigger asChild>
                 <span tabIndex={0} aria-label={`${p.top}, ${fmtDY(p.d)}`}
-                  className={cn('absolute top-0 flex flex-col gap-1 rounded-sm', align, shift, focusRing)} style={{ left: `${x}%` }}>
+                  className={cn('absolute -top-[3px] flex flex-col gap-1.5 rounded-sm', align, focusRing)} style={{ left: `${x}%` }}>
                   <span className={cn('size-3.5 rounded-full border-2 border-popover',
-                    p.kind === 'flag' ? 'bg-warn' : p.kind === 'clear' ? 'bg-good' : p.kind === 'today' ? 'bg-foreground' : 'bg-muted-foreground')} />
-                  <span className="whitespace-nowrap text-xs leading-4">{p.top}</span>
-                  <span className="whitespace-nowrap text-[11px] leading-3 tabular-nums text-muted-foreground">{p.sub}</span>
+                    p.kind === 'flag' ? 'bg-warn' : p.kind === 'clear' ? 'bg-good' : p.kind === 'today' ? 'bg-foreground' : 'bg-bad')} />
+                  <span className="grid whitespace-nowrap leading-tight" style={{ justifyItems: i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'center' }}>
+                    <span className="text-xs">{p.top}</span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">{p.sub}</span>
+                  </span>
                 </span>
               </TooltipTrigger>
               <TooltipContent>{fmtDY(p.d)}</TooltipContent>
@@ -227,47 +227,21 @@ function RunwayTimeline() {
           )
         })}
       </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div tabIndex={0} role="img" aria-label={`${r.used} days used, ${r.left} left of ${r.total}`} className={cn('space-y-1.5 rounded-sm pt-3', focusRing)}>
-            <div className="flex h-1.5 gap-0.5">
-              <span className="h-full rounded-l-full bg-foreground/60" style={{ width: `${usedPct}%` }} />
-              <span className="h-full flex-1 rounded-r-full bg-bad/30" />
-            </div>
-            <p className="text-xs tabular-nums text-muted-foreground">
-              <span className="text-foreground">{r.used} used</span> · {r.left} left
-            </p>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>{r.used} of {r.total} days used since first flag</TooltipContent>
-      </Tooltip>
     </div>
   )
 }
 
-/* ---------- flag rules ---------- */
-function RuleCard({ icon: Icon, title, rows, note, proposed }: {
-  icon: LucideIcon; title: string; rows: { icon: LucideIcon; text: string }[]; note?: React.ReactNode; proposed?: boolean
-}) {
+const Arrow = () => <span className="text-muted-foreground" aria-hidden="true">→</span>
+function RuleRow({ children }: { children: React.ReactNode }) {
+  return <li className="flex flex-wrap items-center gap-x-1.5 tabular-nums">{children}</li>
+}
+
+function InfoCard({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="space-y-3 rounded-lg border border-hairline p-4">
-      <div className="flex items-center gap-2">
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted"><Icon className="size-4 text-muted-foreground" aria-hidden="true" /></span>
-        <span className="font-medium">{title}</span>
-        {proposed && <Badge variant="outline" className="ml-auto font-normal">Proposed</Badge>}
-      </div>
-      <ul className="space-y-2">
-        {rows.map(r => (
-          <li key={r.text} className="flex items-center gap-2 tabular-nums">
-            <r.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />{r.text}
-          </li>
-        ))}
-      </ul>
-      {note && (
-        <p className="flex items-start gap-2 text-xs text-muted-foreground">
-          <CalendarClock className="mt-px size-3.5 shrink-0" aria-hidden="true" /><span>{note}</span>
-        </p>
-      )}
-    </div>
+    <section className="flex flex-col gap-4 rounded-xl border border-hairline p-5">
+      <h3 className="flex items-center gap-2 text-sm font-medium">{title}{aside && <span className="ml-auto text-xs font-normal text-muted-foreground">{aside}</span>}</h3>
+      <div className="flex flex-1 flex-col justify-center">{children}</div>
+    </section>
   )
 }
+

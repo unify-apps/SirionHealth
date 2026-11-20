@@ -49,7 +49,7 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
 
   return (
     <Card className="gap-0 py-0">
-      <BlockHeader icon={HeartPulse} title={`Where the $${BOOK.arr}M sits by health`} sub="Select a band to see its accounts" />
+      <BlockHeader icon={HeartPulse} title={`Where the $${BOOK.arr}M sits by health`} />
       <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="health split" /><SplitSkeleton /></>}
         {status === 'error' && (
@@ -70,7 +70,7 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
                     aria-pressed={on}
                     onClick={() => toggle(s.band)}
                     className={cn(
-                      'grid cursor-pointer gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                      'grid cursor-pointer gap-0.5 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring',
                       on && 'border-border bg-accent',
                     )}
                   >

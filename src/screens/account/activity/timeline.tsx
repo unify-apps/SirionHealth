@@ -125,7 +125,7 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
       )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
       {past.length > shown && (
         <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
-          Show {Math.min(STEP, past.length - shown)} more · {past.length - shown} earlier {dirty ? 'matching not shown' : 'not shown'}
+          Show {Math.min(STEP, past.length - shown)} more
         </Button>
       )}
 
@@ -193,7 +193,7 @@ function ItemSheet({ item: live, onOpenChange, pager }: { item: Item | null; onO
                   </section>
                 ) : (
                   <section className="grid gap-1.5">
-                    <h3 className="text-xs text-muted-foreground">What was said</h3>
+                    <h3 className="text-xs text-muted-foreground">What Was Said</h3>
                     {item.desc ? <p className="leading-relaxed text-pretty">{item.desc}</p> : <p className="text-muted-foreground">No statement recorded.</p>}
                   </section>
                 )}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Search, Table2, UserCheck, Users, X } from 'lucide-react'
-import { BlockHeader, Empty, ListRow, SectionTitle, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { BlockHeader, Empty, ListRow, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
@@ -24,6 +24,8 @@ import { GAP_ICON, PersonSheet } from './stakeholders/person-sheet'
 import { useRoles } from './stakeholders/store'
 
 const PER = 10
+/** The roles a renewal needs covered; Coverage shows who holds each. */
+const KEY_ROLES = ['Executive Sponsor', 'Champion', 'Decision Maker', 'Technical Owner', 'Key User']
 type Filter = 'all' | Kind
 /** Opens a person sheet; `list` is the keys of the list it was opened from, as filtered and sorted, for prev/next. */
 type OnOpen = (key: string, list?: string[]) => void
@@ -32,7 +34,6 @@ export function StakeholdersTab() {
   const load = useLoad(loadBase, undefined, 'stakeholders')
   return (
     <div>
-      <SectionTitle title="Stakeholders" />
       {load.status === 'loading' && <StakeSkeleton />}
       {load.status === 'error' && <ErrorState what="stakeholders" onRetry={load.retry} />}
       {load.status === 'ready' && <Stakeholders base={load.data} />}
@@ -57,17 +58,16 @@ function Stakeholders({ base }: { base: Base }) {
   const pager = listPager(pagerKeys, open?.key, k => k, k => openSheet('person', k, { replace: true }), 'person')
   // whose people: the saved views on the left of each table's toolbar
   const views = (
-    <ToggleGroup type="single" size="sm" spacing={1} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className="shrink-0">
-      <ToggleGroupItem value="customer" className="gap-1.5 data-[state=on]:text-foreground">Customer contacts <Count n={rows.length} /></ToggleGroupItem>
-      <ToggleGroupItem value="internal" className="gap-1.5 data-[state=on]:text-foreground">Sirion and vendors <Count n={internal.length} /></ToggleGroupItem>
+    <ToggleGroup type="single" size="sm" variant="outline" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className="shrink-0">
+      <ToggleGroupItem value="customer" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
+      <ToggleGroupItem value="internal" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
     </ToggleGroup>
   )
 
   return (
     <div className="grid gap-4">
       <Attention rows={rows} orbit={orbit} onOpen={setOpenKey} />
-      <Card className="gap-0 py-0">
-        <BlockHeader icon={Users} title="People" count={audience === 'customer' ? rows.length : internal.length} />
+      <Card data-block className="gap-0 py-0">
         {audience === 'customer'
           ? <CustomerTable lead={views} rows={rows} orbit={orbit} max={max} months={base.months} onOpen={setOpenKey} />
           : <InternalTable lead={views} rows={internal} />}
@@ -90,15 +90,15 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
   const items: { key: string; name: string; why: string; meta: string; dot: string }[] = []
   const when = (r: StakeRow) => r.last ? `Last named ${fmtD(r.last)}` : 'Never named'
   if (sponsor) items.push({ key: sponsor.key, name: sponsor.name, why: 'Sponsor quiet', dot: 'bg-warn',
-    meta: `Executive sponsor · ${when(sponsor)} · no exec contact this month` })
-  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn', meta: `Tagged champion · ${when(r)}` }))
+    meta: `Executive Sponsor · ${when(sponsor)} · no exec contact this month` })
+  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn', meta: `Tagged Champion · ${when(r)}` }))
   gone.forEach(r => items.push({ key: r.key, name: r.name, why: 'Hand over', dot: 'bg-bad', meta: `${r.label} · ${when(r)}` }))
   const active30 = by(0), active90 = by(1), total = Math.max(1, active30 + active90 + quiet)
   const cov: [string, number, string][] = [['Last 30 days', active30, 'bg-chart-1'], ['30 to 90 days', active90, 'bg-chart-seq-2'], ['Quiet or gone', quiet, 'bg-chart-5']]
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         <BlockHeader icon={AlertTriangle} title="Needs attention"
           actions={<span className="text-xs tabular-nums text-muted-foreground">{items.length} {items.length === 1 ? 'person' : 'people'} · {sugg.length} role {sugg.length === 1 ? 'review' : 'reviews'}</span>} />
         {items.length || sugg.length ? (
@@ -118,7 +118,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
                   <p className="mt-1 flex flex-wrap gap-1.5">
                     {sugg.map(r => (
                       <Button key={r.key} variant="outline" size="xs" onClick={() => onOpen(r.key, sugg.map(x => x.key))}>
-                        {r.name} <span className="text-muted-foreground">{r.label.toLowerCase()}</span>
+                        {r.name} <span className="text-muted-foreground">{r.label}</span>
                       </Button>
                     ))}
                   </p>
@@ -128,7 +128,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
           </ul>
         ) : <Empty title="Nothing needs attention" sub="Every tagged role is active and confirmed." className="m-5 py-6" />}
       </Card>
-      <Card className="gap-0 py-0">
+      <Card data-block className="gap-0 py-0">
         <BlockHeader icon={Users} title="Coverage"
           actions={<><span className="text-xs tabular-nums text-muted-foreground">{active30 + active90 + quiet} named stakeholders</span><InfoTip>Key people by when the monthly summaries last named them. Key people are tagged, suggested, departed, or named twice or more.</InfoTip></>} />
         <div className="grid gap-3 p-5">
@@ -147,6 +147,30 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
             </li>
           ))}
         </ul>
+        </div>
+        {/* who holds each key role: covered when someone in it was named in the last 90 days */}
+        <div className="border-t border-hairline px-5 pt-4 pb-3">
+          <p className="mb-1 text-xs font-medium">Key Roles</p>
+          <ul className="divide-y divide-hairline">
+            {KEY_ROLES.map(role => {
+              const people = rows.filter(r => r.label === role && r.kind !== 'departed')
+              const active = people.filter(r => r.eng === 'active' || r.eng === 'warm')
+              const state = active.length ? 'good' : people.length ? 'warn' : 'bad'
+              const first = (active[0] ?? people[0])
+              return (
+                <li key={role}>
+                  <button type="button" disabled={!first} onClick={() => first && onOpen(first.key, people.map(x => x.key))}
+                    className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none enabled:hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring/50">
+                    <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good' : state === 'warn' ? 'bg-warn' : 'bg-bad')} aria-hidden="true" />
+                    <span className="flex-1 truncate">{role}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {!people.length ? 'Nobody' : `${first.name}${people.length > 1 ? ` +${people.length - 1}` : ''}${state === 'warn' ? ' · quiet' : ''}`}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       </Card>
     </div>
@@ -177,7 +201,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
   return (
     <>
       {/* one toolbar row: search left; persona, sort, view, export right */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap">
+      <div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:p-5">
         {lead}
         {view === 'table' && (
           <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
@@ -243,7 +267,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
                 <TableHead>Role</TableHead>
                 <TableHead>Engagement</TableHead>
                 <TableHead>Tone</TableHead>
-                <TableHead>Mentions, 18 months</TableHead>
+                <TableHead>Mentions</TableHead>
                 <TableHead><span className="sr-only">Actions</span></TableHead>
               </TableRow>
             </TableHeader>
@@ -251,20 +275,24 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               {viewRows.length ? viewRows.map(r => {
                 const G = GAP_ICON[r.gap[0]]
                 return (
-                  <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-accent/60 [&>td]:h-11 [&>td]:py-1.5"
+                  <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-hover [&>td]:h-14 [&>td]:py-2"
                     aria-label={`${r.name}, open detail`}
                     onClick={() => onOpen(r.key, list.map(x => x.key))} onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(r.key, list.map(x => x.key)) } }}>
                     <TableCell className={cn(stickyCol, 'max-w-72')}>
-                      <span className="flex min-w-48 items-center gap-2">
-                        <Avatar name={r.name} className="size-5 text-[10px]" />
-                        <span className="shrink-0 font-medium">{r.name}</span>
+                      <span className="flex min-w-48 items-center gap-3">
+                        <Avatar name={r.name} />
+                        <span className="grid min-w-0 leading-tight">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-medium">{r.name}</span>
                         {r.gap[0] === 'warn' && (
                           <Tooltip>
                             <TooltipTrigger asChild><span tabIndex={0} aria-label={`Needs attention: ${r.gap[1]}`} className="shrink-0 cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><G.I className={cn('size-3.5', G.cls)} /></span></TooltipTrigger>
                             <TooltipContent className="max-w-64"><span className="font-medium">Needs attention</span><br />{r.gap[1]}</TooltipContent>
                           </Tooltip>
                         )}
-                        <span className="truncate text-xs text-muted-foreground">{r.sen || r.title || r.org}</span>
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">{r.title || r.sen || r.org}</span>
+                        </span>
                       </span>
                     </TableCell>
                     <TableCell onClick={e => e.stopPropagation()}><RoleCell row={r} reveal /></TableCell>
