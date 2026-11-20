@@ -20,7 +20,7 @@ export function ActivityTab() {
       <SectionTitle title="Activity" actions={
         <TabsList aria-label="Activity view">
           <TabsTrigger value="timeline" className="px-3">Timeline</TabsTrigger>
-          <TabsTrigger value="sentiment" className="px-3">Monthly sentiment</TabsTrigger>
+          <TabsTrigger value="sentiment" className="px-3">Monthly Sentiment</TabsTrigger>
         </TabsList>
       } />
       {load.status === 'loading' && <ActivitySkeleton view={view} />}

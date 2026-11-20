@@ -49,7 +49,7 @@ export function BandSplit({ status, onRetry, filters, onClearFilters }: {
 
   return (
     <Card className="gap-0 py-0">
-      <BlockHeader icon={HeartPulse} title={`Where the $${BOOK.arr}M sits by health`} sub="Select a band to see its accounts" />
+      <BlockHeader icon={HeartPulse} title={`Where the $${BOOK.arr}M sits by health`} />
       <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="health split" /><SplitSkeleton /></>}
         {status === 'error' && (

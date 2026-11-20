@@ -60,8 +60,8 @@ function Stakeholders({ base }: { base: Base }) {
   // whose people: the saved views on the left of each table's toolbar
   const views = (
     <ToggleGroup type="single" size="sm" variant="outline" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className="shrink-0">
-      <ToggleGroupItem value="customer" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Customer contacts <Count n={rows.length} /></ToggleGroupItem>
-      <ToggleGroupItem value="internal" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Sirion and vendors <Count n={internal.length} /></ToggleGroupItem>
+      <ToggleGroupItem value="customer" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
+      <ToggleGroupItem value="internal" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
     </ToggleGroup>
   )
 
@@ -151,7 +151,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
         </div>
         {/* who holds each key role: covered when someone in it was named in the last 90 days */}
         <div className="border-t border-hairline px-5 pt-4 pb-3">
-          <p className="mb-1 text-xs font-medium">Key roles</p>
+          <p className="mb-1 text-xs font-medium">Key Roles</p>
           <ul className="divide-y divide-hairline">
             {KEY_ROLES.map(role => {
               const people = rows.filter(r => r.label === role && r.kind !== 'departed')

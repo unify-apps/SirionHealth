@@ -9,6 +9,8 @@ export interface NewsEvent { date: string | null; text: string }
 export interface Theme { title: string; relevance: number | null; events: NewsEvent[]; why: string }
 
 const areas = AREAS as unknown as [string, string][]
+/** Theme names are titles: "Financial and Operational", small words kept lower. */
+const titleCase = (s: string) => s.split(' ').map((w, i) => i > 0 && /^(and|or|of|the|to|in|for)$/.test(w) ? w : w[0].toUpperCase() + w.slice(1)).join(' ')
 const kpis = (TA_RECORD as unknown as { kpis: Record<string, Kpi[]> }).kpis
 const areaName = (k: string) => (areas.find(a => a[0] === k)?.[1] ?? k).replace(' and enhancement requests', '')
 
@@ -21,7 +23,7 @@ export function loadIntel() {
   }))
   const market = (T as unknown as { market: [string, number | null, string, string][] }).market
   const news: Theme[] = market.map(([title, relevance, text, why]) => ({
-    title, relevance, why,
+    title: titleCase(title), relevance, why,
     events: text.split(/(?<=\.)\s+(?=[A-Z][a-z]{2} \d)/).filter(Boolean).map(e => {
       const m = e.match(/^([A-Z][a-z]{2} \d{1,2}):\s*(.*)$/)
       return m ? { date: `${m[1]}, 2026`, text: m[2] } : { date: null, text: e }

@@ -46,7 +46,7 @@ export function OverviewTab() {
       <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-40">
         <Card className="gap-0 py-0">
           <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
-            sub="Monthly health up to the renewal · select an event for its evidence" />
+            />
           <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
         </Card>
       </section>
@@ -83,7 +83,7 @@ function Cited({ text }: { text: string }) {
 /** What a footnote points at, for its tooltip. */
 function refName(k: string) {
   const r = SUM_REFS[k]
-  return !r ? 'Source' : r.kind === 'rec' ? r.label : r.kind === 'ev' ? 'Monthly summary (AI)' : 'Suggested role (AI)'
+  return !r ? 'Source' : r.kind === 'rec' ? r.label : r.kind === 'ev' ? 'Monthly summary' : 'Suggested role'
 }
 
 function Footnote({ k }: { k: string }) {
@@ -121,7 +121,7 @@ function RefBody({ k }: { k: string }) {
     const ev = evidence().filter(e => e.text.includes(r.match))
     return (
       <>
-        <p className="text-xs text-muted-foreground">Monthly summary (AI)</p>
+        <p className="text-xs text-muted-foreground">Monthly summary</p>
         {ev.length ? <div className="divide-y divide-hairline">{ev.map(e => <EvidenceRow key={e.text} e={e} />)}</div> : <p>No data</p>}
       </>
     )
@@ -131,7 +131,7 @@ function RefBody({ k }: { k: string }) {
   if (!p) return <p className="text-muted-foreground">No data</p>
   return (
     <>
-      <p className="text-xs text-muted-foreground">Suggested role (AI)</p>
+      <p className="text-xs text-muted-foreground">Suggested role</p>
       <p className="font-medium">{p.name}{p.suggested ? ` · ${p.suggested}` : ''}</p>
       {p.basis && <p className="leading-relaxed">{p.basis}</p>}
       <p className="text-xs text-muted-foreground">Named in {p.mentions} monthly summaries{p.lastMentioned ? `, last ${ymLabel(p.lastMentioned)}` : ''}.</p>

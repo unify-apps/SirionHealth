@@ -5,6 +5,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
 import { cn } from '@/lib/utils'
+import { titleCase } from '@/lib/text'
 import { go } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
 import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
@@ -58,13 +59,13 @@ const today = fmtFull(TODAY)
 /** Group header: a tinted row with an icon tile, the group name, its count and what puts a row there. */
 const GROUP_LOOK = {
   pinned: { icon: Pin, label: 'Pinned', hint: 'Kept at the top by you', tile: 'text-signal', row: 'bg-signal-soft/40' },
-  renewal: { icon: CalendarClock, label: GROUP_LABEL.renewal, hint: 'Renews within 90 days or overdue', tile: 'text-warn', row: 'bg-warn-soft/40' },
-  health: { icon: HeartPulse, label: GROUP_LABEL.health, hint: 'Health under 40', tile: 'text-bad', row: 'bg-bad-soft/40' },
+  renewal: { icon: CalendarClock, label: titleCase(GROUP_LABEL.renewal), hint: 'Renews within 90 days or overdue', tile: 'text-warn', row: 'bg-warn-soft/40' },
+  health: { icon: HeartPulse, label: titleCase(GROUP_LABEL.health), hint: 'Health under 40', tile: 'text-bad', row: 'bg-bad-soft/40' },
   rest: { icon: LayoutList, label: '', hint: '', tile: 'text-muted-foreground', row: 'bg-surface-2/60' },
 } as const
 function GroupRow({ group, count, first, restLabel }: { group: keyof typeof GROUP_LOOK; count: number; first: boolean; restLabel: string }) {
   const g = GROUP_LOOK[group], I = g.icon
-  const label = group === 'rest' ? `Other ${restLabel === 'All accounts' ? 'accounts' : restLabel.toLowerCase()}` : g.label
+  const label = titleCase(group === 'rest' ? `Other ${restLabel === 'All accounts' ? 'accounts' : restLabel.toLowerCase()}` : g.label)
   return (
     <TableRow className={cn('hover:bg-transparent', g.row, !first && 'border-t-8 border-t-card')}>
       <TableCell colSpan={99} className="h-10 py-1.5">
@@ -213,7 +214,7 @@ export function AccountsScreen() {
                           <TooltipContent>{v.band === 'bad' ? 'Health under 40' : v.band === 'warn' ? 'Health 40 to 69' : 'Health 70 or more'}</TooltipContent>
                         </Tooltip>
                       )}
-                      {SHORT_VIEW[v.id] ?? v.label}
+                      {titleCase(SHORT_VIEW[v.id] ?? v.label)}
                       <span className="tabular-nums text-muted-foreground">{status === 'loading' ? '–' : counts[v.id]}</span>
                     </ToggleGroupItem>
                   ))}
@@ -221,7 +222,7 @@ export function AccountsScreen() {
                 {moreView && (
                   <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-muted pl-2.5 pr-0.5 text-sm">
                     {moreView.band && <span className={cn('size-1.5 rounded-full', bandBg[moreView.band])} aria-hidden="true" />}
-                    {moreView.label}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span>
+                    {titleCase(moreView.label)}<span className="tabular-nums text-muted-foreground">{counts[moreView.id]}</span>
                     <Button variant="ghost" size="icon-xs" aria-label={`Clear ${moreView.label}`} onClick={() => setView('needs')}><X /></Button>
                   </span>
                 )}

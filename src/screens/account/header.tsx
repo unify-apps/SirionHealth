@@ -1,8 +1,10 @@
 /* Account header: page title row, then one verdict card. Top: the score, what it means and the next step.
    Middle: area scores (colour only) and the renewal. Footer: the few metrics a CSM quotes. Derivation lives in the sheets. */
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, CalendarClock, DollarSign, Gauge, Layers, RefreshCw, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react'
+import { ArrowRight, CalendarClock, ListChecks, DollarSign, Gauge, Layers, RefreshCw, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
+import { TODAY } from '@/data/legacy'
 import { fmtMonth } from '@/lib/dates'
 import { useRange, type Range } from '@/lib/range'
 import { PageHeader } from '@/components/page'
@@ -197,12 +199,23 @@ function Verdict({ d, onHow }: { d: ReturnType<typeof buildVerdict>; onHow: () =
           How the score works
         </button>
       </div>
-      {d.next && (
-        <div className="rounded-lg bg-surface-2 p-4 md:w-80 md:shrink-0">
-          <p className="text-xs text-muted-foreground">Next step</p>
-          <p className="mt-1 text-sm font-medium leading-snug">{d.next}</p>
-        </div>
-      )}
+      {d.next && (() => {
+        // "Get a signed renewal commitment by Nov 26": the action, and its due date as its own line with days left
+        const m = / by ([A-Z][a-z]{2} \d{1,2})$/.exec(d.next)
+        const action = m ? d.next.slice(0, m.index) : d.next
+        const due = m ? new Date(`${m[1]} ${TODAY.getFullYear()}`) : null
+        const left = due ? Math.round((+due - +TODAY) / 864e5) : null
+        return (
+          <div className="flex items-start gap-3 rounded-lg border border-hairline p-4 md:w-80 md:shrink-0">
+            <ListChecks className="mt-0.5 size-4 shrink-0 text-signal" aria-hidden="true" />
+            <div className="grid min-w-0 gap-1">
+              <p className="text-xs text-muted-foreground">Next Step</p>
+              <p className="text-sm font-medium leading-snug">{action}</p>
+              {due && <p className={cn('text-xs tabular-nums', left != null && left <= 7 ? 'text-bad' : 'text-muted-foreground')}>Due {m![1]}{left != null && ` · ${left < 0 ? `${-left} days late` : left === 0 ? 'today' : `in ${left} days`}`}</p>}
+            </div>
+          </div>
+        )
+      })()}
     </section>
   )
 }
@@ -222,7 +235,7 @@ function AreasZone({ d, onArea }: { d: ReturnType<typeof buildVerdict>; onArea: 
                 <TooltipTrigger asChild>
                   <button type="button" onClick={() => onArea(a.k)} aria-label={`${AREA_NAME[a.k]} ${a.v}, ${BAND_LABEL[b]}. ${tip}. Open inputs`}
                     className={cn('flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent/60', focusRing)}>
-                    <span className="truncate text-xs text-muted-foreground">{AREA_SHORT[a.k]}</span>
+                    <span className="truncate text-xs text-muted-foreground">{tc(AREA_SHORT[a.k])}</span>
                     <span className="flex items-baseline gap-1.5 tabular-nums">
                       <span className={cn('text-xl font-medium tracking-[-0.02em]', bandText[b])}>{a.v}</span>
                       {a.d !== 0 && <span className="text-xs text-muted-foreground">{a.d < 0 ? '−' : '+'}{Math.abs(a.d)}</span>}
@@ -277,7 +290,7 @@ function Metrics() {
           <Tooltip>
             <TooltipTrigger asChild>
               <span tabIndex={0} className={cn('flex items-center gap-1.5 self-start rounded-sm text-xs text-muted-foreground', focusRing)}>
-                <k.icon className="size-4 shrink-0" aria-hidden="true" />{k.label}
+                <k.icon className="size-4 shrink-0" aria-hidden="true" />{tc(k.label)}
               </span>
             </TooltipTrigger>
             <TooltipContent>{k.tip}</TooltipContent>
@@ -299,7 +312,7 @@ function ZoneLabel({ id, icon: Icon, children, right }: { id: string; icon: Luci
   return (
     <div className="flex h-5 items-center gap-1.5 text-xs text-muted-foreground">
       <Icon className="size-4 shrink-0" aria-hidden="true" />
-      <h2 id={id} className="text-xs font-normal tracking-normal">{children}</h2>
+      <h2 id={id} className="text-xs font-normal tracking-normal">{tc(children)}</h2>
       {right && <span className="ml-auto">{right}</span>}
     </div>
   )

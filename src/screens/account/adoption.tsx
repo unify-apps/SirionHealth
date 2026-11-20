@@ -7,6 +7,7 @@ import { BarList } from '@/components/charts'
 import { Empty, Tip } from '@/components/page'
 import { bandOf, bandText } from '@/components/health'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
 import { TrendChart } from './health/charts'
 import { LoadError, useLoad } from './health/load'
 import { loadAdoption, type StatRow } from './adoption/model'
@@ -61,7 +62,7 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
     <Card className="gap-0 py-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hairline px-5 py-4">
         <I className="size-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-base font-medium">{title}</h2>
+        <h2 className="text-base font-medium">{tc(title)}</h2>
         {score != null && <>
           <span className={cn('text-xl font-medium tabular-nums', bandText[bandOf(score)])}>{score}</span>
           <span className="text-xs text-muted-foreground">
@@ -75,7 +76,7 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
         className="grid grid-cols-2 gap-y-1 border-b border-hairline py-1 sm:grid-cols-3 xl:grid-cols-[repeat(var(--n),minmax(0,1fr))] xl:py-0">
         {stats.map(s => (
           <div key={s.label} className="grid min-w-0 content-start gap-0.5 px-5 py-3 xl:py-4 xl:[&:not(:first-child)]:border-l xl:[&:not(:first-child)]:border-hairline">
-            <dt className="truncate text-xs text-muted-foreground" title={s.label}>{s.label}</dt>
+            <dt className="truncate text-xs text-muted-foreground" title={s.label}>{tc(s.label)}</dt>
             <dd className={cn('text-xl font-normal tabular-nums tracking-[-0.02em]', TONE[s.label] === 'good' && 'text-good', TONE[s.label] === 'bad' && 'text-bad')}>{s.value}</dd>
             {s.hint && <Tip tip={s.hint}><dd tabIndex={0} className="truncate rounded-sm text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{s.hint}</dd></Tip>}
           </div>
@@ -83,7 +84,7 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
       </dl>
       <div className={cn('grid divide-y divide-hairline', side && 'lg:grid-cols-2 lg:divide-x lg:divide-y-0')}>
         <div className="min-w-0 p-5">
-          <p className="mb-3 flex items-center gap-1.5 text-xs font-medium"><HeartPulse className="size-3.5 text-muted-foreground" aria-hidden="true" />Score over time</p>
+          <p className="mb-3 flex items-center gap-1.5 text-xs font-medium"><HeartPulse className="size-3.5 text-muted-foreground" aria-hidden="true" />Score Over Time</p>
           {months.length ? <TrendChart months={months} area={area} name={title} className={side ? undefined : 'h-44'} /> : <Empty title="No scored months" />}
         </div>
         {side && <div className="min-w-0 p-5">{side}</div>}
@@ -95,7 +96,7 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
 function Breakdown({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
     <div className="grid min-w-0 gap-3">
-      <p className="flex items-baseline gap-2 text-xs"><span className="font-medium text-foreground">{label}</span>{sub && <span className="text-muted-foreground">{sub}</span>}</p>
+      <p className="flex items-baseline gap-2 text-xs"><span className="font-medium text-foreground">{tc(label)}</span>{sub && <span className="text-muted-foreground">{sub}</span>}</p>
       {children}
     </div>
   )

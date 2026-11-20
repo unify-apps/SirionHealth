@@ -1,6 +1,7 @@
 import { isValidElement, useState } from 'react'
 import { ChevronLeft, ArrowLeft, ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -81,7 +82,7 @@ export function BlockHeader({ icon: Icon, title, count, sub, actions, className 
     <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-3', className)}>
       <div className="flex min-w-0 items-center gap-2">
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-        <h3 className="truncate text-sm font-medium text-foreground">{title}</h3>
+        <h3 className="truncate text-sm font-medium text-foreground">{tc(title)}</h3>
         {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
         {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
       </div>
@@ -95,7 +96,7 @@ export function SectionTitle({ title, sub, actions, className }: {
 }) {
   return (
     <div className={cn('mb-3 mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
-      <h2 className="text-base font-medium">{title}</h2>
+      <h2 className="text-base font-medium">{tc(title)}</h2>
       {sub && <span className="text-sm text-muted-foreground">{sub}</span>}
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </div>
@@ -159,7 +160,7 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, cla
 }) {
   return (
     <Card className={cn('h-full gap-1.5 p-5', className)}>
-      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{label}</span></div>
+      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground"><IconSlot icon={icon} /><span className="truncate">{tc(label)}</span></div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
           <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
@@ -402,7 +403,7 @@ export function SheetBody({ facts, children, className }: { facts?: React.ReactN
 export function Fact({ label, children, wide }: { label: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className={cn('grid min-w-0 content-start gap-1', wide && 'col-span-2')}>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{tc(label)}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   )

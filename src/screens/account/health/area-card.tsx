@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { bandText, bandOf } from '@/components/health'
 import { cn } from '@/lib/utils'
+import { tc } from '@/lib/text'
 import { Spark } from './charts'
 import { AREA_ICON } from './parts'
 import type { Area } from './model'
@@ -19,7 +20,7 @@ export function AreaCard({ area, prevLabel, labels, onOpen }: { area: Area; prev
           {/* the whole card is the hit area; the title button carries the accessible name */}
           <button type="button" onClick={onOpen} className="text-left outline-none after:absolute after:inset-0 after:rounded-xl"
             aria-label={`${area.name}: ${area.score}, ${area.band.label}. See its ${all} ${all === 1 ? 'input' : 'inputs'}`}>
-            {area.name}
+            {tc(area.name)}
           </button>
         </h3>
         <ChevronRight className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

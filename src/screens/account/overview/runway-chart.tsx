@@ -230,7 +230,7 @@ function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | nu
       {event && (
         <>
           <RecordSheetHeader eyebrow="Runway event" title={<Glossed text={event.text} focusable={false} />}
-            meta={<span className="tabular-nums">{fmtDY(event.date)} · {EVENT_LABEL[event.kind]} · {sourceLabel(event.source)}{event.ai ? ', written by AI' : ''}</span>} />
+            meta={<span className="tabular-nums">{fmtDY(event.date)} · {EVENT_LABEL[event.kind]} · {sourceLabel(event.source)}</span>} />
           <RecordSheetBody>
             <div className="flex flex-col gap-6 p-6">
               {event.kind === 'flag' && (
