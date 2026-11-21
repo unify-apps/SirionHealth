@@ -20,7 +20,14 @@ export function useLoad<T>(build: () => T, delay = 260, what = 'this section'): 
   useEffect(() => {
     let live = true
     setState({ status: 'loading' })
+    const force = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('widgets') : null
+    if (force === 'loading') return
+    const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const t = setTimeout(() => {
+      if (force === 'error') {
+        if (live) setState({ status: 'error', error: new Error('Forced by ?widgets=error') })
+        return
+      }
       try { const data = build(); if (live) setState({ status: 'ready', data }) }
       catch (error) {
         console.error(error)
@@ -29,7 +36,7 @@ export function useLoad<T>(build: () => T, delay = 260, what = 'this section'): 
         // a retry that fails again says so, with another way to retry
         if (run > 0) toast.error(`Couldn't load ${what}`, { description: 'The account data still didn\'t come through.', action: { label: 'Retry', onClick: () => setRun(n => n + 1) } })
       }
-    }, delay)
+    }, reduced ? 0 : delay)
     return () => { live = false; clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run])

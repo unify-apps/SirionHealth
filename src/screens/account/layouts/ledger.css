@@ -71,9 +71,9 @@ html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .grid:has(> .group[data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
 /* Intelligence news: two ruled columns (the cards sit in <li>s, so the rule above misses them), the Summary's type
    sizes (15px title and body, 13px meta), and a hover wash that bleeds past the column like .ledger-row. */
-html[data-layout="ledger"] [data-ledger-panel="intelligence"] ul.grid:has(> li > button[data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
-html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] button[data-slot="card"],
-html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] button[data-slot="card"]:hover {
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] ul.grid:has(> li > [data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
+html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] [data-slot="card"],
+html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] [data-slot="card"]:hover {
   position: relative; isolation: isolate; padding-block: 1.125rem 1.25rem; background: transparent !important;
 }
 html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"]::before {

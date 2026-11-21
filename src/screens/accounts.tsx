@@ -38,16 +38,17 @@ const BAND_VIEW = { bad: 'risk', warn: 'watch', good: 'healthy' } as const
 
 /** Fixture "fetch". `?accounts=loading|error|empty` in the URL forces a state for review. */
 function useAccounts() {
-  const force = new URLSearchParams(location.search).get('accounts')
+  const force = new URLSearchParams(location.search).get('accounts') ?? new URLSearchParams(location.search).get('widgets')
   const [status, setStatus] = useState<Status>('loading')
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (force === 'loading') return
     setStatus('loading')
+    const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const t = setTimeout(() => {
       setStatus(force === 'error' ? 'error' : 'ready')
       if (force === 'error' && attempt > 0) toast.error("Couldn't load your accounts", { action: { label: 'Retry', onClick: () => setAttempt(a => a + 1) } })
-    }, 350)
+    }, reduced ? 0 : 350)
     return () => clearTimeout(t)
   }, [attempt, force])
   const data = force === 'empty' ? [] : ALL_ROWS

@@ -53,7 +53,7 @@ export function StagesChart({ status, onRetry }: { status: WidgetStatus; onRetry
     <Card data-block className="gap-0 py-0">
       <BlockHeader icon={ChartBar} title={<><Term>CARR</Term> by stage</>} />
       <div className="px-5 py-4">
-        {status === 'loading' && <><LoadingLabel what="CARR by stage" /><SplitSkeleton /></>}
+        {status === 'loading' && <><LoadingLabel what="CARR by stage" /><SplitSkeleton layout="columns" /></>}
         {status === 'error' && <WidgetError title="Stage data didn't load" sub="The stage chart timed out. Other sections are up to date." onRetry={onRetry} />}
         {status === 'ready' && !S.book.carr && <EmptyState title="No CARR by stage" sub={`No account in ${S.name} carries CARR yet.`} />}
         {status === 'ready' && S.book.carr > 0 && (

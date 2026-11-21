@@ -203,10 +203,13 @@ export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n
 /* ---------- loading skeletons matching each widget's shape ---------- */
 export function TilesSkeleton() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+    <div data-kpi-strip className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="grid gap-2 rounded-xl border border-hairline bg-card p-5">
-          <Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-1.5 w-full" /><Skeleton className="h-3 w-32" />
+        <div key={i} data-slot="card" className="grid gap-2 rounded-xl bg-card px-5 py-4 shadow-(--shadow-card)">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-1.5 w-full" />
+          <Skeleton className="h-3 w-32" />
         </div>
       ))}
     </div>
@@ -214,5 +217,19 @@ export function TilesSkeleton() {
 }
 
 export function TableSkeleton() {
-  return <PageTableSkeleton lead={false} columns={[{ w: 'w-40' }, { w: 'w-20' }, { w: 'w-16' }, { w: 'w-16', right: true }, { w: 'w-48' }]} />
+  return (
+    <PageTableSkeleton
+      lead={false}
+      className="min-w-[960px] table-fixed"
+      columns={[
+        { w: 'w-40' },
+        { w: 'w-20' },
+        { w: 'w-12' },
+        { w: 'w-28' },
+        { w: 'w-16' },
+        { w: 'w-12', right: true },
+        { w: 'w-48' },
+      ]}
+    />
+  )
 }

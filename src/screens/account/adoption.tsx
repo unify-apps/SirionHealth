@@ -34,7 +34,22 @@ export function AdoptionTab() {
   const load = useLoad(loadAdoption, undefined, 'adoption and support')
   if (load.status === 'loading') return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading adoption and support">
-      {[0, 1].map(i => <Card key={i} className="gap-4 p-5"><Skeleton className="h-5 w-40" /><div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-40" /><Skeleton className="h-40" /></div></Card>)}
+      {[false, true].map((withSide, i) => (
+        <Card key={i} data-block className="gap-0 py-0">
+          <div className="flex items-center gap-3 px-5 pt-5 pb-3"><Skeleton className="h-5 w-44" /><Skeleton className="h-5 w-10" /></div>
+          <div className="grid grid-cols-2 border-b border-hairline sm:grid-cols-3 xl:grid-cols-4">
+            {[0, 1, 2, 3].map(c => (
+              <div key={c} className="grid gap-1.5 px-5 py-3 xl:py-4 xl:[&:not(:first-child)]:border-l xl:[&:not(:first-child)]:border-hairline">
+                <Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-16" /><Skeleton className="h-3 w-32" />
+              </div>
+            ))}
+          </div>
+          <div className={cn('grid divide-y divide-hairline', withSide && 'lg:grid-cols-2 lg:divide-x lg:divide-y-0')}>
+            <div className="grid gap-3 p-5"><Skeleton className="h-3.5 w-28" /><Skeleton className="h-44 w-full" /></div>
+            {withSide && <div className="grid gap-3 p-5"><Skeleton className="h-3.5 w-32" /><Skeleton className="h-44 w-full" /></div>}
+          </div>
+        </Card>
+      ))}
     </div>
   )
   if (load.status === 'error') return <LoadError what="adoption and support" error={load.error} retry={load.retry} />

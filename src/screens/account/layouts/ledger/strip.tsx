@@ -2,11 +2,13 @@
    leads, then what it is about). The key figures are context and sit lower on the page (summary.tsx). */
 import { cn } from '@/lib/utils'
 import { TODAY } from '@/data/legacy'
+import { useRange } from '@/lib/range'
 import { openSheet } from '@/lib/route'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BAND_LABEL, bandBg, bandOf, bandText } from '@/components/health'
 import { buildVerdict, useCountUp } from '../../header'
-import { showTab, Term } from '../../overview/bits'
+import { showTab, Term, useWidget, WidgetBody } from '../../overview/bits'
 import { fmtDY, kpis, renewal, score } from '../../facts'
 import { focusRing } from './bits'
 
@@ -23,46 +25,81 @@ function splitNext(next: string) {
 /** The verdict's first sentence restates the renewal, which the renewal group already says; keep what drove the score. */
 const drove = (why: string) => why.split(/(?<=\.)\s/).slice(1).join(' ') || why
 
-export function VerdictStrip({ d }: { d: Verdict }) {
+export function VerdictStrip({ d: _d }: { d?: Verdict }) {
+  const range = useRange()
+  const w = useWidget(() => buildVerdict(range), [range.id])
+  return (
+    <section aria-labelledby="h-verdict" className="@container pt-9">
+      <WidgetBody w={w} what="the health verdict" skeleton={<VerdictStripSkeleton />}>
+        {d => <VerdictStripBody d={d} />}
+      </WidgetBody>
+    </section>
+  )
+}
+
+function VerdictStripSkeleton() {
+  return (
+    <div className="grid gap-x-16 gap-y-10 @4xl:grid-cols-[minmax(0,1fr)_19rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]" aria-hidden="true">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-9">
+        <div className="flex flex-col items-start gap-4">
+          <Skeleton className="h-[75px] w-24" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="grid min-w-0 content-start gap-3">
+          <Skeleton className="h-10 w-80 max-w-full" />
+          <Skeleton className="h-4 w-full max-w-[48ch]" />
+          <Skeleton className="h-4 w-4/5 max-w-[40ch]" />
+        </div>
+      </div>
+      <div className="grid min-w-0 content-start gap-2.5 self-start">
+        <Skeleton className="h-3.5 w-16" />
+        <Skeleton className="h-6 w-full max-w-64" />
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="mt-2 h-4 w-48" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </div>
+  )
+}
+
+function VerdictStripBody({ d }: { d: Verdict }) {
   const b = bandOf(score.final)
   const n = useCountUp(score.final)
   return (
-    <section aria-labelledby="h-verdict" className="@container pt-9">
-      <div className="grid gap-x-16 gap-y-10 @4xl:grid-cols-[minmax(0,1fr)_19rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid gap-x-16 gap-y-10 @4xl:grid-cols-[minmax(0,1fr)_19rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]">
 
-        {/* 1. how is it: the score and the verdict */}
-        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-9">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" onClick={() => openSheet('how')} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how the score works`}
-                className={cn('group -m-1 flex flex-col items-start self-start rounded-md p-1 text-left', focusRing)}>
-                <span className="num inline-block min-w-[1.05em] text-[96px] leading-[0.78] font-light tracking-[-0.055em] tabular-nums" aria-hidden="true">{n}</span>
-                <span className="mt-4 flex items-center gap-1.5 text-[13px]">
-                  <span className={cn('size-2 rounded-full', bandBg[b])} aria-hidden="true" />
-                  <span className={cn('font-medium', bandText[b])}>{BAND_LABEL[b]}</span>
-                  <span className="text-muted-foreground">of 100</span>
-                </span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{score.cap ? `Weighted ${score.weighted}, held to ${score.final} by the renewal cap` : 'Weighted average of the six areas, no cap'}</TooltipContent>
-          </Tooltip>
+      {/* 1. how is it: the score and the verdict */}
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-9">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" onClick={() => openSheet('how')} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how the score works`}
+              className={cn('group -m-1 flex flex-col items-start self-start rounded-md p-1 text-left', focusRing)}>
+              <span className="num inline-block min-w-[1.05em] text-[96px] leading-[0.78] font-light tracking-[-0.055em] tabular-nums" aria-hidden="true">{n}</span>
+              <span className="mt-4 flex items-center gap-1.5 text-[13px]">
+                <span className={cn('size-2 rounded-full', bandBg[b])} aria-hidden="true" />
+                <span className={cn('font-medium', bandText[b])}>{BAND_LABEL[b]}</span>
+                <span className="text-muted-foreground">of 100</span>
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{score.cap ? `Weighted ${score.weighted}, held to ${score.final} by the renewal cap` : 'Weighted average of the six areas, no cap'}</TooltipContent>
+        </Tooltip>
 
-          <div className="min-w-0">
-            <h2 id="h-verdict" className="font-heading text-[42px] leading-[1.05] font-normal tracking-[-0.02em]">{d.title}</h2>
-            <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-pretty text-muted-foreground">
-              {drove(d.why)}{' '}
-              <button type="button" onClick={() => openSheet('how')}
-                className={cn('rounded-sm whitespace-nowrap text-foreground underline decoration-hairline underline-offset-4 transition-colors hover:decoration-current', focusRing)}>
-                How the score works
-              </button>
-            </p>
-          </div>
+        <div className="min-w-0">
+          <h2 id="h-verdict" className="font-heading text-[42px] leading-[1.05] font-normal tracking-[-0.02em]">{d.title}</h2>
+          <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-pretty text-muted-foreground">
+            {drove(d.why)}{' '}
+            <button type="button" onClick={() => openSheet('how')}
+              className={cn('rounded-sm whitespace-nowrap text-foreground underline decoration-hairline underline-offset-4 transition-colors hover:decoration-current', focusRing)}>
+              How the score works
+            </button>
+          </p>
         </div>
-
-        {/* 2. what to do, by when: the renewal, led by its next step */}
-        <RenewalGroup d={d} />
       </div>
-    </section>
+
+      {/* 2. what to do, by when: the renewal, led by its next step */}
+      <RenewalGroup d={d} />
+    </div>
   )
 }
 

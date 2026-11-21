@@ -129,12 +129,14 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
 
 function NewsSkeleton() {
   return (
-    <div className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading news">
+    <ul className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading news">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="grid gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)">
-          <Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-16" />
-        </div>
+        <li key={i}>
+          <div data-slot="card" className="group flex h-full w-full flex-col gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)">
+            <Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-16" />
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }

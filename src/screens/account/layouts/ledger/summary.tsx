@@ -30,12 +30,15 @@ const openArea = (k: AreaKey) => openSheet('area', k)
 
 export function LedgerSummary() {
   const range = useRange()
+  const w = useWidget(() => buildVerdict(range), [range.id])
   const d = useMemo(() => buildVerdict(range), [range])
   return (
     <div className="flex min-w-0 flex-col">
       {/* 3. why: what makes up the score (the six areas, then the cap), then its history */}
         <LedgerSection id="h-areas" title={`Why ${score.final}`} actions={<AreaScaleKey since={d.since} />}>
-          <AreaLedger d={d} range={range} />
+          <WidgetBody w={w} what="health areas" skeleton={rowsSkeleton(7)}>
+            {v => <AreaLedger d={v} range={range} />}
+          </WidgetBody>
           <div id="runway" data-ledger-runway className="mt-12 scroll-mt-40">
             <p className="text-[13px] text-muted-foreground">
               <span className="text-foreground">Score by month</span>
@@ -56,7 +59,21 @@ export function LedgerSummary() {
 
       <Cluster className="grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <OrderForms />
-        <LedgerSection id="h-figures" title="Key figures"><KeyFigures /></LedgerSection>
+        <LedgerSection id="h-figures" title="Key figures">
+          <WidgetBody w={w} what="key figures" skeleton={
+            <div className="grid grid-cols-2 gap-x-10 gap-y-6 py-1" aria-hidden="true">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="grid gap-1.5">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-3.5 w-32" />
+                </div>
+              ))}
+            </div>
+          }>
+            {() => <KeyFigures />}
+          </WidgetBody>
+        </LedgerSection>
       </Cluster>
 
       <Cluster><RecentActivity /></Cluster>

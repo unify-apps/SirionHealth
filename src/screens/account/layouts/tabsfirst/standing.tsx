@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BAND_LABEL, bandOf, bandText, type Band } from '@/components/health'
-import { AREA_KEYS, AREA_NAME, AREA_SHORT, fmtDY, kpis, renewal, score } from '../../facts'
+import { AREA_NAME, AREA_SHORT, fmtDY, kpis, renewal, score } from '../../facts'
 import { buildVerdict, useCountUp } from '../../header'
 import { showTab, useWidget, WidgetBody } from '../../overview/bits'
 import { RunwayChart } from '../../overview/runway-chart'
@@ -238,9 +238,64 @@ function Facts() {
 
 function StandingSkeleton() {
   return (
-    <div className="grid gap-6 p-6">
-      <div className="flex gap-6"><Skeleton className="h-16 w-28" /><div className="flex-1 space-y-2"><Skeleton className="h-6 w-48" /><Skeleton className="h-4 w-full max-w-lg" /></div><Skeleton className="hidden h-20 w-72 lg:block" /></div>
-      <div className="grid grid-cols-3 gap-4 xl:grid-cols-6">{AREA_KEYS.map(k => <Skeleton key={k} className="h-12" />)}</div>
+    <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_21rem]" aria-hidden="true">
+      <div data-slot="card" className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-card)">
+        <div className="grid flex-1 gap-x-8 gap-y-5 px-5 py-4 md:grid-cols-[7.5rem_minmax(0,1fr)]">
+          <div className="grid content-start gap-3">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-14 w-24" />
+            <Skeleton className="h-1 w-full" />
+          </div>
+          <div className="grid content-start gap-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3.5 w-24" />
+            </div>
+            <Skeleton className="h-7 w-72 max-w-full" />
+            <div className="grid gap-1.5">
+              <Skeleton className="h-4 w-full max-w-[60ch]" />
+              <Skeleton className="h-4 w-4/5 max-w-[48ch]" />
+            </div>
+          </div>
+          <div className="grid gap-2 self-end md:col-span-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-[190px] w-full rounded-lg" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 border-t border-hairline px-5 py-3">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-4 w-64 max-w-full" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      </div>
+
+      <div data-slot="card" className="flex flex-col overflow-hidden rounded-xl bg-card shadow-(--shadow-card)">
+        <div className="grid gap-1.5 border-b border-hairline px-5 py-4">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-3 w-36" />
+        </div>
+        <div className="px-5 pt-4 pb-1"><Skeleton className="h-3 w-16" /></div>
+        <div className="divide-y divide-hairline">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="flex items-center justify-between gap-4 px-5 py-2.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3.5 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-auto border-t border-hairline px-5 pt-4 pb-1"><Skeleton className="h-3 w-16" /></div>
+        <div className="grid grid-cols-2">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className={cn('grid gap-1.5 px-5 py-3', i % 2 === 1 && 'border-l border-hairline', i > 1 && 'border-t border-hairline')}>
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-5 w-14" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

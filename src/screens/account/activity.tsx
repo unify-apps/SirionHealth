@@ -74,7 +74,7 @@ function ActivitySkeleton({ view }: { view: View }) {
         <div className="flex gap-0.5 pt-4">{Array.from({ length: 20 }, (_, i) => <Skeleton key={i} className="h-7 flex-1 rounded-sm" />)}</div>
         <Skeleton className="h-3 w-1/2" />
       </Card>
-      <Card className="gap-0 px-4 py-4">
+      <Card data-block className="gap-0 px-4 py-4">
         {view === 'timeline' ? (
           <>
             <div className="flex gap-2 pb-3"><Skeleton className="h-7 w-72" /><Skeleton className="h-7 w-32" /></div>

@@ -162,7 +162,16 @@ export function Brief() {
       )} />
       <div className="px-5 py-2">
         <WidgetBody w={w} what="the account brief" isEmpty={d => d.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
-          skeleton={<div className="grid gap-5 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
+          skeleton={
+            <div className="divide-y divide-hairline" aria-hidden="true">
+              {[0, 1].map(i => (
+                <div key={i} className="grid gap-1.5 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4">
+                  <Skeleton className="h-4 w-20" />
+                  <div className="grid gap-1.5"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>
+                </div>
+              ))}
+            </div>
+          }>
           {d => (
             <dl className="divide-y divide-hairline">
               {/* the next step already leads the header, so the brief keeps the context around it */}

@@ -403,19 +403,27 @@ function StakeSkeleton() {
   return (
     <div className="grid gap-4" aria-busy="true" aria-label="Loading stakeholders">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card className="gap-3 px-5 py-4">
+        <Card data-block className="gap-3 px-5 py-4">
           <Skeleton className="h-4 w-32" />
           {[0, 1, 2].map(i => <div key={i} className="flex min-h-11 items-center gap-3"><Skeleton className="size-7 rounded-full" /><div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-1/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-3 w-20" /></div>)}
         </Card>
-        <Card className="gap-3 px-5 py-4">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-1.5 w-full" />
-          <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
+        <Card data-block className="gap-0 py-0">
+          <div className="grid gap-3 p-5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-1.5 w-full" />
+            <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
+          </div>
+          <div className="border-t border-hairline px-5 pt-4 pb-3">
+            <Skeleton className="mb-2 h-3.5 w-20" />
+            <div className="divide-y divide-hairline">
+              {[0, 1, 2, 3, 4].map(i => <div key={i} className="flex items-center justify-between py-2"><Skeleton className="h-3.5 w-28" /><Skeleton className="h-3 w-24" /></div>)}
+            </div>
+          </div>
         </Card>
       </div>
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap gap-2 px-4 py-3"><Skeleton className="h-7 w-72" /><Skeleton className="ml-auto h-8 w-[200px]" /><Skeleton className="h-8 w-40" /></div>
+      <Card data-block className="gap-0 py-0">
+        <div className="flex flex-wrap gap-2 p-4 sm:p-5"><Skeleton className="h-8 w-72" /><Skeleton className="ml-auto h-8 w-[200px]" /><Skeleton className="h-8 w-40" /></div>
         <TableSkeleton columns={[{ w: 'w-44' }, { w: 'w-24' }, { w: 'w-16' }, { w: 'w-16' }, { w: 'w-24' }, { w: 'w-6', right: true }]} />
       </Card>
     </div>
