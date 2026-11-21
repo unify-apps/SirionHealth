@@ -30,7 +30,7 @@ const CAUSE: Partial<Record<AreaKey, () => string>> = {
 }
 
 /** Initials for the page avatar: "Boston Scientific" -> BS, "Abellio" -> AB, "TransAmerica" -> TA. */
-const initials = (n: string) => { const w = n.split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : /[A-Z].*[A-Z]/.test(n.slice(1)) ? n[0] + n.slice(1).match(/[A-Z]/)![0] : n.slice(0, 2)).toUpperCase() }
+export const initials = (n: string) => { const w = n.split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : /[A-Z].*[A-Z]/.test(n.slice(1)) ? n[0] + n.slice(1).match(/[A-Z]/)![0] : n.slice(0, 2)).toUpperCase() }
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
@@ -48,7 +48,7 @@ function useDrawn() {
 }
 
 /** Counts 0 -> to over `ms` with an ease-out, in step with the ring's stroke. Final value at once under reduced motion. */
-function useCountUp(to: number, ms = 800) {
+export function useCountUp(to: number, ms = 800) {
   const [n, setN] = useState(() => (reducedMotion() ? to : 0))
   useEffect(() => {
     if (reducedMotion()) { setN(to); return }
@@ -65,10 +65,10 @@ function useCountUp(to: number, ms = 800) {
   return n
 }
 
-const BAND_STROKE: Record<Band, string> = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)', none: 'var(--muted-foreground)' }
+const BAND_STROKE: Record<Band, string> = { good: 'var(--good-fill)', warn: 'var(--warn-fill)', bad: 'var(--bad-fill)', none: 'var(--muted-foreground)' }
 
 /** The score ring: the stroke draws from 0 to the score and the number counts up with it (band colour fixed to the final score). */
-function ScoreRing({ value, size = 88, stroke = 6 }: { value: number; size?: number; stroke?: number }) {
+export function ScoreRing({ value, size = 88, stroke = 6 }: { value: number; size?: number; stroke?: number }) {
   const drawn = useDrawn()
   const n = useCountUp(value)
   const b = bandOf(value)
@@ -81,7 +81,7 @@ function ScoreRing({ value, size = 88, stroke = 6 }: { value: number; size?: num
           strokeDasharray={c} strokeDashoffset={c * (1 - (drawn ? Math.min(100, value) / 100 : 0))}
           className="transition-[stroke-dashoffset] duration-[800ms] ease-out motion-reduce:transition-none" />
       </svg>
-      <span className={cn('absolute text-[28px] font-medium tabular-nums tracking-[-0.02em]', bandText[b])} aria-hidden="true">{n}</span>
+      <span className={cn('num absolute text-[26px] font-normal', bandText[b])} aria-hidden="true">{n}</span>
     </span>
   )
 }
@@ -92,7 +92,7 @@ function baseline(r: Range): Month {
   return months[Math.max(0, i)]
 }
 
-function buildVerdict(r: Range) {
+export function buildVerdict(r: Range) {
   const base = baseline(r)
   const areas = AREA_KEYS.map(k => ({ k, v: latest.areas[k], d: latest.areas[k] - base.areas[k], drv: areaDriver(k) }))
   // the two biggest falls since last month drive the headline
@@ -318,16 +318,16 @@ function Metrics() {
   return (
     <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {items.map(k => (
-        <Card key={k.label} data-block className="gap-1 p-5">
+        <Card key={k.label} data-block className="gap-2 p-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span tabIndex={0} className={cn('flex items-center gap-1.5 self-start rounded-sm text-xs text-muted-foreground', focusRing)}>
-                <k.icon className="size-4 shrink-0" aria-hidden="true" />{tc(k.label)}
+              <span tabIndex={0} className={cn('flex items-center gap-1.5 self-start rounded-sm text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground', focusRing)}>
+                {tc(k.label)}
               </span>
             </TooltipTrigger>
             <TooltipContent>{k.tip}</TooltipContent>
           </Tooltip>
-          <span className={cn('mt-1 text-2xl font-normal tabular-nums tracking-[-0.02em]', k.tone === 'good' && 'text-good', k.tone === 'bad' && 'text-bad')}>{k.value}</span>
+          <span className={cn('num text-[26px] leading-none font-light', k.tone === 'good' && 'text-good', k.tone === 'bad' && 'text-bad')}>{k.value}</span>
           <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
             {k.trend != null && k.trend !== 0 && (k.trend > 0
               ? <TrendingUp className={cn('size-3.5 shrink-0', k.tone === 'good' ? 'text-good' : 'text-muted-foreground')} aria-hidden="true" />

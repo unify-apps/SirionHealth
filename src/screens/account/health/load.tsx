@@ -9,12 +9,19 @@ export type Load<T> =
 
 /** Reads a tab's data after a short beat, the way the legacy view showed skeletons on entry.
     A throw in the reader becomes an error state with a retry. */
-export function useLoad<T>(read: () => T, delay = 450, what = 'this section'): Load<T> {
+export function useLoad<T>(read: () => T, delay = 260, what = 'this section'): Load<T> {
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<{ attempt: number; data?: T; error?: string } | null>(null)
   const retry = useCallback(() => { setState(null); setAttempt(a => a + 1) }, [])
   useEffect(() => {
+    const force = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('widgets') : null
+    if (force === 'loading') return
+    const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const t = setTimeout(() => {
+      if (force === 'error') {
+        setState({ attempt, error: 'Forced by ?widgets=error' })
+        return
+      }
       try { setState({ attempt, data: read() }) }
       catch (e) {
         const error = e instanceof Error ? e.message : String(e)
@@ -22,7 +29,7 @@ export function useLoad<T>(read: () => T, delay = 450, what = 'this section'): L
         // a retry that fails again says so, with another way to retry
         if (attempt > 0) toast.error(`Couldn't load ${what}`, { description: error, action: { label: 'Retry', onClick: () => { setState(null); setAttempt(a => a + 1) } } })
       }
-    }, delay)
+    }, reduced ? 0 : delay)
     return () => clearTimeout(t)
     // read is a stable module function; attempt drives retries (deps intentionally exclude it)
   }, [attempt, delay])

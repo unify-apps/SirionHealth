@@ -1,7 +1,7 @@
 /* Summary tab: account brief, strengths and risks, renewal runway, recent activity, order forms.
    Ported from renderSummary, openRef, renderCLM, renderRunway and the #s-summary markup. */
 import {
-  Activity, CalendarClock, CalendarDays, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
+  Activity, CalendarDays, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,6 @@ import {
 import { AREA_ICON, EvidenceRow, Glossed, ListRow, NavLink, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
 import { ACT_STATUS, ActivitySheet } from './overview/activity-sheet'
 import { ATTN, BRIEF, CLM, REF_ORDER, SUM_REFS, WELL, type ListItem } from './overview/content'
-import { RunwayChart } from './overview/runway-chart'
 
 // the area sheet lives in the URL and the account header renders it (overview/how-sheet.tsx)
 const setArea = (k: AreaKey) => openSheet('area', k)
@@ -43,17 +42,9 @@ export function OverviewTab() {
         </div>
       )}
 
-      <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-40">
-        <Card data-block className="gap-0 py-0">
-          <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
-            />
-          <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
-        </Card>
-      </section>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {/* order forms now sit in the renewal details card at the top (Studio), so activity takes the full width */}
+      <div className="mt-8 grid gap-4">
         <RecentActivity />
-        <OrderForms onArea={setArea} />
       </div>
 
     </div>
@@ -61,7 +52,7 @@ export function OverviewTab() {
 }
 
 /* ---------- citations: every source goes after its sentence's full stop ---------- */
-function Cited({ text }: { text: string }) {
+export function Cited({ text }: { text: string }) {
   const sentences = text.split(/(?<=[.!?])\s+/)
   return (
     <>
@@ -152,7 +143,7 @@ async function copyBrief(d: [string, string][]) {
   }
 }
 
-function Brief() {
+export function Brief() {
   const w = useWidget(() => BRIEF)
   const ready = w.status === 'ready' && !!w.data?.length
   return (
@@ -171,7 +162,16 @@ function Brief() {
       )} />
       <div className="px-5 py-2">
         <WidgetBody w={w} what="the account brief" isEmpty={d => d.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
-          skeleton={<div className="grid gap-5 md:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-full" /></div>)}</div>}>
+          skeleton={
+            <div className="divide-y divide-hairline" aria-hidden="true">
+              {[0, 1].map(i => (
+                <div key={i} className="grid gap-1.5 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4">
+                  <Skeleton className="h-4 w-20" />
+                  <div className="grid gap-1.5"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>
+                </div>
+              ))}
+            </div>
+          }>
           {d => (
             <dl className="divide-y divide-hairline">
               {/* the next step already leads the header, so the brief keeps the context around it */}
@@ -197,7 +197,7 @@ const listSkeleton = (n: number) => (
 )
 
 /* ---------- going well / needs attention ---------- */
-function ListCard({ title, items, tone, onArea }: {
+export function ListCard({ title, items, tone, onArea }: {
   title: string; items: ListItem[]; tone: 'good' | 'bad'; onArea: (k: AreaKey) => void
 }) {
   const w = useWidget(() => items)
@@ -228,7 +228,7 @@ const CH_ICON: Record<Channel, LucideIcon> = {
   teams: MessageSquare, call: Phone, note: StickyNote,
 }
 
-function RecentActivity() {
+export function RecentActivity() {
   const range = useRange()
   const w = useWidget(() => {
     const from = rangeStart(range)
@@ -271,7 +271,7 @@ const CLM_ICON = [FileText, FileSignature, FileX]
 // status wording by tone: a bad commitment is "Unsigned", a good one "Signed"
 const CLM_STATUS = { good: 'Signed', bad: 'Unsigned', warn: 'Pending' } as const
 
-function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
+export function OrderForms({ onArea }: { onArea: (k: AreaKey) => void }) {
   const w = useWidget(() => CLM)
   return (
     <Card className="gap-0 py-0">

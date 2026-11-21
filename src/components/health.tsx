@@ -16,13 +16,13 @@ export const bandText: Record<Band, string> = {
   good: 'text-good', warn: 'text-warn', bad: 'text-bad', none: 'text-muted-foreground',
 }
 export const bandBg: Record<Band, string> = {
-  good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad', none: 'bg-muted-foreground/40',
+  good: 'bg-good-fill', warn: 'bg-warn-fill', bad: 'bg-bad-fill', none: 'bg-muted-foreground/40',
 }
 export const bandSoft: Record<Band, string> = {
   good: 'bg-good-soft', warn: 'bg-warn-soft', bad: 'bg-bad-soft', none: 'bg-muted',
 }
 const bandStroke: Record<Band, string> = {
-  good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)', none: 'var(--muted-foreground)',
+  good: 'var(--good-fill)', warn: 'var(--warn-fill)', bad: 'var(--bad-fill)', none: 'var(--muted-foreground)',
 }
 
 /** Circular score. size in px. */

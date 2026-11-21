@@ -54,7 +54,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                 <span className="flex items-center gap-2">
                   <span className="flex-1 truncate text-sm font-medium">{t.title}</span>
                   <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground" title={`Relevance to the renewal: ${r} of 100`}>
-                    <span className={cn('size-1.5 rounded-full', r >= 70 ? 'bg-bad' : r >= 50 ? 'bg-warn' : 'bg-muted-foreground/50')} aria-hidden="true" />{relLabel(r)} relevance
+                    <span className={cn('size-1.5 rounded-full', r >= 70 ? 'bg-bad-fill' : r >= 50 ? 'bg-warn-fill' : 'bg-muted-foreground/50')} aria-hidden="true" />{relLabel(r)} relevance
                   </span>
                 </span>
                 {t.why && <span className="text-sm leading-relaxed text-pretty">{t.why}</span>}
@@ -129,12 +129,14 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
 
 function NewsSkeleton() {
   return (
-    <div className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading news">
+    <ul className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading news">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="grid gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)">
-          <Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-16" />
-        </div>
+        <li key={i}>
+          <div data-slot="card" className="group flex h-full w-full flex-col gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)">
+            <Skeleton className="h-4 w-1/2" /><Skeleton className="h-4 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-16" />
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }

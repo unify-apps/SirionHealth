@@ -280,7 +280,7 @@ export function SplitBar({ parts, label, unit, format = fmtNum, colors, ordinal,
 
   return (
     <div className={className}>
-      <div className="flex h-3 gap-0.5 overflow-hidden rounded-full"
+      <div className="flex h-3 gap-0.5 overflow-hidden rounded-[2px]"
         role={onSelect ? 'group' : 'list'} aria-label={label}>
         {parts.map((p, i) => {
           if (p.value <= 0) return null
@@ -338,8 +338,8 @@ export function Meter({ value, max = 100, fill = 'bg-chart-1', min = 0, tip, lab
 }) {
   const pct = value == null || !max ? 0 : Math.min(100, Math.max(min, (value / max) * 100))
   const bar = (
-    <span className={cn('block h-1 overflow-hidden rounded-full bg-chart-5', className)} aria-hidden="true">
-      {value != null && <span className={cn('block h-full rounded-full transition-[width,opacity] duration-700 ease-out group-hover/meter:opacity-80 motion-reduce:transition-none', fill)}
+    <span className={cn('block h-1 overflow-hidden rounded-[1px] bg-chart-5', className)} aria-hidden="true">
+      {value != null && <span className={cn('block h-full transition-[width,opacity] duration-700 ease-out group-hover/meter:opacity-80 motion-reduce:transition-none', fill)}
         style={{ width: `${pct}%`, transitionDelay: delay ? `${delay}ms, 0ms` : undefined }} />}
     </span>
   )

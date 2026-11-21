@@ -16,7 +16,7 @@ import { useScope } from './scope'
 type LiveBand = Exclude<Band, 'none'>
 
 // this split IS health, so its segments take the health colours
-const BAND_COLOR: Record<LiveBand, string> = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' }
+const BAND_COLOR: Record<LiveBand, string> = { good: 'var(--good-fill)', warn: 'var(--warn-fill)', bad: 'var(--bad-fill)' }
 
 export function BandSplit({ status, onRetry }: { status: WidgetStatus; onRetry: () => void }) {
   // the open band lives in the URL (#portfolio?sheet=band:warn): reload restores it, browser Back closes it
@@ -29,7 +29,7 @@ export function BandSplit({ status, onRetry }: { status: WidgetStatus; onRetry: 
   const [hot, setHot] = useState<LiveBand | null>(null)
 
   return (
-    <Card className="gap-0 py-0">
+    <Card data-block className="gap-0 py-0">
       <BlockHeader icon={HeartPulse} title={S.book.carr ? `Where the ${money1(S.book.arr)} sits by health` : 'Health split'} />
       <div className="px-5 py-4">
         {status === 'loading' && <><LoadingLabel what="health split" /><SplitSkeleton /></>}

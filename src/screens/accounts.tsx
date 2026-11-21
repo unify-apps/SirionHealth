@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, CalendarClock, Columns3, Copy, ExternalLink, HeartPulse, LayoutList, Pin, PinOff, RotateCcw, Search, X } from 'lucide-react'
+import { AlertTriangle, Ban, CalendarClock, CircleCheck, Columns3, Copy, ExternalLink, HeartPulse, RotateCcw, TrendingDown, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { money, TODAY } from '@/data/legacy'
 import { fmtFull } from '@/lib/dates'
@@ -8,20 +8,20 @@ import { cn } from '@/lib/utils'
 import { titleCase } from '@/lib/text'
 import { openAccount } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
-import { Empty, Meter, PageHeader, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
+import { Empty, Meter, PageHeader, SEGMENTED, SortHead, Stat, stickyCol } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  DEFAULT_HIDDEN, filterCount, FIRST_DIR, GROUP_LABEL, NO_FILTERS, OPTIONAL_COLS, OWNER, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
-  type ColId, type FilterState, type Row, type SortKey, type ViewId,
+  DEFAULT_HIDDEN, filterCount, FIRST_DIR, NO_FILTERS, OPTIONAL_COLS, passes, reason, rows as ALL_ROWS, sortRows, SORT_NAME, summary, VIEWS,
+  type Category, type ColId, type FilterState, type Row, type SortKey, type ViewId,
 } from './accounts/model'
 import {
   AccountFilter, BandSplit, FilterChips, InsightsPopover, NrrCell, ReasonCell, RunwayCell, TableSkeleton, TilesSkeleton,
@@ -38,16 +38,17 @@ const BAND_VIEW = { bad: 'risk', warn: 'watch', good: 'healthy' } as const
 
 /** Fixture "fetch". `?accounts=loading|error|empty` in the URL forces a state for review. */
 function useAccounts() {
-  const force = new URLSearchParams(location.search).get('accounts')
+  const force = new URLSearchParams(location.search).get('accounts') ?? new URLSearchParams(location.search).get('widgets')
   const [status, setStatus] = useState<Status>('loading')
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (force === 'loading') return
     setStatus('loading')
+    const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const t = setTimeout(() => {
       setStatus(force === 'error' ? 'error' : 'ready')
       if (force === 'error' && attempt > 0) toast.error("Couldn't load your accounts", { action: { label: 'Retry', onClick: () => setAttempt(a => a + 1) } })
-    }, 350)
+    }, reduced ? 0 : 350)
     return () => clearTimeout(t)
   }, [attempt, force])
   const data = force === 'empty' ? [] : ALL_ROWS
@@ -56,44 +57,17 @@ function useAccounts() {
 
 const today = fmtFull(TODAY)
 
-/** Group header: a tinted row with an icon tile, the group name, its count and what puts a row there. */
-const GROUP_LOOK = {
-  pinned: { icon: Pin, label: 'Pinned', hint: 'Kept at the top by you', tile: 'text-signal', row: 'bg-signal-soft/40' },
-  renewal: { icon: CalendarClock, label: titleCase(GROUP_LABEL.renewal), hint: 'Renews within 90 days or overdue', tile: 'text-warn', row: 'bg-warn-soft/40' },
-  health: { icon: HeartPulse, label: titleCase(GROUP_LABEL.health), hint: 'Health under 40', tile: 'text-bad', row: 'bg-bad-soft/40' },
-  rest: { icon: LayoutList, label: '', hint: '', tile: 'text-muted-foreground', row: 'bg-surface-2/60' },
-} as const
-function GroupRow({ group, count, first, restLabel }: { group: keyof typeof GROUP_LOOK; count: number; first: boolean; restLabel: string }) {
-  const g = GROUP_LOOK[group], I = g.icon
-  const label = titleCase(group === 'rest' ? `Other ${restLabel === 'All accounts' ? 'accounts' : restLabel.toLowerCase()}` : g.label)
-  return (
-    <TableRow className={cn('hover:bg-transparent', g.row, !first && 'border-t-8 border-t-card')}>
-      <TableCell colSpan={99} className="h-10 py-1.5">
-        <span className="flex items-center gap-2">
-          <I className={cn('size-4 shrink-0', g.tile)} aria-hidden="true" />
-          <span className="text-sm font-medium">{label}</span>
-          <span className="rounded-sm bg-card px-1.5 text-xs font-medium tabular-nums text-muted-foreground">{count}</span>
-          {g.hint && <span className="text-xs text-muted-foreground max-sm:hidden">· {g.hint}</span>}
-        </span>
-      </TableCell>
-    </TableRow>
-  )
+/** Category chip: neutral on purpose (green/amber/red mean health only); the icon carries the kind. */
+const CATEGORY_ICON: Record<Category, LucideIcon> = {
+  'Renewal risk': CalendarClock, 'Low health': HeartPulse, Contracting: TrendingDown, Expanding: TrendingUp, 'On track': CircleCheck, Churned: Ban,
 }
-
-/** Pinned accounts lead the list in every view. Remembered in this browser; TransAmerica starts pinned. */
-const PIN_KEY = 'sah-pins'
-function usePins() {
-  const [pins, setPins] = useState<Set<string>>(() => {
-    try { const v = localStorage.getItem(PIN_KEY); return new Set(v ? JSON.parse(v) : ['TransAmerica']) } catch { return new Set(['TransAmerica']) }
-  })
-  const toggle = (name: string) => {
-    const n = new Set(pins)
-    if (n.has(name)) n.delete(name); else n.add(name)
-    setPins(n)
-    try { localStorage.setItem(PIN_KEY, JSON.stringify([...n])) } catch {}
-    toast(n.has(name) ? `Pinned ${name}` : `Unpinned ${name}`)
-  }
-  return [pins, toggle] as const
+function CategoryChip({ c }: { c: Category }) {
+  const I = CATEGORY_ICON[c]
+  return (
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-muted px-2 text-xs whitespace-nowrap text-foreground">
+      <I className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />{c}
+    </span>
+  )
 }
 
 export function AccountsScreen() {
@@ -110,7 +84,6 @@ export function AccountsScreen() {
   const [pinned, setPinned] = useState(true)
   const [hidden, setHidden] = useState<Set<ColId>>(() => new Set(DEFAULT_HIDDEN))
   const filterBtn = useRef<HTMLButtonElement>(null)
-  const [pins, togglePin] = usePins()
 
   const priority = pinned && view === 'needs'
   const query = q.trim().toLowerCase()
@@ -120,9 +93,8 @@ export function AccountsScreen() {
     const f = data.filter(v.test)
       .filter(r => passes(r, filters))
       .filter(r => !query || `${r.name} ${r.ind} ${r.seg}`.toLowerCase().includes(query))
-    const sorted = sortRows(f, sortKey, sortDir, priority)
-    return [...sorted.filter(r => pins.has(r.name)), ...sorted.filter(r => !pins.has(r.name))] // pinned rows lead in every view
-  }, [data, view, filters, query, sortKey, sortDir, priority, pins])
+    return sortRows(f, sortKey, sortDir, priority)
+  }, [data, view, filters, query, sortKey, sortDir, priority])
 
   const sum = useMemo(() => summary(data), [data])
   const nFilters = filterCount(filters)
@@ -161,23 +133,28 @@ export function AccountsScreen() {
 
   const show = (c: ColId) => !hidden.has(c)
   const viewLabel = VIEWS.find(v => v.id === view)!.label
-  const sortHead = (k: SortKey, children: React.ReactNode, opts: { numeric?: boolean; sticky?: boolean; tip?: string } = {}) => (
-    <SortHead key={k} active={!priority && sortKey === k} dir={sortDir} onSort={() => sortBy(k)} numeric={opts.numeric} sticky={opts.sticky} title={opts.tip}>{children}</SortHead>
+  // the table is table-fixed: column widths (`w`) come from the header, not the rows shown, so switching views never
+  // shifts columns; "Why it's here" has no width and takes what is left
+  const sortHead = (k: SortKey, children: React.ReactNode, opts: { numeric?: boolean; sticky?: boolean; tip?: string; w?: string } = {}) => (
+    <SortHead key={k} active={!priority && sortKey === k} dir={sortDir} onSort={() => sortBy(k)} numeric={opts.numeric} sticky={opts.sticky} title={opts.tip} className={opts.w}>{children}</SortHead>
   )
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts" sub={`${OWNER}'s book · ${today} · ${data.length} accounts`}
-        actions={status === 'ready' && (
-          // the book's size sits opposite the title as one figure, so it reads at a glance instead of trailing the meta line
-          <div className="grid justify-items-end leading-tight">
-            <span className="text-xs text-muted-foreground">Total ARR</span>
-            <span className="text-2xl font-normal tabular-nums tracking-[-0.02em]">{money(sum.arr)}</span>
-          </div>
-        )} />
+      <PageHeader title="My accounts" sub={`Updated ${today}`} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
-        <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
+        <div data-kpi-strip className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* the book's size: the first tile, so the page header stays a title */}
+          {(() => {
+            // the book in the accent colour (not a health colour); the bar is the share of its ARR that needs you
+            const needs = VIEWS.find(v => v.id === 'needs')!, needArr = data.filter(needs.test).reduce((a, r) => a + r.carr, 0)
+            return (
+              <Stat label="Your book" value={<span className="text-signal">{money(sum.arr)}</span>} hint={`${data.length} accounts · total ARR`}
+                visual={<Meter value={needArr} max={sum.arr || 1} fill="bg-signal" label="Share of ARR that needs you"
+                  showValue={`${sum.arr ? Math.round((needArr / sum.arr) * 100) : 0}% needs you`} />} />
+            )
+          })()}
           <TileButton active={view === 'renew'} onClick={() => setView(v => (v === 'renew' ? 'needs' : 'renew'))} label="Show accounts renewing in 90 days">
             <Stat icon={CalendarClock} label="Renewing in 90 days" value={money(sum.renew.arr)} tone={sum.renew.overdue ? 'bad' : undefined}
               visual={<ShareMeter part={sum.renew.arr} of={sum.arr} />}
@@ -204,7 +181,7 @@ export function AccountsScreen() {
       )}
 
       {status === 'error' ? (
-        <Card className="min-w-0 gap-0 py-0">
+        <Card data-block className="min-w-0 gap-0 py-0">
           <div className="p-4 sm:p-5">
             <Empty title="Couldn't load your accounts" sub="The account list didn't respond. Your filters are kept; try again." />
             <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={retry}><RotateCcw />Try again</Button></div>
@@ -216,10 +193,10 @@ export function AccountsScreen() {
                 On phones the views scroll and search drops below. */}
             <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               <div className="order-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto max-sm:basis-full">
-                <ToggleGroup type="single" variant="outline" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
-                  onValueChange={v => v && setView(v as ViewId)}>
+                <ToggleGroup type="single" spacing={0} value={PRIMARY.includes(view) ? view : ''} aria-label="Saved views"
+                  onValueChange={v => v && setView(v as ViewId)} className={SEGMENTED.group}>
                   {VIEWS.filter(v => PRIMARY.includes(v.id)).map(v => (
-                    <ToggleGroupItem key={v.id} value={v.id} className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">
+                    <ToggleGroupItem key={v.id} value={v.id} className={SEGMENTED.item}>
                       {v.band && (
                         <Tooltip>
                           <TooltipTrigger asChild><span className={cn('size-1.5 rounded-full', bandBg[v.band])} aria-hidden="true" /></TooltipTrigger>
@@ -241,12 +218,7 @@ export function AccountsScreen() {
               </div>
 
               <div className="order-2 ml-auto flex shrink-0 items-center gap-2">
-                <InputGroup className="hidden h-8 w-[200px] transition-[width] duration-200 focus-within:w-64 sm:flex">
-                  <InputGroupAddon><Search /></InputGroupAddon>
-                  <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
-                    value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
-                  {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
-                </InputGroup>
+                <SearchBox value={q} onChange={setQ} placeholder="Search accounts" />
                 <AccountFilter value={filters} onChange={changeFilters} rows={data} buttonRef={filterBtn} />
                 <DropdownMenu>
                   <Tooltip>
@@ -276,12 +248,6 @@ export function AccountsScreen() {
                 {dirty && <Button variant="ghost" onClick={reset}><RotateCcw />Reset</Button>}
               </div>
 
-              {/* phones: search on its own row */}
-              <InputGroup className="order-3 h-8 w-full sm:hidden">
-                <InputGroupAddon><Search /></InputGroupAddon>
-                <InputGroupInput type="search" placeholder="Search accounts" aria-label="Search accounts" autoComplete="off"
-                  value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
-              </InputGroup>
             </div>
 
             {nFilters > 0 && (
@@ -291,7 +257,7 @@ export function AccountsScreen() {
               </div>
             )}
 
-            <Card className="min-w-0 gap-0 py-0">
+            <Card data-block className="min-w-0 gap-0 py-0">
             <div>
               {status === 'loading' ? <TableSkeleton /> : !data.length ? (
                 <div className="p-4 sm:p-5"><Empty title="No accounts in your book yet" sub="Accounts assigned to you will appear here with their health and renewal." /></div>
@@ -302,57 +268,38 @@ export function AccountsScreen() {
                   <div className="mt-3 flex justify-center"><Button variant="outline" size="sm" onClick={reset}><RotateCcw />Reset search and filters</Button></div>
                 </div>
               ) : (
-                <Table aria-label="Accounts" className="min-w-[760px] sm:[&_td:first-child]:pl-5 sm:[&_td:last-child]:pr-5 sm:[&_th:first-child]:pl-5 sm:[&_th:last-child]:pr-5">
+                <Table aria-label="Accounts" className="min-w-[960px] table-fixed">
                   <TableHeader>
                     <TableRow>
-                      {sortHead('name', 'Account', { sticky: true })}
-                      {sortHead('health', 'Health')}
-                      {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date' })}
-                      {sortHead('carr', 'ARR', { numeric: true, tip: 'Contracted annual recurring revenue (CARR)' })}
-                      {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover' })}
+                      {sortHead('name', 'Account', { sticky: true, w: 'w-[17rem]' })}
+                      <TableHead className="w-[9.5rem]">Category</TableHead>
+                      {sortHead('health', 'Health', { w: 'w-[6rem]' })}
+                      {sortHead('renew', 'Renewal', { tip: 'Time to the renewal date', w: 'w-[13rem]' })}
+                      {sortHead('carr', 'ARR', { tip: 'Contracted annual recurring revenue (CARR)', w: 'w-[7rem]' })}
+                      {show('nrr') && sortHead('nrr', 'NRR', { numeric: true, tip: 'Net revenue retention; GRR on hover', w: 'w-[6rem]' })}
                       <TableHead>Why it's here</TableHead>
-                      {show('stage') && <TableHead>Stage</TableHead>}
-                      {show('repo') && sortHead('repo', 'Repository', { numeric: true })}
-                      {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought' })}
+                      {show('stage') && <TableHead className="w-[10rem]">Stage</TableHead>}
+                      {show('repo') && sortHead('repo', 'Repository', { numeric: true, w: 'w-[8rem]' })}
+                      {show('lic') && sortHead('lic', 'Licence use', { numeric: true, tip: 'Seats in use against seats bought', w: 'w-[8rem]' })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {list.map((r, i) => {
+                    {list.map(r => {
                       const b = bandOf(r.health)
-                      const pin = pins.has(r.name)
-                      // pinned rows lead; the rest split by reason under "Needs me first", else sit under one "rest" header
-                      const hasPinned = pins.has(list[0].name)
-                      const groupOf = (x: Row) => (pins.has(x.name) ? 'pinned' : priority ? reason(x).group : hasPinned ? 'rest' : undefined)
-                      const grp = groupOf(r)
-                      const newGroup = grp && grp !== (i ? groupOf(list[i - 1]) : undefined)
                       return (
-                        <Fragment key={r.name}>
-                        {newGroup && (
-                          <GroupRow group={grp} count={list.filter(x => groupOf(x) === grp).length} first={i === 0} restLabel={viewLabel} />
-                        )}
-                        <ContextMenu>
+                        <ContextMenu key={r.name}>
                         <ContextMenuTrigger asChild>
                         <TableRow tabIndex={0} aria-label={`${r.name}, health ${BAND_LABEL[b]}. Open account`}
-                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:h-14 [&>td]:py-2"
+                          className="cursor-pointer focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>td]:py-2"
                           onClick={() => openRow(r)}
                           onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(r) } }}>
-                          <TableCell className={cn(stickyCol, 'max-w-72')}>
+                          <TableCell className={stickyCol}>
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate font-medium">{r.name}</span>
-                              {pin && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" aria-label={`Unpin ${r.name}`} onClick={e => { e.stopPropagation(); togglePin(r.name) }}
-                                      className="grid size-5 shrink-0 place-items-center rounded-sm text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
-                                      <Pin className="size-3.5" aria-hidden="true" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Pinned · click to unpin</TooltipContent>
-                                </Tooltip>
-                              )}
                               <span className="truncate text-xs text-muted-foreground">{r.ind}</span>
                             </span>
                           </TableCell>
+                          <TableCell><CategoryChip c={reason(r).category} /></TableCell>
                           <TableCell onClick={e => { e.stopPropagation(); clearTimeout(timer.current); setIns({ name: r.name, focus: true }) }}>
                             <InsightsPopover row={r} open={ins?.name === r.name} focusOnOpen={!!ins?.focus}
                               onOpenChange={o => setIns(o ? { name: r.name, focus: true } : null)}
@@ -362,12 +309,12 @@ export function AccountsScreen() {
                                 onFocus={() => setIns(s => (s?.name === r.name ? s : { name: r.name, focus: false }))}
                                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setIns({ name: r.name, focus: true }) } }}>
                                 {isMissing(r.health) ? <span className="text-muted-foreground">No data</span>
-                                  : <span className={cn('font-medium tabular-nums', bandText[b])}>{r.health}</span>}
+                                  : <span className={cn('num font-medium', bandText[b])}>{r.health}</span>}
                               </span>
                             </InsightsPopover>
                           </TableCell>
                           <TableCell><RunwayCell row={r} /></TableCell>
-                          <TableCell className="text-right">{money(r.carr)}</TableCell>
+                          <TableCell className="num">{money(r.carr)}</TableCell>
                           {show('nrr') && <TableCell className="text-right"><NrrCell row={r} /></TableCell>}
                           <TableCell className="max-w-80"><ReasonCell row={r} /></TableCell>
                           {show('stage') && <TableCell className="text-muted-foreground">{r.stage}</TableCell>}
@@ -383,21 +330,18 @@ export function AccountsScreen() {
                           <ContextMenuItem onSelect={() => openRow(r)}><ExternalLink />Open account</ContextMenuItem>
                           <ContextMenuItem onSelect={() => setIns({ name: r.name, focus: true })}><HeartPulse />Show health insights</ContextMenuItem>
                           <ContextMenuSeparator />
-                          <ContextMenuItem onSelect={() => togglePin(r.name)}>{pin ? <><PinOff />Unpin</> : <><Pin />Pin to top</>}</ContextMenuItem>
                           <ContextMenuItem onSelect={() => { navigator.clipboard?.writeText(r.name); toast('Account name copied') }}><Copy />Copy name</ContextMenuItem>
                         </ContextMenuContent>
                         </ContextMenu>
-                        </Fragment>
                       )
                     })}
                   </TableBody>
                 </Table>
               )}
             </div>
+            {/* sort order is announced to screen readers only; the header arrows show it on screen */}
             {status === 'ready' && list.length > 0 && (
-              <TableFooterBar shown={list.length} total={data.length} className="sm:px-5">
-                <span aria-live="polite">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
-              </TableFooterBar>
+              <span aria-live="polite" className="sr-only">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
             )}
             </Card>
         </div>

@@ -96,7 +96,7 @@ export const AREA_ICON: Record<AreaKey, LucideIcon> = {
 }
 
 /** Status dot classes for list rows. Green, amber and red are health only. */
-export const DOT = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad', none: 'bg-muted-foreground/50' } as const
+export const DOT = { good: 'bg-good-fill', warn: 'bg-warn-fill', bad: 'bg-bad-fill', none: 'bg-muted-foreground/50' } as const
 
 /** Compact list row: neutral icon circle, one-line title, one muted meta line, status dot on the right.
  *  The whole row is the button when `onClick` is set. */
@@ -171,12 +171,14 @@ export function useWidget<T>(compute: () => T, deps: unknown[] = []): WidgetStat
   useEffect(() => {
     let alive = true
     const f = forced()
+    set({ status: 'loading' })
     if (f === 'loading') return
     if (f === 'error') { set({ status: 'error', error: 'Forced by ?widgets=error' }); return }
+    const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const id = setTimeout(() => {
       try { const data = compute(); if (alive) set({ status: 'ready', data }) }
       catch (e) { if (alive) set({ status: 'error', error: e instanceof Error ? e.message : String(e) }) }
-    }, 0)
+    }, reduced ? 0 : 260)
     return () => { alive = false; clearTimeout(id) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run, ...deps])
@@ -238,7 +240,7 @@ export function SectionHead({ title, tip, open, onToggle, actions, id }: {
 export function EvidenceRow({ e }: { e: Evidence }) {
   return (
     <div className="flex gap-3 py-2.5">
-      <span className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', e.kind === 'neg' ? 'bg-bad' : 'bg-good')} aria-hidden="true" />
+      <span className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', e.kind === 'neg' ? 'bg-bad-fill' : 'bg-good-fill')} aria-hidden="true" />
       <div className="min-w-0 space-y-1.5">
         <p className="leading-relaxed">{e.text}</p>
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

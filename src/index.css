@@ -2,11 +2,21 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/hanken-grotesk";
+@import "@fontsource-variable/geist-mono";
+
+/* Geist Serif (Vercel's geist package ships the files; its loader is Next.js only, so load the variable font here) */
+@font-face {
+  font-family: 'Geist Serif';
+  src: url('../node_modules/geist/dist/fonts/geist-serif/GeistSerifVF.woff2') format('woff2');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--heading-face);
+    /* figures: headline numbers and numeric table columns (class `num`) */
+    --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
     /* Sirion brand face is PP Radio Grotesk (licensed, not bundled); Hanken Grotesk is the free stand-in. */
     --font-sans: 'PP Radio Grotesk', 'Hanken Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -48,6 +58,9 @@
     --color-foreground: var(--foreground);
     --color-background: var(--background);
     --color-good: var(--good);
+    --color-good-fill: var(--good-fill);
+    --color-warn-fill: var(--warn-fill);
+    --color-bad-fill: var(--bad-fill);
     --color-good-soft: var(--good-soft);
     --color-warn: var(--warn);
     --color-warn-soft: var(--warn-soft);
@@ -69,121 +82,128 @@
 }
 
 /*
- * Theme: structure from the "Default" style reference (hairlines, compact density, light-weight headings,
- * pill controls, no heavy shadows) in Sirion's brand palette from sirion.ai:
- * deep teal-black surfaces, plum (#92429F) primary actions, light-teal accents for active/focus,
- * periwinkle for AI. Green / amber / red mean health only.
+ * Two app-wide design styles, switched by data-layout on <html> (dev toolbar). The base tokens below are "Tabs first":
+ * warm white page, ink text, a bright violet accent and a near-black violet sidebar. "Ledger" (further down) swaps in
+ * cool paper, pure ink, cobalt, a light sidebar, serif headings and open, outlined containers. Green / amber / red mean health only,
+ * in both; they are tuned bright but still pass 4.5:1 as text on the page.
  */
 :root {
-    --radius: 0.75rem;
-    --background: #f3f7f7;
-    --foreground: #0b1821;
-    --card: #ffffff;
-    --card-foreground: #0b1821;
+    --heading-face: var(--font-sans);  /* swapped per style; @theme inline bakes --font-heading, so swap this */
+    --radius: 0.5rem;
+    --background: #fffdfa;          /* warm white */
+    --foreground: #111318;          /* neutral ink */
+    --card: #fffdfa;
+    --card-foreground: #111318;
     --popover: #ffffff;
-    --popover-foreground: #0b1821;
-    --primary: #92429f;             /* Sirion plum */
+    --popover-foreground: #111318;
+    --primary: #6d4aff;             /* bright violet */
     --primary-foreground: #ffffff;
-    --secondary: #e7eff0;           /* Sirion mist */
-    --secondary-foreground: #0b1821;
-    --muted: #e7eff0;
-    --muted-foreground: #4d565d;
-    --accent: #e7eff0;
-    --accent-foreground: #0b1821;
-    --destructive: #c62f4a;
-    --border: #d3e1e3;
-    --hairline: rgb(13 94 104 / 0.12);
-    --input: #c5d9dc;
-    --ring: #5d939a;
-    --surface-2: #f0f5f6;
-    /* row and card hover: a neutral wash, not the teal-tinted accent */
-    --hover: rgb(11 24 33 / 0.035);
-    --signal: #0d5e68;              /* Sirion teal: active, links, focus */
-    --signal-soft: rgb(13 94 104 / 0.08);
-    --good: #1f7a4d;
-    --good-soft: rgb(31 122 77 / 0.1);
-    --warn: #b06a10;
-    --warn-soft: rgb(176 106 16 / 0.1);
-    --bad: #c62f4a;
-    --bad-soft: rgb(198 47 74 / 0.09);
-    --ai: #5b5fd6;
-    --ai-soft: rgb(129 139 251 / 0.12);
-    --chart-1: #008c9c;             /* categorical, fixed order: teal, blue, plum (validated: dataviz validate_palette, light #fff) */
-    --chart-2: #3a5be2;
-    --chart-3: #a3409f;
-    --chart-4: #9aa7ab;             /* "Other" / context series: neutral */
-    --chart-5: #c9d6d9;             /* track / background marks */
-    --chart-seq-1: #b3dfe3;         /* sequential teal ramp, light -> dark = low -> high emphasis */
-    --chart-seq-2: #5cb6bf;
-    --chart-seq-3: #008c9c;
-    --chart-seq-4: #005f6a;
-    --chart-grid: rgb(13 94 104 / 0.1);
-    --chart-axis: #6b777d;
-    --sidebar: #0b3a41;             /* brand: deep Sirion teal in both themes */
-    --sidebar-foreground: #b9d3d6;
-    --sidebar-primary: #2aa7b2;
+    --secondary: #f3f1ed;
+    --secondary-foreground: #111318;
+    --muted: #f3f1ed;
+    --muted-foreground: #5f5b55;
+    --accent: #f3f1ed;
+    --accent-foreground: #111318;
+    --destructive: #e11d48;
+    --border: #e7e3dc;
+    --hairline: rgb(40 30 15 / 0.09);
+    --input: #dcd7cf;
+    --ring: #9b86ff;
+    --surface-2: #f8f6f3;          /* also the fill of secondary cards (see Card tiers below) */
+    --hover: rgb(40 30 15 / 0.035);
+    --signal: #5b3df5;              /* active, links, focus */
+    --signal-soft: rgb(109 74 255 / 0.09);
+    /* health: vivid fills for marks (bars, dots, meters, chart strokes), deeper shades of the same hues for text */
+    --good: #047857;
+    --good-fill: #10b981;
+    --good-soft: rgb(16 185 129 / 0.12);
+    --warn: #b45309;
+    --warn-fill: #f59e0b;
+    --warn-soft: rgb(245 158 11 / 0.14);
+    --bad: #e11d48;
+    --bad-fill: #f43f5e;
+    --bad-soft: rgb(244 63 94 / 0.1);
+    --ai: #6d4aff;
+    --ai-soft: rgb(109 74 255 / 0.1);
+    --chart-1: #6d4aff;             /* categorical, fixed order: violet, sky, magenta */
+    --chart-2: #0ea5e9;
+    --chart-3: #c026d3;
+    --chart-4: #a8a29e;             /* "Other" / context series: neutral */
+    --chart-5: #e7e3dc;             /* track / background marks */
+    --chart-seq-1: #ddd6fe;         /* sequential violet ramp, light -> dark = low -> high emphasis */
+    --chart-seq-2: #a78bfa;
+    --chart-seq-3: #6d4aff;
+    --chart-seq-4: #4a2bd4;
+    --chart-grid: rgb(40 30 15 / 0.08);
+    --chart-axis: #78716c;
+    --sidebar: #15131d;             /* near-black with a violet cast */
+    --sidebar-foreground: #c4c0d3;
+    --sidebar-primary: #8b74ff;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: rgb(255 255 255 / 0.09);
+    --sidebar-accent: rgb(255 255 255 / 0.08);
     --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: rgb(255 255 255 / 0.08);
-    --sidebar-ring: #7cc3ca;
-    --shadow-card: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 1px 2px rgb(11 24 33 / 0.04);
-    --shadow-panel: 0 0 0 0.5px rgb(13 94 104 / 0.14), 0 16px 36px rgb(11 24 33 / 0.14);
+    --sidebar-border: rgb(255 255 255 / 0.07);
+    --sidebar-ring: #9b86ff;
+    --shadow-card: 0 0 0 1px rgb(40 30 15 / 0.09);
+    --shadow-panel: 0 0 0 0.5px rgb(40 30 15 / 0.12), 0 16px 36px rgb(20 15 5 / 0.12);
 }
 
 .dark {
-    --background: #06141a;          /* teal-black canvas */
-    --foreground: #f5f6f6;
-    --card: #0b1f26;
-    --card-foreground: #f5f6f6;
-    --popover: #0d252f;
-    --popover-foreground: #f5f6f6;
-    --primary: #a24cb0;             /* plum, lifted for dark */
+    --background: #0d0c12;
+    --foreground: #f4f3f7;
+    --card: #14131b;
+    --card-foreground: #f4f3f7;
+    --popover: #1a1823;
+    --popover-foreground: #f4f3f7;
+    --primary: #8b74ff;
     --primary-foreground: #ffffff;
-    --secondary: rgb(180 205 208 / 0.08);
-    --secondary-foreground: #f5f6f6;
-    --muted: #0f2b33;
-    --muted-foreground: #8ea4a9;
-    --accent: rgb(180 205 208 / 0.08);
-    --accent-foreground: #f5f6f6;
-    --destructive: #f06a85;
-    --border: rgb(180 205 208 / 0.12);
-    --hairline: rgb(180 205 208 / 0.1);
-    --input: rgb(180 205 208 / 0.16);
-    --ring: #90b5ba;
-    --surface-2: #0f2b33;
-    --hover: rgb(245 246 246 / 0.05);
-    --signal: #90b5ba;
-    --signal-soft: rgb(144 181 186 / 0.12);
-    --good: #4cc38a;
-    --good-soft: rgb(76 195 138 / 0.12);
-    --warn: #e8a53a;
-    --warn-soft: rgb(232 165 58 / 0.12);
-    --bad: #f06a85;
-    --bad-soft: rgb(240 106 133 / 0.12);
-    --ai: #a5abfc;
-    --ai-soft: rgb(129 139 251 / 0.12);
-    --chart-1: #18a0ab;             /* categorical, fixed order: teal, blue, plum (validated against #0b1f26) */
-    --chart-2: #7088ff;
-    --chart-3: #c66ac4;
-    --chart-4: #5f7378;
-    --chart-5: #1c3a42;
-    --chart-seq-1: #1d4f56;         /* sequential teal ramp, dark -> light = low -> high emphasis */
-    --chart-seq-2: #23707a;
-    --chart-seq-3: #18a0ab;
-    --chart-seq-4: #7fd0d7;
-    --chart-grid: rgb(180 205 208 / 0.08);
-    --chart-axis: #7f9399;
-    --sidebar: #071920;
-    --sidebar-foreground: #b4c7cb;
-    --sidebar-primary: #18a0ab;
+    --secondary: rgb(255 255 255 / 0.06);
+    --secondary-foreground: #f4f3f7;
+    --muted: #1e1c27;
+    --muted-foreground: #a39fae;
+    --accent: rgb(255 255 255 / 0.06);
+    --accent-foreground: #f4f3f7;
+    --destructive: #fb7185;
+    --border: rgb(255 255 255 / 0.1);
+    --hairline: rgb(255 255 255 / 0.08);
+    --input: rgb(255 255 255 / 0.14);
+    --ring: #a796ff;
+    --surface-2: #181620;
+    --hover: rgb(255 255 255 / 0.045);
+    --signal: #a796ff;
+    --signal-soft: rgb(139 116 255 / 0.14);
+    --good: #34d399;
+    --good-fill: #34d399;
+    --good-soft: rgb(52 211 153 / 0.13);
+    --warn: #fbbf24;
+    --warn-fill: #fbbf24;
+    --warn-soft: rgb(251 191 36 / 0.13);
+    --bad: #fb7185;
+    --bad-fill: #fb7185;
+    --bad-soft: rgb(251 113 133 / 0.13);
+    --ai: #a796ff;
+    --ai-soft: rgb(139 116 255 / 0.14);
+    --chart-1: #8b74ff;
+    --chart-2: #38bdf8;
+    --chart-3: #e879f9;
+    --chart-4: #78716c;
+    --chart-5: #2a2733;
+    --chart-seq-1: #2e2560;
+    --chart-seq-2: #4f3fb0;
+    --chart-seq-3: #8b74ff;
+    --chart-seq-4: #c4b5fd;
+    --chart-grid: rgb(255 255 255 / 0.07);
+    --chart-axis: #8f8a99;
+    --sidebar: #0a0910;
+    --sidebar-foreground: #b9b5c6;
+    --sidebar-primary: #8b74ff;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: rgb(180 205 208 / 0.08);
-    --sidebar-accent-foreground: #f5f6f6;
-    --sidebar-border: rgb(180 205 208 / 0.08);
-    --sidebar-ring: #90b5ba;
-    --shadow-card: inset 0 1px 0 rgb(180 205 208 / 0.05), 0 0 0 0.5px rgb(180 205 208 / 0.12);
-    --shadow-panel: inset 0 1px 0 rgb(180 205 208 / 0.08), 0 0 0 0.5px rgb(180 205 208 / 0.12), 0 16px 36px rgb(0 0 0 / 0.45);
+    --sidebar-accent: rgb(255 255 255 / 0.07);
+    --sidebar-accent-foreground: #f4f3f7;
+    --sidebar-border: rgb(255 255 255 / 0.06);
+    --sidebar-ring: #a796ff;
+    --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 0 0 1px rgb(255 255 255 / 0.08);
+    --shadow-panel: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.09), 0 16px 36px rgb(0 0 0 / 0.5);
 }
 
 @layer base {
@@ -208,6 +228,9 @@
     }
   h1, h2, h3 { font-weight: 400; letter-spacing: -0.02em; text-wrap: balance; }
 }
+/* Headline figures and numeric columns in the mono face; slightly tighter so it sits with the sans text. */
+@utility num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+
 /* Chart chrome shared by every shadcn ChartContainer: recessive grid and axes, tabular numbers. */
 @layer components {
   [data-slot="chart"] { font-variant-numeric: tabular-nums; }
@@ -221,17 +244,146 @@
 }
 
 
-/* Design option "Flat detail page" (dev toolbar): fewer blocks, not none, and no grouping.
-   Kept as blocks: main surfaces (data-block: verdict, runway chart, adoption areas, activity timeline, people table,
-   needs attention, coverage) and clickable cards (health areas, news themes).
-   Flat: the lighter reading sections (metrics, account brief, strengths and risks, recent activity, order forms,
-   health ribbon) drop their box and sit on the page, aligned to the page column. */
-html[data-flat] [data-account] [role="tabpanel"] { row-gap: 2.5rem; }
-html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) {
-  background: transparent; box-shadow: none; border-radius: 0; overflow: visible; margin-inline: -1.25rem;
-  padding-block: 0 !important; /* no box, so no box padding: the gap between sections is the only vertical space */
+/* Card tiers, app-wide: a main surface (Card with data-block: verdict, charts, tables, timelines) is white with a
+   hairline; every other card (lists, brief, KPI tiles, reading sections) is a light grey fill with the same hairline,
+   so weight follows importance. */
+[data-slot="card"]:not([data-block]) { background: var(--surface-2); box-shadow: var(--shadow-card); }
+/* on an account's tabs every card is white: the grey tier is for list pages (KPI tiles and the like) */
+[data-account] [data-slot="card"]:not([data-block]) { background: var(--card); }
+
+/* ===============================================================================================================
+   Style "Ledger" (dev toolbar, html[data-layout="ledger"]), app-wide. Cool paper, pure ink, one cobalt accent, a light
+   sidebar, square corners and serif headings. No cards: every card on every page loses its box and sits on the page
+   column under a hairline rule, so pages read as ruled sections. Account-page specifics live in layouts/ledger.css.
+   =============================================================================================================== */
+html[data-layout="ledger"] {
+  --heading-face: 'Geist Serif', Georgia, serif;
+  --radius: 0.5rem;
+  --background: #fcfcfb;
+  --foreground: #0a0a0b;
+  --card: #fcfcfb;
+  --card-foreground: #0a0a0b;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0b;
+  --primary: #1f4fff;             /* cobalt */
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0ee;
+  --secondary-foreground: #0a0a0b;
+  --muted: #f0f0ee;
+  --muted-foreground: #5b5b60;
+  --accent: #f0f0ee;
+  --accent-foreground: #0a0a0b;
+  --border: #e3e3e0;
+  --hairline: rgb(10 10 11 / 0.1);
+  --input: #d5d5d1;
+  --ring: #6b8bff;
+  --surface-2: #f5f5f3;
+  --hover: rgb(10 10 11 / 0.035);
+  --signal: #1f4fff;
+  --signal-soft: rgb(31 79 255 / 0.08);
+  --ai: #1f4fff;
+  --ai-soft: rgb(31 79 255 / 0.08);
+  --chart-1: #1f4fff;             /* categorical: cobalt, cyan, pink */
+  --chart-2: #06b6d4;
+  --chart-3: #db2777;
+  --chart-4: #a1a1aa;
+  --chart-5: #e4e4e7;
+  --chart-seq-1: #d6e0ff;
+  --chart-seq-2: #8aa4ff;
+  --chart-seq-3: #1f4fff;
+  --chart-seq-4: #0f2fb3;
+  --chart-grid: rgb(10 10 11 / 0.07);
+  --chart-axis: #71717a;
+  --sidebar: #f3f3f1;
+  --sidebar-foreground: #3f3f46;
+  --sidebar-primary: #1f4fff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(10 10 11 / 0.06);
+  --sidebar-accent-foreground: #0a0a0b;
+  --sidebar-border: rgb(10 10 11 / 0.08);
+  --sidebar-ring: #6b8bff;
+  --shadow-card: none;
+  --shadow-panel: 0 0 0 1px rgb(10 10 11 / 0.1), 0 16px 36px rgb(0 0 0 / 0.1);
 }
-html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) > :first-child { padding-top: 0 !important; }
-html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) > :last-child { padding-bottom: 0 !important; }
-html[data-flat] [data-account] [data-slot="card"]:not([data-block]):not(.group):not(button) h3 { font-size: 1rem; font-weight: 500; }
-html[data-flat] [data-account] .grid:has(> [data-slot="card"]:not([data-block]):not(.group)) { column-gap: 2.5rem; }
+html.dark[data-layout="ledger"], html[data-layout="ledger"] .dark {
+  --background: #0b0b0c;
+  --foreground: #f5f5f4;
+  --card: #0b0b0c;
+  --card-foreground: #f5f5f4;
+  --popover: #161618;
+  --popover-foreground: #f5f5f4;
+  --primary: #6b8bff;
+  --secondary: rgb(255 255 255 / 0.06);
+  --muted: #1a1a1d;
+  --muted-foreground: #a1a1aa;
+  --accent: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.1);
+  --hairline: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.14);
+  --ring: #8aa4ff;
+  --surface-2: #141416;
+  --hover: rgb(255 255 255 / 0.045);
+  --signal: #8aa4ff;
+  --signal-soft: rgb(107 139 255 / 0.14);
+  --ai: #8aa4ff;
+  --ai-soft: rgb(107 139 255 / 0.14);
+  --chart-1: #6b8bff;
+  --chart-2: #22d3ee;
+  --chart-3: #f472b6;
+  --chart-4: #71717a;
+  --chart-5: #27272a;
+  --chart-seq-1: #1c2a66;
+  --chart-seq-2: #2f4bd6;
+  --chart-seq-3: #6b8bff;
+  --chart-seq-4: #c7d3ff;
+  --chart-grid: rgb(255 255 255 / 0.07);
+  --chart-axis: #8b8b94;
+  --sidebar: #111113;
+  --sidebar-foreground: #b4b4bc;
+  --sidebar-primary: #6b8bff;
+  --sidebar-accent: rgb(255 255 255 / 0.07);
+  --sidebar-accent-foreground: #f5f5f4;
+  --sidebar-border: rgb(255 255 255 / 0.07);
+  --shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.1), 0 16px 36px rgb(0 0 0 / 0.5);
+}
+
+/* type: serif only where a component opts in with font-heading (page titles, section and card titles, the verdict);
+   labels, body and figures stay sans / mono. Block headers drop their icon and take one section-title size. */
+html[data-layout="ledger"] main [data-block-header] > div > svg:first-child { display: none; }
+html[data-layout="ledger"] main [data-block-header] h3 { font-size: 22px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em; }
+html[data-layout="ledger"] main [data-block-header] { padding-top: 1.25rem; }
+
+/* containers: a widget (a data-block card: chart, table, timeline) is an unfilled, rounded box with one hairline outline
+   (no shadow, no fill); other cards and nested cards stay open. Tiles inside a KPI strip are square; the strip is rounded. KPI tiles ([data-kpi-strip] grids) become one outlined strip, the tiles split by vertical rules. */
+html[data-layout="ledger"] main [data-slot="card"] {
+  background: transparent !important; box-shadow: none !important;
+}
+html[data-layout="ledger"] main [data-slot="card"][data-block]:not([data-slot="card"] [data-slot="card"]) {
+  box-shadow: 0 0 0 1px var(--hairline) !important;
+}
+html[data-layout="ledger"] main [data-slot="card"]:is(button, .group):hover { background: var(--hover) !important; }
+html[data-layout="ledger"] main [data-kpi-strip] { gap: 0; box-shadow: 0 0 0 1px var(--hairline); border-radius: var(--radius-xl); }
+html[data-layout="ledger"] main [data-kpi-strip] > * { border-radius: 0; }
+html[data-layout="ledger"] main [data-kpi-strip] > * + * { border-left: 1px solid var(--hairline); }
+@media (max-width: 639px) {
+  html[data-layout="ledger"] main [data-kpi-strip] > * + * { border-left: 0; border-top: 1px solid var(--hairline); }
+}
+
+/* tables: no grey header bar, sentence-case labels over a hairline */
+html[data-layout="ledger"] main [data-slot="table-header"] { --surface-2: var(--background); }
+html[data-layout="ledger"] main [data-slot="table-header"] th, html[data-layout="ledger"] main [data-slot="table-header"] th button {
+  text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 12px;
+}
+
+/* ---------- tables: open on the page column, never in a box ---------- */
+html[data-layout="ledger"] main [data-slot="card"][data-block][data-block]:has([data-slot="table"]):not([data-slot="card"] [data-slot="card"]) { box-shadow: none !important; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="table"] :is(th, td):first-child { padding-left: 0; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="table"] th:first-child > button { padding-left: 0; }
+/* one line under the header labels; rows carry no rule of their own */
+html[data-layout="ledger"] main [data-slot="table"] tbody :is(td, th) { border-bottom: 0 !important; }
+html[data-layout="ledger"] main [data-slot="table-header"] th { border-bottom: 1px solid var(--hairline) !important; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) > * { padding-inline: 0 !important; }
+/* the toolbar's first control carries its own pill padding: pull it so its label starts on the column line */
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="toggle-group"]:first-child { margin-left: -15px; }
+
+

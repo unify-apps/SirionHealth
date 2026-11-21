@@ -53,7 +53,7 @@ export function EngagementPill({ eng, days }: { eng: Engagement; days: number | 
   )
 }
 
-const TONE_DOT: Record<Tone, string> = { pos: 'bg-good', neg: 'bg-bad', mix: 'bg-warn', none: 'hidden' }
+const TONE_DOT: Record<Tone, string> = { pos: 'bg-good-fill', neg: 'bg-bad-fill', mix: 'bg-warn-fill', none: 'hidden' }
 export function TonePill({ tone, pos, neg }: { tone: Tone; pos: number; neg: number }) {
   return (
     <Tooltip>

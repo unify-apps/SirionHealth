@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Search, Table2, UserCheck, Users, X } from 'lucide-react'
-import { BlockHeader, Empty, ListRow, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Download, ListFilter, Mail, Network, RotateCcw, Table2, UserCheck, Users } from 'lucide-react'
+import { BlockHeader, Empty, ListRow, SEGMENTED, stickyCol, stickyColStatic, TableFooterBar, TableSkeleton, Tip } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -59,9 +59,9 @@ function Stakeholders({ base }: { base: Base }) {
   const pager = listPager(pagerKeys, open?.key, k => k, k => openSheet('person', k, { replace: true }), 'person')
   // whose people: the saved views on the left of each table's toolbar
   const views = (
-    <ToggleGroup type="single" size="sm" variant="outline" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className="shrink-0">
-      <ToggleGroupItem value="customer" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
-      <ToggleGroupItem value="internal" className="h-8 gap-1.5 px-3! data-[state=on]:bg-muted data-[state=on]:text-foreground">Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
+    <ToggleGroup type="single" spacing={0} value={audience} onValueChange={v => v && setAudience(v as typeof audience)} aria-label="Whose people" className={cn(SEGMENTED.group, 'shrink-0')}>
+      <ToggleGroupItem value="customer" className={SEGMENTED.item}>Customer Contacts <Count n={rows.length} /></ToggleGroupItem>
+      <ToggleGroupItem value="internal" className={SEGMENTED.item}>Sirion and Vendors <Count n={internal.length} /></ToggleGroupItem>
     </ToggleGroup>
   )
 
@@ -90,10 +90,10 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
   const quiet = orbit.filter(p => p.state === 'quiet').length
   const items: { key: string; name: string; why: string; meta: string; dot: string }[] = []
   const when = (r: StakeRow) => r.last ? `Last named ${fmtD(r.last)}` : 'Never named'
-  if (sponsor) items.push({ key: sponsor.key, name: sponsor.name, why: 'Sponsor quiet', dot: 'bg-warn',
+  if (sponsor) items.push({ key: sponsor.key, name: sponsor.name, why: 'Sponsor quiet', dot: 'bg-warn-fill',
     meta: `Executive Sponsor · ${when(sponsor)} · no exec contact this month` })
-  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn', meta: `Tagged Champion · ${when(r)}` }))
-  gone.forEach(r => items.push({ key: r.key, name: r.name, why: 'Hand over', dot: 'bg-bad', meta: `${r.label} · ${when(r)}` }))
+  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn-fill', meta: `Tagged Champion · ${when(r)}` }))
+  gone.forEach(r => items.push({ key: r.key, name: r.name, why: 'Hand over', dot: 'bg-bad-fill', meta: `${r.label} · ${when(r)}` }))
   const active30 = by(0), active90 = by(1), total = Math.max(1, active30 + active90 + quiet)
   const cov: [string, number, string][] = [['Last 30 days', active30, 'bg-chart-1'], ['30 to 90 days', active90, 'bg-chart-seq-2'], ['Quiet or gone', quiet, 'bg-chart-5']]
 
@@ -137,7 +137,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
           <span className={cn('text-2xl font-normal tabular-nums', active30 + active90 <= 1 && 'text-warn')}>{active30 + active90}</span>
           <span className="text-xs text-muted-foreground">{active30 + active90 <= 1 ? 'active in 90 days · single-threaded' : 'active in 90 days'}</span>
         </div>
-        <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={cov.map(([l, v]) => `${l}: ${v}`).join(', ')}>
+        <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-[2px]" role="img" aria-label={cov.map(([l, v]) => `${l}: ${v}`).join(', ')}>
           {cov.filter(([, v]) => v > 0).map(([l, v, c]) => <span key={l} className={cn('h-full', c)} style={{ width: `${(v / total) * 100}%` }} />)}
         </div>
         <ul className="grid grid-cols-3 gap-2 text-xs">
@@ -162,7 +162,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
                 <li key={role}>
                   <button type="button" disabled={!first} onClick={() => first && onOpen(first.key, people.map(x => x.key))}
                     className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none enabled:hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring/50">
-                    <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good' : state === 'warn' ? 'bg-warn' : 'bg-bad')} aria-hidden="true" />
+                    <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good-fill' : state === 'warn' ? 'bg-warn-fill' : 'bg-bad-fill')} aria-hidden="true" />
                     <span className="flex-1 truncate">{role}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {!people.length ? 'Nobody' : `${first.name}${people.length > 1 ? ` +${people.length - 1}` : ''}${state === 'warn' ? ' · quiet' : ''}`}
@@ -201,22 +201,16 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
 
   return (
     <>
-      {/* one toolbar row: search left; persona, sort, view, export right */}
+      {/* one toolbar row, same controls as My accounts: lead (customer / vendor) left; search, persona, sort, view, export right */}
       <div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:p-5">
         {lead}
-        {view === 'table' && (
-          <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
-            <InputGroupAddon><Search /></InputGroupAddon>
-            <InputGroupInput type="search" value={q} onChange={e => { setQ(e.target.value); reset() }} placeholder="Search people" aria-label="Search stakeholders" />
-            {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => { setQ(''); reset() }}><X /></InputGroupButton></InputGroupAddon>}
-          </InputGroup>
-        )}
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {view === 'table' && (
             <>
+              <SearchBox value={q} onChange={v => { setQ(v); reset() }} placeholder="Search people" label="Search stakeholders" />
               <Select value={filter} onValueChange={v => { setFilter(v as Filter); reset() }}>
                 <Tip tip="Filter by persona">
-                  <SelectTrigger size="sm" className="relative w-auto gap-1.5 border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent" aria-label="Filter by persona">
+                  <SelectTrigger className="relative w-auto gap-1.5" aria-label="Filter by persona">
                     <ListFilter className="text-muted-foreground" />
                     <span className="hidden sm:inline">{filter === 'all' ? 'All personas' : KIND_LABEL[filter]}</span>
                     {filter !== 'all' && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-signal sm:hidden" aria-hidden="true" />}
@@ -230,7 +224,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               </Select>
               <Select value={sort} onValueChange={v => { setSort(v as SortKey); reset() }}>
                 <Tip tip={`Sort: ${SORTS[sort][0]}`}>
-                  <SelectTrigger size="sm" className="w-auto border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort stakeholders">
+                  <SelectTrigger className="size-8 justify-center p-0 [&>svg:last-child]:hidden" aria-label="Sort stakeholders">
                     <ArrowUpDown className="text-muted-foreground" />
                   </SelectTrigger>
                 </Tip>
@@ -240,17 +234,18 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
               </Select>
             </>
           )}
-          <ToggleGroup type="single" size="sm" value={view} onValueChange={v => v && setView(v as typeof view)} aria-label="View">
-            <Tip tip="Table"><ToggleGroupItem value="table" aria-label="Table"><Table2 /></ToggleGroupItem></Tip>
-            <Tip tip="Relationship orbit"><ToggleGroupItem value="orbit" aria-label="Relationship orbit"><Network /></ToggleGroupItem></Tip>
+          {/* table / orbit is a choice of view, so a segmented toggle like Needs me / All */}
+          <ToggleGroup type="single" spacing={0} value={view} onValueChange={v => v && setView(v as typeof view)} aria-label="View" className={SEGMENTED.group}>
+            <Tip tip="Table"><ToggleGroupItem value="table" aria-label="Table" className={SEGMENTED.icon}><Table2 /></ToggleGroupItem></Tip>
+            <Tip tip="Relationship orbit"><ToggleGroupItem value="orbit" aria-label="Relationship orbit" className={SEGMENTED.icon}><Network /></ToggleGroupItem></Tip>
           </ToggleGroup>
           <Tip tip="Export CSV">
-            <Button variant="ghost" size="icon" aria-label="Export CSV" disabled={!list.length}
+            <Button variant="outline" size="icon" aria-label="Export CSV" disabled={!list.length}
               onClick={() => { download(`${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv`, toCsv(list)); toast.success(`Exported ${list.length} contact${list.length === 1 ? '' : 's'}`, { description: `${ACCT.name.toLowerCase().replace(/\W+/g, '-')}-stakeholders.csv` }) }}>
               <Download />
             </Button>
           </Tip>
-          {dirty && <Button variant="ghost" size="sm" onClick={resetAll}><RotateCcw />Reset</Button>}
+          {dirty && <Button variant="ghost" onClick={resetAll}><RotateCcw />Reset</Button>}
         </div>
       </div>
 
@@ -279,11 +274,12 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
                   <TableRow key={r.key} tabIndex={0} className="group/row cursor-pointer outline-none focus-visible:bg-hover [&>td]:h-14 [&>td]:py-2"
                     aria-label={`${r.name}, open detail`}
                     onClick={() => onOpen(r.key, list.map(x => x.key))} onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(r.key, list.map(x => x.key)) } }}>
-                    <TableCell className={cn(stickyCol, 'max-w-72')}>
+                    <TableCell className={cn(stickyCol, 'max-w-96')}>
                       <span className="flex min-w-48 items-center gap-3">
                         <Avatar name={r.name} />
-                        <span className="grid min-w-0 leading-tight">
-                        <span className="flex min-w-0 items-center gap-1.5">
+                        {/* one line: name (+ gap flag), then the title muted; the title truncates first */}
+                        <span className="flex min-w-0 items-center gap-2">
+                        <span className="flex shrink-0 items-center gap-1.5">
                         <span className="truncate font-medium">{r.name}</span>
                         {r.gap[0] === 'warn' && (
                           <Tooltip>
@@ -292,7 +288,7 @@ function CustomerTable({ lead, rows, orbit, max, months, onOpen }: {
                           </Tooltip>
                         )}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">{r.title || r.sen || r.org}</span>
+                        <span className="min-w-0 truncate text-muted-foreground">{r.title || r.sen || r.org}</span>
                         </span>
                       </span>
                     </TableCell>
@@ -349,17 +345,14 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
   const groupLabel = (k: (typeof GROUPS)[number]) => k === 'all' ? 'All groups' : k === 'Partner' ? 'Partners' : k === 'System sender' ? 'System senders' : k
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:flex-nowrap">
+      {/* same toolbar shape and height as the customer table, so switching never moves the table */}
+      <div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:p-5">
         {lead}
-        <InputGroup className="w-full transition-[width] duration-200 sm:w-[200px] sm:focus-within:w-64">
-          <InputGroupAddon><Search /></InputGroupAddon>
-          <InputGroupInput type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search people" aria-label="Search Sirion and vendor people" />
-          {q && <InputGroupAddon align="inline-end"><InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQ('')}><X /></InputGroupButton></InputGroupAddon>}
-        </InputGroup>
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <SearchBox value={q} onChange={setQ} placeholder="Search people" label="Search Sirion and vendor people" />
           <Select value={g} onValueChange={v => setG(v as typeof g)}>
             <Tip tip="Filter by group">
-              <SelectTrigger size="sm" className="w-auto gap-1.5 border-0 bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent" aria-label="Filter by group">
+              <SelectTrigger className="w-auto gap-1.5" aria-label="Filter by group">
                 <ListFilter className="text-muted-foreground" /><span className="hidden sm:inline">{groupLabel(g)}</span>
               </SelectTrigger>
             </Tip>
@@ -367,7 +360,7 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
               {GROUPS.map(k => <SelectItem key={k} value={k}>{groupLabel(k)} <Count n={rows.filter(r => k === 'all' || r.group === k).length} /></SelectItem>)}
             </SelectContent>
           </Select>
-          {(q || g !== 'all') && <Button variant="ghost" size="sm" onClick={() => { setQ(''); setG('all'); toast('Filters reset') }}><RotateCcw />Reset</Button>}
+          {(q || g !== 'all') && <Button variant="ghost" onClick={() => { setQ(''); setG('all'); toast('Filters reset') }}><RotateCcw />Reset</Button>}
         </div>
       </div>
       <Table aria-label="Sirion and vendor people">
@@ -378,7 +371,7 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
         </TableHeader>
         <TableBody>
           {list.length ? list.map(r => (
-            <TableRow key={r.key} className="hover:bg-transparent [&>td]:h-11 [&>td]:py-1.5">
+            <TableRow key={r.key} className="hover:bg-transparent">
               <TableCell className={cn(stickyColStatic, 'max-w-80')}>
                 <span className="flex min-w-48 items-center gap-2">
                   <Avatar name={r.name} className="size-5 text-[10px]" />
@@ -402,7 +395,6 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
           )}
         </TableBody>
       </Table>
-      <TableFooterBar shown={list.length} total={rows.length} />
     </>
   )
 }
@@ -411,19 +403,27 @@ function StakeSkeleton() {
   return (
     <div className="grid gap-4" aria-busy="true" aria-label="Loading stakeholders">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card className="gap-3 px-5 py-4">
+        <Card data-block className="gap-3 px-5 py-4">
           <Skeleton className="h-4 w-32" />
           {[0, 1, 2].map(i => <div key={i} className="flex min-h-11 items-center gap-3"><Skeleton className="size-7 rounded-full" /><div className="grid flex-1 gap-1.5"><Skeleton className="h-3.5 w-1/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-3 w-20" /></div>)}
         </Card>
-        <Card className="gap-3 px-5 py-4">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-1.5 w-full" />
-          <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
+        <Card data-block className="gap-0 py-0">
+          <div className="grid gap-3 p-5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-1.5 w-full" />
+            <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
+          </div>
+          <div className="border-t border-hairline px-5 pt-4 pb-3">
+            <Skeleton className="mb-2 h-3.5 w-20" />
+            <div className="divide-y divide-hairline">
+              {[0, 1, 2, 3, 4].map(i => <div key={i} className="flex items-center justify-between py-2"><Skeleton className="h-3.5 w-28" /><Skeleton className="h-3 w-24" /></div>)}
+            </div>
+          </div>
         </Card>
       </div>
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap gap-2 px-4 py-3"><Skeleton className="h-7 w-72" /><Skeleton className="ml-auto h-8 w-[200px]" /><Skeleton className="h-8 w-40" /></div>
+      <Card data-block className="gap-0 py-0">
+        <div className="flex flex-wrap gap-2 p-4 sm:p-5"><Skeleton className="h-8 w-72" /><Skeleton className="ml-auto h-8 w-[200px]" /><Skeleton className="h-8 w-40" /></div>
         <TableSkeleton columns={[{ w: 'w-44' }, { w: 'w-24' }, { w: 'w-16' }, { w: 'w-16' }, { w: 'w-24' }, { w: 'w-6', right: true }]} />
       </Card>
     </div>

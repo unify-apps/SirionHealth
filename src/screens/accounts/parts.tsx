@@ -19,30 +19,29 @@ import {
 } from './model'
 
 
-const DOT: Record<Tone, string> = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good', neutral: 'bg-muted-foreground/60' }
+const DOT: Record<Tone, string> = { bad: 'bg-bad-fill', warn: 'bg-warn-fill', good: 'bg-good-fill', neutral: 'bg-muted-foreground/60' }
 
 /** Why the row is in the list, in full, with the next step underneath. Only the dot carries colour. */
 export function ReasonCell({ row }: { row: Row }) {
   const r = reason(row)
   return (
-    <span className="grid min-w-0 gap-0.5">
-      <span className="inline-flex min-w-0 items-center gap-1.5">
-        <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
-        <span className={cn('truncate', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
-      </span>
-      {r.next && <span className="truncate pl-3 text-xs text-muted-foreground">→ {r.next}</span>}
+    // one line: the reason, then the next step muted after it; the step truncates first
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
+      <span className={cn('max-w-full flex-none truncate', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
+      {r.next && <span className="min-w-0 flex-1 truncate text-muted-foreground">→ {r.next}</span>}
     </span>
   )
 }
 
-/** Renewal date with the time to it underneath. Red only within 60 days or overdue. */
+/** Renewal date and the time to it, on one line. Red only within 60 days or overdue. */
 export function RunwayCell({ row }: { row: Row }) {
   if (!live(row)) return <span className="text-muted-foreground">Churned</span>
   const rr = runway(row)
   return (
-    <span className="grid gap-0.5 tabular-nums">
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap tabular-nums">
       <span>{fmtShort(row.renew)}</span>
-      <span className={cn('text-xs', rr.c === 'b' ? 'text-bad' : 'text-muted-foreground')}>{rr.days < 0 ? rr.t : `in ${rr.t}`}</span>
+      <span className={rr.c === 'b' ? 'text-bad' : 'text-muted-foreground'}>· {rr.days < 0 ? rr.t : `in ${rr.t}`}</span>
     </span>
   )
 }
@@ -186,7 +185,7 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /** Scored accounts split by health band: one thin stacked bar, a tooltip per band. */
-const BAND_FILL = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good' } as const
+const BAND_FILL = { bad: 'bg-bad-fill', warn: 'bg-warn-fill', good: 'bg-good-fill' } as const
 const BAND_NAME = { bad: 'At risk', warn: 'Watch', good: 'Healthy' } as const
 export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n: number }[] }) {
   const total = bands.reduce((a, b) => a + b.n, 0) || 1
@@ -194,7 +193,7 @@ export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n
     <span className="flex h-1.5 w-full gap-0.5" role="img" aria-label={bands.map(b => `${BAND_NAME[b.band]} ${b.n}`).join(', ')}>
       {bands.filter(b => b.n).map(b => (
         <Tip key={b.band} tip={`${BAND_NAME[b.band]}: ${b.n} accounts`}>
-          <span className={cn('h-full rounded-full', BAND_FILL[b.band])} style={{ width: `${(b.n / total) * 100}%` }} />
+          <span className={cn('h-full rounded-[1px]', BAND_FILL[b.band])} style={{ width: `${(b.n / total) * 100}%` }} />
         </Tip>
       ))}
     </span>
@@ -204,10 +203,13 @@ export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n
 /* ---------- loading skeletons matching each widget's shape ---------- */
 export function TilesSkeleton() {
   return (
-    <div className="grid gap-3 sm:grid-cols-3" aria-hidden="true">
-      {[0, 1, 2].map(i => (
-        <div key={i} className="grid gap-2 rounded-xl border border-hairline bg-card p-5">
-          <Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-1.5 w-full" /><Skeleton className="h-3 w-32" />
+    <div data-kpi-strip className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} data-slot="card" className="grid gap-2 rounded-xl bg-card px-5 py-4 shadow-(--shadow-card)">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-1.5 w-full" />
+          <Skeleton className="h-3 w-32" />
         </div>
       ))}
     </div>
@@ -215,5 +217,19 @@ export function TilesSkeleton() {
 }
 
 export function TableSkeleton() {
-  return <PageTableSkeleton lead={false} columns={[{ w: 'w-40' }, { w: 'w-20' }, { w: 'w-16' }, { w: 'w-16', right: true }, { w: 'w-48' }]} />
+  return (
+    <PageTableSkeleton
+      lead={false}
+      className="min-w-[960px] table-fixed"
+      columns={[
+        { w: 'w-40' },
+        { w: 'w-20' },
+        { w: 'w-12' },
+        { w: 'w-28' },
+        { w: 'w-16' },
+        { w: 'w-12', right: true },
+        { w: 'w-48' },
+      ]}
+    />
+  )
 }

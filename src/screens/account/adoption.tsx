@@ -26,7 +26,7 @@ const TONE: Record<string, 'good' | 'bad' | undefined> = {
   'SLA met': F.sla >= 90 ? 'good' : 'bad', 'Reopen rate': F.reopen <= 5 ? 'good' : 'bad',
 }
 /** Counts where none is the good answer (P1s, escalations); a long open backlog is bad. */
-const toneOf = (label: string, value: string) => label in TONE ? TONE[label]
+export const toneOf = (label: string, value: string) => label in TONE ? TONE[label]
   : /P1 incidents|Exec escalations/.test(label) ? (value === '0' ? 'good' : 'bad')
   : label === 'Open enhancement requests' ? (+value > 10 ? 'bad' : undefined) : undefined
 
@@ -34,7 +34,22 @@ export function AdoptionTab() {
   const load = useLoad(loadAdoption, undefined, 'adoption and support')
   if (load.status === 'loading') return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading adoption and support">
-      {[0, 1].map(i => <Card key={i} className="gap-4 p-5"><Skeleton className="h-5 w-40" /><div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-40" /><Skeleton className="h-40" /></div></Card>)}
+      {[false, true].map((withSide, i) => (
+        <Card key={i} data-block className="gap-0 py-0">
+          <div className="flex items-center gap-3 px-5 pt-5 pb-3"><Skeleton className="h-5 w-44" /><Skeleton className="h-5 w-10" /></div>
+          <div className="grid grid-cols-2 border-b border-hairline sm:grid-cols-3 xl:grid-cols-4">
+            {[0, 1, 2, 3].map(c => (
+              <div key={c} className="grid gap-1.5 px-5 py-3 xl:py-4 xl:[&:not(:first-child)]:border-l xl:[&:not(:first-child)]:border-hairline">
+                <Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-16" /><Skeleton className="h-3 w-32" />
+              </div>
+            ))}
+          </div>
+          <div className={cn('grid divide-y divide-hairline', withSide && 'lg:grid-cols-2 lg:divide-x lg:divide-y-0')}>
+            <div className="grid gap-3 p-5"><Skeleton className="h-3.5 w-28" /><Skeleton className="h-44 w-full" /></div>
+            {withSide && <div className="grid gap-3 p-5"><Skeleton className="h-3.5 w-32" /><Skeleton className="h-44 w-full" /></div>}
+          </div>
+        </Card>
+      ))}
     </div>
   )
   if (load.status === 'error') return <LoadError what="adoption and support" error={load.error} retry={load.retry} />
@@ -69,15 +84,15 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
   const score = last?.areas[area], delta = prev ? score - prev.areas[area] : 0
   return (
     <Card data-block className="gap-0 py-0">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5 pb-1">
+      <div className="flex min-h-12 flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-4 pb-1">
         <I className="size-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-base font-medium">{tc(title)}</h2>
-        {score != null && <>
-          <span className={cn('text-xl font-medium tabular-nums', bandText[bandOf(score)])}>{score}</span>
+        <h2 className="font-heading text-base font-medium">{tc(title)}</h2>
+        {score != null && (
           <span className="text-xs text-muted-foreground">
-            {delta ? <><span className={cn('tabular-nums', delta < 0 && 'text-bad')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</span> since {prev.label.split(' ')[0]}</> : 'flat on last month'}
+            <span className={cn('font-medium tabular-nums', bandText[bandOf(score)])}>{score}</span>
+            <span className="ml-2">{delta ? <><span className={cn('tabular-nums', delta < 0 && 'text-bad')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</span> since {prev.label.split(' ')[0]}</> : 'flat on last month'}</span>
           </span>
-        </>}
+        )}
       </div>
       {/* figures: one strip, equal cells divided by hairlines */}
       {/* figures: one row of equal cells on wide screens (hairlines between), 2 or 3 per row below without inner rules */}

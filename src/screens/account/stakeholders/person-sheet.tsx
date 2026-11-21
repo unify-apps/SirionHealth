@@ -59,7 +59,7 @@ export function Statement({ e }: { e: Evidence }) {
   return (
     <li className="grid gap-1 py-3 first:pt-0 last:pb-0">
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span aria-hidden="true" className={cn('size-1.5 rounded-full', e.kind === 'pos' ? 'bg-good' : 'bg-bad')} />
+        <span aria-hidden="true" className={cn('size-1.5 rounded-full', e.kind === 'pos' ? 'bg-good-fill' : 'bg-bad-fill')} />
         <span className="tabular-nums">{e.date ? fmtDY(e.date) : ymLabel(e.ym)}</span>
         <span className="sr-only">{e.kind === 'pos' ? 'Positive' : 'Negative'}</span>
       </p>

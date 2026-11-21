@@ -15,17 +15,21 @@ export type WidgetStatus = 'loading' | 'ready' | 'error'
 
 const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** `?fail=pods,stages` makes those widgets fail their first load, to demo the error state. */
+/** `?fail=pods,stages` makes those widgets fail their first load, to demo the error state. `?widgets=loading|error` forces all widgets. */
 const failsOnLoad = (name: string) =>
   typeof location !== 'undefined' && (new URLSearchParams(location.search).get('fail') ?? '').split(',').includes(name)
+const forcedWidget = () =>
+  typeof location !== 'undefined' ? (new URLSearchParams(location.search).get('widgets') as 'loading' | 'error' | null) : null
 
 /** Simulated first load for a widget (the prototype has no network). Retry reloads it. */
-export function useWidget(name: string, ms = 950) {
+export function useWidget(name: string, ms = 350) {
   const [status, setStatus] = useState<WidgetStatus>('loading')
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
-    const t = setTimeout(() => setStatus(attempt === 0 && failsOnLoad(name) ? 'error' : 'ready'),
-      reducedMotion() ? 0 : attempt === 0 ? ms : 600)
+    const force = forcedWidget()
+    if (force === 'loading') { setStatus('loading'); return }
+    const t = setTimeout(() => setStatus(force === 'error' || (attempt === 0 && failsOnLoad(name)) ? 'error' : 'ready'),
+      reducedMotion() ? 0 : attempt === 0 ? ms : 350)
     return () => clearTimeout(t)
   }, [name, ms, attempt])
   const retry = useCallback(() => { setStatus('loading'); setAttempt(a => a + 1) }, [])
@@ -83,13 +87,35 @@ export function KpiSkeleton({ className }: { className?: string }) {
   )
 }
 
-export function SplitSkeleton() {
+export function SplitSkeleton({ layout = 'rows' }: { layout?: 'rows' | 'columns' }) {
   return (
-    <div className="grid gap-3" aria-hidden="true">
-      <Skeleton className="h-3 w-full rounded-full" />
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map(i => <div key={i} className="grid gap-1.5 px-2.5 py-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-6 w-20" /><Skeleton className="h-3 w-28" /></div>)}
-      </div>
+    <div aria-hidden="true">
+      <Skeleton className="h-3 w-full rounded-[3px]" />
+      {layout === 'columns' ? (
+        <div className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="grid gap-1.5">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mb-1 h-6 w-24" />
+              <div className="flex h-7 items-center gap-2"><Skeleton className="size-2 shrink-0 rounded-[2px]" /><Skeleton className="h-3.5 flex-1" /><Skeleton className="h-3.5 w-12" /></div>
+              <div className="flex h-7 items-center gap-2"><Skeleton className="size-2 shrink-0 rounded-[2px]" /><Skeleton className="h-3.5 flex-1" /><Skeleton className="h-3.5 w-12" /></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-2 divide-y divide-hairline">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="flex items-center gap-3 py-2.5">
+              <Skeleton className="size-2 shrink-0 rounded-full" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="ml-auto hidden h-3 w-16 sm:block" />
+              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

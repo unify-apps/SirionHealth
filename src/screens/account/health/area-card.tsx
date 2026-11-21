@@ -51,11 +51,14 @@ export function AreaCard({ area, prevLabel, labels, onOpen }: { area: Area; prev
 
 export function AreaCardSkeleton() {
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)" aria-hidden="true">
-      <Skeleton className="h-4 w-32" />
-      <Skeleton className="h-8 w-20" />
+    <div data-slot="card" className="group relative flex flex-col gap-3 rounded-xl bg-card p-5 shadow-(--shadow-card)" aria-hidden="true">
+      <div className="flex items-center gap-2"><Skeleton className="h-4 w-32" /></div>
+      <div className="flex items-baseline gap-2"><Skeleton className="h-8 w-16" /><Skeleton className="h-3 w-16" /></div>
       <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-3 w-2/3" />
+      <p className="mt-auto flex items-baseline gap-2 text-xs">
+        <span><Skeleton className="h-3 w-36" /></span>
+        <span className="ml-auto"><Skeleton className="h-3 w-14" /></span>
+      </p>
     </div>
   )
 }

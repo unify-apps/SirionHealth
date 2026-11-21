@@ -15,11 +15,11 @@ import { loadHealth, type AreaKey, type HealthData } from './health/model'
 function Summary({ data }: { data: HealthData }) {
   const counts = data.areas.reduce((m, a) => { const b = bandOf(a.score); m[b] = (m[b] ?? 0) + 1; return m }, {} as Partial<Record<Band, number>>)
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-foreground">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       {(['bad', 'warn', 'good'] as Band[]).filter(b => counts[b]).map(b => (
         <span key={b} className="inline-flex items-center gap-1.5">
           <span className={cn('size-1.5 rounded-full', bandBg[b])} aria-hidden="true" />
-          <span className="tabular-nums">{counts[b]}</span> {BAND_LABEL[b].toLowerCase()}
+          <span className="tabular-nums text-foreground">{counts[b]}</span> {BAND_LABEL[b].toLowerCase()}
         </span>
       ))}
     </span>
@@ -47,7 +47,7 @@ export function HealthTab() {
 
   return (
     <div>
-      <SectionTitle title="Six health areas" sub={data ? <Summary data={data} /> : undefined} className="mb-4 items-center"
+      <SectionTitle title="Six health areas" sub={data ? <Summary data={data} /> : undefined} className="mb-4"
         actions={
           <Button variant="outline" size="sm" disabled={!data} onClick={() => openSheet('inputs')}>
             <ListTree />All {total} inputs

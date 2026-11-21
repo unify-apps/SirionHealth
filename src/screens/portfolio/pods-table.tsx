@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, Search, Users } from 'lucide-react'
+import { ChevronRight, Users } from 'lucide-react'
 import { BlockHeader, SortHead, stickyCol } from '@/components/page'
+import { SearchBox } from '@/components/app/search-box'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -29,8 +30,8 @@ export function BarValue({ value, max, fill = 'bg-chart-1', text }: { value: num
   const pct = max > 0 ? Math.min(100, Math.max(value > 0 ? 3 : 0, (value / max) * 100)) : 0
   return (
     <span className="inline-flex items-center justify-end gap-2.5">
-      <span className="block h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <span className={cn('block h-full rounded-full', fill)} style={{ width: `${pct}%` }} />
+      <span className="block h-1.5 w-12 overflow-hidden rounded-[2px] bg-muted" aria-hidden="true">
+        <span className={cn('block h-full', fill)} style={{ width: `${pct}%` }} />
       </span>
       <span className="w-9 text-right">{text}</span>
     </span>
@@ -90,16 +91,12 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
     setSort(s => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'name' ? 1 : -1 }))
 
   return (
-    <Card className="gap-0 py-0">
+    <Card data-block className="gap-0 py-0">
       <BlockHeader icon={Users} title="Pods" count={status === 'ready' ? list.length : undefined}
         sub={`Sorted by ${sortLabel.replace(/^(?!CARR|ARR|GRR)([A-Z])/, c => c.toLowerCase())}${sort.dir === 1 ? ', ascending' : ''}`}
         actions={controls && status === 'ready' ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="flex h-8 w-44 items-center gap-2 rounded-md border border-input px-2 focus-within:ring-2 focus-within:ring-ring">
-              <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search pods" aria-label="Search pods"
-                className="h-full w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
-            </label>
+            <SearchBox value={q} onChange={setQ} placeholder="Search pods" />
           </div>
         ) : undefined} />
       <CardContent className="px-0">
@@ -129,7 +126,7 @@ export function PodsTable({ status, onRetry }: { status: WidgetStatus; onRetry: 
             </TableHeader>
             <TableBody>
               {list.map(p => (
-                <TableRow key={p.name} className="cursor-pointer [&>td]:h-12" onClick={() => openSheet('pod', p.name)}>
+                <TableRow key={p.name} className="cursor-pointer" onClick={() => openSheet('pod', p.name)}>
                   <TableCell className={cn(stickyCol, 'truncate')}>
                     <button type="button" aria-haspopup="dialog" onClick={e => { e.stopPropagation(); openSheet('pod', p.name) }}
                       className="rounded-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">{p.name}</button>

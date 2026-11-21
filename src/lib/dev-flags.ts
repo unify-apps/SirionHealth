@@ -1,26 +1,35 @@
 import { useSyncExternalStore } from 'react'
 
-/** Prototype-only switches for comparing design options. Kept in localStorage, and ?flat=1 / ?flat=0 in the URL wins,
- *  so a reviewer can be sent straight to an option. Each flag lands as data-<flag> on <html> for CSS to read. */
-export type Flag = 'flat'
-export const FLAGS: { id: Flag; label: string; hint: string }[] = [
-  { id: 'flat', label: 'Flat detail page', hint: 'Account page without card blocks: sections sit on the page, split by rules' },
+/** Prototype-only design switch. Each style restyles the whole app (palette, type, surfaces, tables, toolbars) and the
+ *  account page layout. Kept in localStorage; ?layout=ledger in the URL wins, so a reviewer can be sent straight to one.
+ *  The choice lands as data-layout on <html> for CSS to read. */
+export type Layout = 'tabsfirst' | 'ledger'
+export const LAYOUTS: { id: Layout; label: string; hint: string }[] = [
+  { id: 'tabsfirst', label: 'Studio', hint: 'Cards on a warm white page, violet accent; account tabs lead, standing in Summary' },
+  { id: 'ledger', label: 'Ledger', hint: 'No cards: ruled rows, editorial type, cobalt accent; everything scans in lines' },
 ]
 
-const KEY = (f: Flag) => `sah-flag-${f}`
-const read = (f: Flag) => {
-  const q = new URLSearchParams(location.search).get(f)
-  if (q === '1' || q === '0') return q === '1'
-  try { return localStorage.getItem(KEY(f)) === '1' } catch { return false }
+const KEY = (f: string) => `sah-flag-${f}`
+/** Default style. The key carries a version so a change of default resets earlier picks. */
+export const DEFAULT_LAYOUT: Layout = 'tabsfirst'
+const LAYOUT_KEY = 'layout-v3'
+
+const readLayout = (): Layout => {
+  const ok = (v: string | null): v is Layout => LAYOUTS.some(l => l.id === v)
+  const v = new URLSearchParams(location.search).get('layout')
+  if (ok(v)) return v
+  try { const s = localStorage.getItem(KEY(LAYOUT_KEY)); return ok(s) ? s : DEFAULT_LAYOUT } catch { return DEFAULT_LAYOUT }
 }
-let state: Record<Flag, boolean> = { flat: read('flat') }
+
+type State = { layout: Layout }
+let state: State = { layout: readLayout() }
 const subs = new Set<() => void>()
-const apply = () => (Object.keys(state) as Flag[]).forEach(f => document.documentElement.toggleAttribute(`data-${f}`, state[f]))
+const apply = () => { document.documentElement.dataset.layout = state.layout }
 apply()
 
-export function setFlag(f: Flag, on: boolean) {
-  state = { ...state, [f]: on }
-  try { localStorage.setItem(KEY(f), on ? '1' : '0') } catch {}
+export const setLayout = (l: Layout) => {
+  state = { layout: l }
+  try { localStorage.setItem(KEY(LAYOUT_KEY), l) } catch {}
   apply()
   subs.forEach(s => s())
 }

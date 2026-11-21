@@ -11,7 +11,7 @@ import type { JourneyMonth, SentimentMonth } from './model'
 import { fmtDY, ymLabel, ymLong } from './shared'
 
 /* ---- timeline to renewal: one slim column per month, height = health, colour = band; events as dots above ---- */
-const FILL: Record<Band, string> = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad', none: 'bg-muted' }
+const FILL: Record<Band, string> = { good: 'bg-good-fill', warn: 'bg-warn-fill', bad: 'bg-bad-fill', none: 'bg-muted' }
 
 /** A slim strip: one segment per month coloured by its health band, event dots above, sparse labels below
  *  (quarter starts, today, renewal). The score and events are in each segment's tooltip. */
@@ -44,8 +44,8 @@ export function HealthRibbon({ months, renewal }: { months: JourneyMonth[]; rene
                   <button type="button" aria-label={`${ymLabel(m.ym)}: ${future ? 'upcoming' : !scored ? 'not scored' : `health ${m.health}`}${m.events.length ? `, ${m.events.length} events` : ''}`}
                     className="group grid gap-1.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <span className="flex h-1.5 items-center justify-center gap-0.5" aria-hidden="true">
-                      {m.neg > 0 && <span className="size-1.5 rounded-full bg-bad" />}
-                      {m.pos > 0 && <span className="size-1.5 rounded-full bg-good" />}
+                      {m.neg > 0 && <span className="size-1.5 rounded-full bg-bad-fill" />}
+                      {m.pos > 0 && <span className="size-1.5 rounded-full bg-good-fill" />}
                     </span>
                     <span aria-hidden="true" className={cn('relative h-2.5 transition-opacity group-hover:opacity-75',
                       i === 0 && 'rounded-l-full', last && 'rounded-r-full',
@@ -70,9 +70,9 @@ export function HealthRibbon({ months, renewal }: { months: JourneyMonth[]; rene
 /** Legend for the ribbon, small enough to sit in its block header. */
 export function RibbonLegend() {
   return (
-    <span className="flex items-center gap-3 text-xs text-muted-foreground">
-      <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-bad" aria-hidden="true" />Risk event</span>
-      <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-good" aria-hidden="true" />Positive event</span>
+    <span className="flex items-center gap-3 text-xs text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">
+      <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-bad-fill" aria-hidden="true" />Risk event</span>
+      <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-good-fill" aria-hidden="true" />Positive event</span>
     </span>
   )
 }
@@ -95,8 +95,8 @@ export function SentimentMonths({ months }: { months: SentimentMonth[] }) {
                   {d != null && <DeltaChip value={d} health label={`vs ${fmtMonthName(prevYm(m.ym))}`} />}
                 </p>
               </div>
-              <Drivers label="Positive" items={m.pos} dot="bg-good" />
-              <Drivers label="Negative" items={m.neg} dot="bg-bad" />
+              <Drivers label="Positive" items={m.pos} dot="bg-good-fill" />
+              <Drivers label="Negative" items={m.neg} dot="bg-bad-fill" />
             </li>
           )
         })}

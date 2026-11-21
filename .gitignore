@@ -9,3 +9,6 @@ shots/
 
 dist
 *.local
+
+# local browser screenshots from Claude sessions
+.playwright-mcp/

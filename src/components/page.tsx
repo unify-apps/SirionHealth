@@ -28,7 +28,8 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
   return (
     <header className={cn(ease, compact ? 'py-2' : 'pb-5')}>
       <div className={cn('grid', ease, compact ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100', !back && 'md:hidden')} inert={compact}>
-        <div className="overflow-hidden">
+        {/* -mx-2/px-2: the clip box runs 8px past the column, so the back link's hover fill (pulled left by -ml-1.5) isn't cut */}
+        <div className="-mx-2 overflow-hidden px-2">
           <div className="mb-3 flex items-center gap-2">
             <SidebarTrigger className="-ml-1 md:hidden" aria-label="Open navigation" />
             {back && (
@@ -60,7 +61,7 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
         })() : lead}
         <div className="min-w-0">
           {eyebrow && !compact && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
-          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
+          <h1 className={cn('font-heading truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
           {(compact ? compactSub ?? sub : sub) && <p className={cn('truncate text-muted-foreground', ease, compact ? 'text-xs' : 'mt-0.5 text-sm')}>{compact ? compactSub ?? sub : sub}</p>}
         </div>
       </div>
@@ -68,6 +69,15 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
       </div>
     </header>
   )
+}
+
+/** Segmented toggle (ToggleGroup type="single" spacing={0}): a grey track, the selected option a raised thumb. */
+export const SEGMENTED = {
+  group: 'gap-0.5 rounded-lg bg-muted p-[3px]',
+  // a trailing count (last span) becomes a small pill; it darkens with the selected option
+  item: 'h-7 gap-1.5 rounded-md! border-0 px-3! text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_0.5px_rgb(0_0_0/0.06)] [&>span:last-child:not(:first-child)]:rounded [&>span:last-child:not(:first-child)]:bg-foreground/[0.06] [&>span:last-child:not(:first-child)]:px-1.5 [&>span:last-child:not(:first-child)]:text-xs [&>span:last-child:not(:first-child)]:leading-5 data-[state=on]:[&>span:last-child:not(:first-child)]:bg-foreground/[0.08] data-[state=on]:[&>span:last-child:not(:first-child)]:text-foreground',
+  /** icon-only items. Keyed on aria-checked, not data-state: a Tooltip trigger wrapped round the item overwrites data-state */
+  icon: 'size-7 rounded-md! border-0 p-0! text-muted-foreground transition-[color,background-color,box-shadow] duration-150 hover:bg-transparent hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_0.5px_rgb(0_0_0/0.06)]',
 }
 
 /**
@@ -79,14 +89,14 @@ export function BlockHeader({ icon: Icon, title, count, sub, actions, className 
   actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
-      <div className="flex min-w-0 items-center gap-2">
-        {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-        <h3 className="truncate text-sm font-medium text-foreground">{tc(title)}</h3>
-        {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
-        {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
+    <div data-block-header className={cn('flex min-h-12 flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
+      <div className="flex min-w-0 items-baseline gap-2">
+        {Icon && <Icon className="size-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />}
+        <h3 className="font-heading truncate text-base font-medium text-foreground">{tc(title)}</h3>
+        {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">{count}</span>}
+        {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline [[data-layout=ledger]_&]:text-[13px]">{sub}</span>}
       </div>
-      {actions && <div className="ml-auto flex items-center gap-1.5">{actions}</div>}
+      {actions && <div className="ml-auto flex items-center gap-1.5 self-center text-xs [[data-layout=ledger]_&]:text-[13px]">{actions}</div>}
     </div>
   )
 }
@@ -95,10 +105,10 @@ export function SectionTitle({ title, sub, actions, className }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('mb-3 mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
-      <h2 className="text-base font-medium">{tc(title)}</h2>
-      {sub && <span className="text-sm text-muted-foreground">{sub}</span>}
-      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+    <div data-section-title className={cn('mb-3 mt-8 flex min-h-8 flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
+      <h2 className="font-heading text-base font-medium">{tc(title)}</h2>
+      {sub && <span className="text-xs text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">{sub}</span>}
+      {actions && <div className="ml-auto flex items-center gap-2 self-center">{actions}</div>}
     </div>
   )
 }
@@ -145,7 +155,7 @@ export function DeltaChip({ value, format, label, health, className }: Delta & {
 /** KPI tile with one fixed structure so tiles in a row line up: icon + label, value (+ delta, + aside),
  *  a visual row that is always 20px tall (reserved when empty), and a one-line truncated hint.
  *  Tiles fill their grid cell, so a row of tiles is equal height. `tone` colours the value only (health semantics). */
-export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onOpen, openLabel = 'See details', className }: {
+export function Stat({ label, value, hint, tone, delta, aside, visual, onOpen, openLabel = 'See details', className }: {
   label: React.ReactNode; value: React.ReactNode; hint?: React.ReactNode
   tone?: 'good' | 'warn' | 'bad'
   /** a lucide component (rendered 16px muted) or a ready node */
@@ -161,9 +171,10 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
   className?: string
 }) {
   return (
-    <Card onClick={onOpen} className={cn('h-full gap-1.5 p-5', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
-      <div className="flex h-4 min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <IconSlot icon={icon} /><span className="truncate">{tc(label)}</span>
+    <Card onClick={onOpen} className={cn('h-full gap-2 p-5', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
+      {/* ponytail: `icon` is accepted but not drawn (cleaner label); drop the prop once callers stop passing it */}
+      <div className="flex h-4 min-w-0 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+        <span className="truncate">{tc(label)}</span>
         {onOpen && (
           <Tip tip={openLabel}>
             <button type="button" aria-haspopup="dialog" aria-label={openLabel} onClick={e => { e.stopPropagation(); onOpen() }}
@@ -175,7 +186,7 @@ export function Stat({ label, value, hint, tone, icon, delta, aside, visual, onO
       </div>
       <div className="flex min-h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-2">
-          <div className={cn('truncate text-2xl font-normal tabular-nums tracking-[-0.02em]',
+          <div className={cn('num truncate text-[26px] leading-none font-light',
             tone === 'good' && 'text-good', tone === 'warn' && 'text-warn', tone === 'bad' && 'text-bad')}>{value}</div>
           {delta && <DeltaChip {...delta} className="shrink-0" />}
         </div>
@@ -210,8 +221,8 @@ export function Meter({ value, max = 100, tone, fill, label, showValue, tip: tip
   const bar = (
     <span role="meter" aria-label={label} tabIndex={tip && !showValue ? 0 : undefined} aria-valuemin={0} aria-valuemax={max} aria-valuenow={has ? value : undefined}
       aria-valuetext={has ? undefined : 'No data'}
-      className={cn('relative block h-1.5 w-full overflow-hidden rounded-full bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring/50', !showValue && className)}>
-      {has && <span className={cn('block h-full rounded-full', fill ?? (tone === 'good' ? 'bg-good' : tone === 'warn' ? 'bg-warn' : tone === 'bad' ? 'bg-bad' : 'bg-chart-1'))}
+      className={cn('relative block h-1 w-full overflow-hidden rounded-[1px] bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring/50', !showValue && className)}>
+      {has && <span className={cn('block h-full', fill ?? (tone === 'good' ? 'bg-good-fill' : tone === 'warn' ? 'bg-warn-fill' : tone === 'bad' ? 'bg-bad-fill' : 'bg-chart-1'))}
         style={{ width: `${pct}%` }} />}
       {over && <span aria-hidden="true" className="absolute inset-y-0 w-px bg-card" style={{ left: `${(max / scale) * 100}%` }} />}
     </span>
@@ -241,7 +252,7 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
   const body = (
     <>
       {icon != null && (isIconComponent(icon)
-        ? <span className={cn('grid shrink-0 place-items-center rounded-full bg-muted', size === 'lg' ? 'size-8' : 'size-7')}><IconSlot icon={icon} /></span>
+        ? <span className={cn('grid shrink-0 place-items-center rounded-md bg-muted', size === 'lg' ? 'size-8' : 'size-7')}><IconSlot icon={icon} /></span>
         : icon)}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{title}</span>
@@ -253,9 +264,9 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
     </>
   )
   const cls = cn('flex w-full items-center gap-3 rounded-lg px-2 text-left', size === 'lg' ? 'min-h-13 py-2' : 'min-h-11 py-1.5', className)
-  if (!onClick) return <div className={cls}>{body}</div>
+  if (!onClick) return <div data-list-row className={cls}>{body}</div>
   return (
-    <button type="button" onClick={onClick} {...aria}
+    <button type="button" data-list-row onClick={onClick} {...aria}
       className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring')}>
       {body}
     </button>
@@ -288,7 +299,7 @@ export function MoreList<T>({ items, n = 3, render, className, noun = 'more' }: 
     <>
       <ul className={className}>{shown.map(render)}</ul>
       {items.length > n && (
-        <Button variant="outline" size="sm" className="mt-3 rounded-full" aria-expanded={all} onClick={() => setAll(v => !v)}>
+        <Button variant="outline" size="sm" className="mt-3" aria-expanded={all} onClick={() => setAll(v => !v)}>
           {all ? 'Show less' : `Show ${items.length - n} ${noun}`}
         </Button>
       )}
@@ -338,8 +349,8 @@ export function SortHead({ children, active, dir, onSort, numeric, sticky, title
     <TableHead aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={cn('p-0 first:pl-0 last:pr-0', numeric && 'text-right', sticky && stickyColStatic, className)}>
       <Tip tip={title}><button type="button" onClick={onSort}
-        className={cn('group/sort flex h-9 w-full items-center gap-1 px-3 text-[11px] font-normal uppercase tracking-[0.06em] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
-          '[th:first-child_&]:pl-4 [th:last-child_&]:pr-4', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>
+        className={cn('group/sort flex h-10 w-full items-center gap-1 px-4 text-[11px] font-medium uppercase tracking-[0.06em] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
+          '[th:first-child_&]:pl-5 [th:last-child_&]:pr-5', numeric && 'flex-row-reverse', active ? 'text-foreground' : 'text-muted-foreground')}>
         {children}
         <I className={cn('size-3 shrink-0', !active && 'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true" />
       </button></Tip>
@@ -378,7 +389,7 @@ export function TableFooterBar({ shown, total, children, className }: {
   shown: React.ReactNode; total: number; children?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-4 py-2.5 text-xs text-muted-foreground tabular-nums', className)}>
+    <div className={cn('flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-xs text-muted-foreground tabular-nums', className)}>
       <span>Showing {shown} of {total}</span>
       {children}
     </div>

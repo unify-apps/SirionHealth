@@ -2,7 +2,9 @@
    line, today and the renewal; every event marker opens its evidence. */
 import { Fragment, memo, useMemo } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Scatter, XAxis, YAxis } from 'recharts'
+import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { fmtTick } from '@/lib/dates'
 import { rangeStart, useRange, type Range } from '@/lib/range'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
@@ -26,11 +28,11 @@ const cfg = {
 } satisfies ChartConfig
 
 // the axis runs from the first scored month (May 2025 at the earliest) to a week past the renewal, Jan 2027 at the least
-const T0 = +new Date(2025, 4, 1), T1 = Math.max(+new Date(2027, 0, 6), +RENEWAL + 7 * 864e5)
+export const T0 = +new Date(2025, 4, 1), T1 = Math.max(+new Date(2027, 0, 6), +RENEWAL + 7 * 864e5)
 /** Left edge for a range: the start of the month the range begins in, never before the first scored month. */
-const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
+export const startFor = (r: Range) => { const s = rangeStart(r); return s ? Math.max(T0, +new Date(s.getFullYear(), s.getMonth(), 1)) : T0 }
 
-type Row = { t: number; health?: number; proj?: number; month?: Month; ev?: number; event?: KeyEvent }
+export type Row = { t: number; health?: number; proj?: number; month?: Month; ev?: number; event?: KeyEvent }
 
 /** Where a month's score sits on the time axis: mid-month, so it lines up under its month and inside its flagged band.
  *  (The record dates each score at month end, which drew May's point under June.) */
@@ -48,7 +50,7 @@ function healthAt(t: number): number {
   return pts[pts.length - 1][1]
 }
 
-function buildRows(): Row[] {
+export function buildRows(): Row[] {
   if (!months.length) return []
   const map = new Map<number, Row>()
   const at = (t: number) => map.get(t) ?? (map.set(t, { t }), map.get(t)!)
@@ -61,7 +63,7 @@ function buildRows(): Row[] {
 }
 
 /** Flagged months merged into continuous bands. */
-function flaggedBands(): [number, number][] {
+export function flaggedBands(): [number, number][] {
   const out: [number, number][] = []
   months.filter(m => m.model).forEach(m => {
     const x1 = +new Date(m.date.getFullYear(), m.date.getMonth(), 1), x2 = +new Date(m.date.getFullYear(), m.date.getMonth() + 1, 1)
@@ -73,19 +75,21 @@ function flaggedBands(): [number, number][] {
 }
 
 /** Month ticks from t0; every month on short ranges, every third on long ones. */
-const ticksFrom = (t0: number) => { const out: number[] = [], step = T1 - t0 < 200 * 864e5 ? 1 : 3; for (let d = new Date(t0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + step, 1)) out.push(+d); return out }
+export const ticksFrom = (t0: number) => { const out: number[] = [], step = T1 - t0 < 200 * 864e5 ? 1 : 3; for (let d = new Date(t0); +d <= T1; d = new Date(d.getFullYear(), d.getMonth() + step, 1)) out.push(+d); return out }
 
 /** Event markers, at most 8px: risk is a filled dot, positive a ring, everything else a small neutral dot. */
 const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: number }> = {
-  neg: { fill: 'var(--bad)', stroke: 'var(--card)', r: 4 },
-  flag: { fill: 'var(--bad)', stroke: 'var(--card)', r: 4 },
-  pos: { fill: 'var(--card)', stroke: 'var(--good)', r: 3.5 },
+  neg: { fill: 'var(--bad-fill)', stroke: 'var(--card)', r: 4 },
+  flag: { fill: 'var(--bad-fill)', stroke: 'var(--card)', r: 4 },
+  pos: { fill: 'var(--card)', stroke: 'var(--good-fill)', r: 3.5 },
   neu: { fill: 'var(--chart-axis)', stroke: 'var(--card)', r: 3 },
   goal: { fill: 'var(--chart-axis)', stroke: 'var(--card)', r: 3 },
   end: { fill: 'var(--chart-axis)', stroke: 'var(--card)', r: 3 },
 }
 
-export function RunwayChart() {
+/** `compact`: a shorter plot for the Summary's health card; same data, events, tooltips and sheets.
+ *  `tint`: colour for the health line and its fill (the card passes the health band's colour). */
+export function RunwayChart({ compact = false, tint }: { compact?: boolean; tint?: string }) {
   // the open event lives in the URL (?sheet=event:<iso date>); prev/next walks the events in date order
   const sheet = useSheet()
   const open = sheet?.type === 'event' ? events.find(e => e.iso === sheet.id) ?? null : null
@@ -97,8 +101,8 @@ export function RunwayChart() {
     <>
       <WidgetBody w={w} what="the renewal runway" isEmpty={d => d.length === 0}
         empty={{ title: 'No data', sub: 'No monthly health has been scored for this account yet.' }}
-        skeleton={<Skeleton className="h-[260px] w-full rounded-lg" />}>
-        {rows => <><Plot rows={rows} t0={t0} onEvent={openEvent} /><Legend /></>}
+        skeleton={<Skeleton className={cn('w-full rounded-lg', compact ? 'h-[190px]' : 'h-[260px]')} />}>
+        {rows => <div className="relative"><Plot rows={rows} t0={t0} onEvent={openEvent} compact={compact} tint={tint} /><Legend menu={compact} tint={tint} /></div>}
       </WidgetBody>
       <EventSheet event={open} onOpenChange={sheetOpenChange} pager={pager} />
     </>
@@ -109,7 +113,8 @@ export function RunwayChart() {
 const openEvent = (e: KeyEvent) => openSheet('event', e.iso)
 
 /* memo: the Scatter `shape` is an inline component, so a re-render (the sheet opening) would remount the dots and drop keyboard focus. */
-const Plot = memo(function Plot({ rows: all, t0, onEvent }: { rows: Row[]; t0: number; onEvent: (e: KeyEvent) => void }) {
+const Plot = memo(function Plot({ rows: all, t0, onEvent, compact, tint }: { rows: Row[]; t0: number; onEvent: (e: KeyEvent) => void; compact: boolean; tint?: string }) {
+  const config = useMemo(() => (tint ? { ...cfg, health: { ...cfg.health, color: tint } } : cfg), [tint])
   // the line keeps the point just before the window so it enters from the left edge instead of starting mid-chart
   const firstIn = all.findIndex(r => r.t >= t0)
   const rows = all.slice(Math.max(0, firstIn - 1)).filter(r => r.t >= t0 || r.health != null)
@@ -118,7 +123,7 @@ const Plot = memo(function Plot({ rows: all, t0, onEvent }: { rows: Row[]; t0: n
     + (runway ? ` First flagged ${fmtDY(runway.firstFlag)}.` : '')
   return (
     <div className="-mx-1 overflow-x-auto px-1" role="figure" aria-label={label}>
-      <ChartContainer config={cfg} className="aspect-auto h-[260px] w-full min-w-[640px]">
+      <ChartContainer config={config} className={cn('aspect-auto w-full', compact ? 'h-[190px] min-w-[520px]' : 'h-[260px] min-w-[640px]')}>
         <ComposedChart data={rows} margin={{ top: 18, right: 16, bottom: 0, left: 0 }} accessibilityLayer>
           <CartesianGrid {...gridProps} />
           <XAxis dataKey="t" type="number" scale="time" domain={[t0, T1]} allowDataOverflow ticks={ticksFrom(t0)} tickFormatter={fmtTick} {...xAxisProps} />
@@ -145,7 +150,7 @@ const Plot = memo(function Plot({ rows: all, t0, onEvent }: { rows: Row[]; t0: n
   )
 })
 
-function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; payload: Row; onEvent: (e: KeyEvent) => void }) {
+export function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; payload: Row; onEvent: (e: KeyEvent) => void }) {
   const e = payload.event
   if (!e || cx == null) return null
   const s = EV_STYLE[e.kind]
@@ -159,7 +164,7 @@ function EventMark({ cx, cy, payload, onEvent }: { cx: number; cy: number; paylo
   )
 }
 
-function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
+export function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload: Row }[] }) {
   const row = payload?.[0]?.payload
   if (!active || !row) return null
   return (
@@ -183,19 +188,35 @@ function RunwayTip({ active, payload }: { active?: boolean; payload?: { payload:
   )
 }
 
-function Legend() {
+function Legend({ menu = false, tint }: { menu?: boolean; tint?: string }) {
   const items: [React.ReactNode, string][] = [
-    [<span className="inline-block h-0.5 w-4 rounded bg-chart-1" />, 'Monthly health'],
+    [<span className="inline-block h-0.5 w-4 rounded bg-chart-1" style={tint ? { background: tint } : undefined} />, 'Monthly health'],
     [<span className="inline-block h-2.5 w-3 rounded-sm bg-chart-axis/15" />, 'Months the model flagged'],
     [<span className="inline-block w-4 border-t-2 border-dotted border-chart-axis" />, 'Held by the renewal cap until signed'],
-    [<span className="inline-block size-2 rounded-full bg-bad" />, 'Risk event'],
-    [<span className="inline-block size-2 rounded-full border-2 border-good" />, 'Positive event'],
+    [<span className="inline-block size-2 rounded-full bg-bad-fill" />, 'Risk event'],
+    [<span className="inline-block size-2 rounded-full border-2 border-good-fill" />, 'Positive event'],
     [<span className="inline-block size-1.5 rounded-full bg-chart-axis" />, 'Other event'],
   ]
-  return (
-    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-      {items.map(([m, l]) => <li key={l} className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-flex">{m}</span>{l}</li>)}
+  const list = (
+    <ul className={cn('text-xs text-muted-foreground', menu ? 'grid gap-2' : 'mt-3 flex flex-wrap gap-x-4 gap-y-1.5')}>
+      {items.map(([m, l]) => <li key={l} className="flex items-center gap-2"><span aria-hidden="true" className="inline-flex w-4 justify-center">{m}</span>{l}</li>)}
     </ul>
+  )
+  if (!menu) return list
+  // compact: the key folds into a small icon button at the top right, opening on click
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label="Chart legend"
+          className="absolute -top-8 right-0 grid size-7 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <Info className="size-4" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-3">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">Legend</p>
+        {list}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -223,7 +244,7 @@ function Statement({ e, on }: { e: Evidence; on: Date }) {
   )
 }
 
-function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
+export function EventSheet({ event: live, onOpenChange, pager }: { event: KeyEvent | null; onOpenChange: (o: boolean) => void; pager?: RecordSheetPager }) {
   const event = useKept(live)
   const related = event ? eventEvidence(event) : []
   return (
