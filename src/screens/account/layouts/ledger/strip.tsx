@@ -29,7 +29,7 @@ export function VerdictStrip({ d: _d }: { d?: Verdict }) {
   const range = useRange()
   const w = useWidget(() => buildVerdict(range), [range.id])
   return (
-    <section aria-labelledby="h-verdict" className="@container pt-9">
+    <section aria-labelledby="h-verdict" className="@container pt-6">
       <WidgetBody w={w} what="the health verdict" skeleton={<VerdictStripSkeleton />}>
         {d => <VerdictStripBody d={d} />}
       </WidgetBody>
@@ -39,24 +39,27 @@ export function VerdictStrip({ d: _d }: { d?: Verdict }) {
 
 function VerdictStripSkeleton() {
   return (
-    <div className="grid gap-x-16 gap-y-10 @4xl:grid-cols-[minmax(0,1fr)_19rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]" aria-hidden="true">
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-9">
-        <div className="flex flex-col items-start gap-4">
-          <Skeleton className="h-[75px] w-24" />
-          <Skeleton className="h-4 w-28" />
+    <div className="grid items-start gap-x-8 gap-y-6 @3xl:grid-cols-[minmax(0,1.5fr)_minmax(14rem,0.75fr)_minmax(15rem,0.85fr)]" aria-hidden="true">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-6">
+        <div className="flex flex-col items-start gap-2.5">
+          <Skeleton className="h-[54px] w-20" />
+          <Skeleton className="h-3.5 w-24" />
         </div>
-        <div className="grid min-w-0 content-start gap-3">
-          <Skeleton className="h-10 w-80 max-w-full" />
-          <Skeleton className="h-4 w-full max-w-[48ch]" />
-          <Skeleton className="h-4 w-4/5 max-w-[40ch]" />
+        <div className="grid min-w-0 content-start gap-2">
+          <Skeleton className="h-8 w-64 max-w-full" />
+          <Skeleton className="h-3.5 w-full max-w-[54ch]" />
+          <Skeleton className="h-3.5 w-3/4 max-w-[42ch]" />
         </div>
       </div>
-      <div className="grid min-w-0 content-start gap-2.5 self-start">
-        <Skeleton className="h-3.5 w-16" />
-        <Skeleton className="h-6 w-full max-w-64" />
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="mt-2 h-4 w-48" />
-        <Skeleton className="h-4 w-40" />
+      <div className="grid min-w-0 content-start gap-1.5 @3xl:border-l @3xl:border-hairline @3xl:pl-7">
+        <Skeleton className="h-3 w-14" />
+        <Skeleton className="mt-0.5 h-5 w-44" />
+        <Skeleton className="h-3.5 w-48" />
+      </div>
+      <div className="grid min-w-0 content-start gap-1.5 @3xl:border-l @3xl:border-hairline @3xl:pl-7">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="mt-0.5 h-5 w-56 max-w-full" />
+        <Skeleton className="h-3.5 w-32" />
       </div>
     </div>
   )
@@ -66,16 +69,16 @@ function VerdictStripBody({ d }: { d: Verdict }) {
   const b = bandOf(score.final)
   const n = useCountUp(score.final)
   return (
-    <div className="grid gap-x-16 gap-y-10 @4xl:grid-cols-[minmax(0,1fr)_19rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid items-start gap-x-8 gap-y-6 @3xl:grid-cols-[minmax(0,1.5fr)_minmax(14rem,0.75fr)_minmax(15rem,0.85fr)]">
 
       {/* 1. how is it: the score and the verdict */}
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-9">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-6">
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" onClick={() => openSheet('how')} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how the score works`}
               className={cn('group -m-1 flex flex-col items-start self-start rounded-md p-1 text-left', focusRing)}>
-              <span className="num inline-block min-w-[1.05em] text-[96px] leading-[0.78] font-light tracking-[-0.055em] tabular-nums" aria-hidden="true">{n}</span>
-              <span className="mt-4 flex items-center gap-1.5 text-[13px]">
+              <span className="num inline-block min-w-[1.05em] text-[68px] leading-[0.8] font-light tracking-[-0.055em] tabular-nums" aria-hidden="true">{n}</span>
+              <span className="mt-2.5 flex items-center gap-1.5 text-[13px]">
                 <span className={cn('size-2 rounded-full', bandBg[b])} aria-hidden="true" />
                 <span className={cn('font-medium', bandText[b])}>{BAND_LABEL[b]}</span>
                 <span className="text-muted-foreground">of 100</span>
@@ -86,8 +89,8 @@ function VerdictStripBody({ d }: { d: Verdict }) {
         </Tooltip>
 
         <div className="min-w-0">
-          <h2 id="h-verdict" className="font-heading text-[42px] leading-[1.05] font-normal tracking-[-0.02em]">{d.title}</h2>
-          <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-pretty text-muted-foreground">
+          <h2 id="h-verdict" className="font-heading text-[32px] leading-[1.08] font-normal tracking-[-0.02em]">{d.title}</h2>
+          <p className="mt-1.5 max-w-[58ch] text-[14px] leading-relaxed text-pretty text-muted-foreground">
             {drove(d.why)}{' '}
             <button type="button" onClick={() => openSheet('how')}
               className={cn('rounded-sm whitespace-nowrap text-foreground underline decoration-hairline underline-offset-4 transition-colors hover:decoration-current', focusRing)}>
@@ -97,7 +100,7 @@ function VerdictStripBody({ d }: { d: Verdict }) {
         </div>
       </div>
 
-      {/* 2. what to do, by when: the renewal, led by its next step */}
+      {/* 2. renewal standing and next step, split across two compact columns */}
       <RenewalGroup d={d} />
     </div>
   )
@@ -108,26 +111,38 @@ function RenewalGroup({ d }: { d: Verdict }) {
   const next = splitNext(d.next)
   const state = renewal.signed ? 'signed' : `${renewal.autoRenew ? 'auto-renew on' : 'auto-renew off'}, not signed yet`
   return (
-    <section aria-labelledby="h-renewal" className="min-w-0 self-start">
-      <h3 id="h-renewal" className="text-[13px] text-muted-foreground">Renewal</h3>
+    <>
+      <section aria-labelledby="h-renewal" className="min-w-0 self-start @3xl:border-l @3xl:border-hairline @3xl:pl-7">
+        <h3 id="h-renewal" className="text-[12px] text-muted-foreground">Renewal</h3>
+        <button type="button" onClick={() => showTab('overview', 'runway')}
+          aria-label={`${late ? `${-renewal.daysLeft} days overdue since` : `${renewal.daysLeft} days left to`} renewal on ${fmtDY(renewal.date)}, ${renewal.carrLabel}, ${state}. Go to the renewal runway`}
+          className={cn('mt-1 block rounded-sm text-left text-[14px] leading-snug text-muted-foreground hover:[&_.lead]:underline hover:[&_.lead]:decoration-hairline hover:[&_.lead]:underline-offset-4', focusRing)}>
+          <span className="block">
+            <span className="lead text-[18px] font-medium tracking-[-0.015em] text-foreground">
+              <span className="num">{Math.abs(renewal.daysLeft)}</span> {late ? 'days overdue' : 'days left'}
+            </span>{' '}
+            <span>{late ? 'since' : 'to'} {fmtDY(renewal.date)}</span>
+          </span>
+          <span className="mt-1 block text-[13px]">
+            <span className="num font-medium text-foreground">{renewal.carrLabel}</span>, {state}
+          </span>
+        </button>
+      </section>
+
       {next.action && (
-        <p className="mt-2 text-[20px] leading-snug font-medium tracking-[-0.015em] text-pretty">
-          {next.action}
-          {next.due && (
-            <span className={cn('mt-1 block text-[15px] font-normal tracking-normal', next.left != null && next.left <= 7 ? 'text-bad' : 'text-muted-foreground')}>
-              Due {next.due}, {next.left! < 0 ? `${-next.left!} days late` : next.left === 0 ? 'today' : `in ${next.left} days`}
-            </span>
-          )}
-        </p>
+        <section aria-labelledby="h-next-step" className="min-w-0 self-start @3xl:border-l @3xl:border-hairline @3xl:pl-7">
+          <h3 id="h-next-step" className="text-[12px] text-muted-foreground">Next step</h3>
+          <p className="mt-1 text-[18px] leading-snug font-medium tracking-[-0.015em] text-pretty">
+            {next.action}
+            {next.due && (
+              <span className={cn('mt-1 block text-[13px] font-normal tracking-normal', next.left != null && next.left <= 7 ? 'text-bad' : 'text-muted-foreground')}>
+                Due {next.due}, {next.left! < 0 ? `${-next.left!} days late` : next.left === 0 ? 'today' : `in ${next.left} days`}
+              </span>
+            )}
+          </p>
+        </section>
       )}
-      <button type="button" onClick={() => showTab('overview', 'runway')}
-        aria-label={`${late ? `${-renewal.daysLeft} days overdue since` : `${renewal.daysLeft} days left to`} renewal on ${fmtDY(renewal.date)}, ${renewal.carrLabel}, ${state}. Go to the renewal runway`}
-        className={cn('mt-4 block rounded-sm text-left text-[15px] leading-relaxed text-muted-foreground hover:[&_.lead]:underline hover:[&_.lead]:decoration-hairline hover:[&_.lead]:underline-offset-4', focusRing)}>
-        <span className="lead font-medium text-foreground"><span className="num">{Math.abs(renewal.daysLeft)}</span> {late ? 'days overdue' : 'days left'}</span>{' '}
-        {late ? 'since' : 'to'} {fmtDY(renewal.date)}
-        <span className="block"><span className="num text-foreground">{renewal.carrLabel}</span>, {state}</span>
-      </button>
-    </section>
+    </>
   )
 }
 

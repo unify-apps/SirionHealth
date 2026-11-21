@@ -60,7 +60,7 @@ export function LedgerLayout() {
         {tab === 'overview' ? <VerdictStrip d={d} /> : <CompactStrip d={d} />}
         {TABS.map(t => (
           <TabsContent key={t.id} value={t.id} data-ledger-panel={t.id}
-            className={cn('flex flex-col gap-6 animate-in', t.id === 'overview' ? 'pt-12' : 'pt-7',
+            className={cn('flex flex-col gap-6 animate-in', t.id === 'overview' ? 'pt-8' : 'pt-7',
               'fade-in-0 duration-200 motion-reduce:animate-none')}>
             {t.id === 'overview' ? <LedgerSummary /> : t.id === 'adoption' ? <LedgerAdoption /> : t.id === 'activity' ? <LedgerActivity /> : <t.C />}
           </TabsContent>
