@@ -6,7 +6,7 @@ html[data-layout="ledger"] [data-ledger] {
   --ledger-gap: color-mix(in oklab, var(--foreground) 30%, transparent);
   --ledger-mark: color-mix(in oklab, var(--foreground) 70%, transparent);
   --ledger-track: color-mix(in oklab, var(--foreground) 10%, transparent);
-  --ledger-70: color-mix(in oklab, var(--good) 45%, transparent);
+  --ledger-70: color-mix(in oklab, var(--good-fill) 45%, transparent);
   --ledger-hover-bg: color-mix(in srgb, var(--background), var(--foreground) 3.5%);
 }
 html.dark[data-layout="ledger"] [data-ledger] {
@@ -14,7 +14,7 @@ html.dark[data-layout="ledger"] [data-ledger] {
   --ledger-gap: color-mix(in oklab, var(--foreground) 35%, transparent);
   --ledger-mark: color-mix(in oklab, var(--foreground) 75%, transparent);
   --ledger-track: color-mix(in oklab, var(--foreground) 12%, transparent);
-  --ledger-70: color-mix(in oklab, var(--good) 50%, transparent);
+  --ledger-70: color-mix(in oklab, var(--good-fill) 50%, transparent);
   --ledger-hover-bg: color-mix(in srgb, var(--background), var(--foreground) 5%);
 }
 
@@ -58,19 +58,9 @@ html[data-layout="ledger"] .ledger-activity .ledger-who { display: none; }
   html[data-layout="ledger"] .ledger-activity .ledger-who { display: block; }
 }
 
-/* ---------- other tabs: ruled and cardless. Every card loses its box and sits on the page; its own padding is pulled
-   back into the gutter so its content lines up with the page column, and a hairline on top separates sections. ---------- */
+/* ---------- other tabs: cards lose their box app-wide (index.css, Ledger block); this keeps the tab's bottom space ---------- */
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) { padding-bottom: 5rem; }
-html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"]:not(.group):not(button) {
-  position: relative; background: transparent; box-shadow: none; border: 0; border-radius: 0; min-width: 0;
-}
-html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"]:not(.group):not(button)::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--hairline); pointer-events: none;
-}
-/* the tab rule already opens the first section; cards nested in cards lose the rule too, so there is one rule per section */
-html[data-layout="ledger"] [data-ledger-panel] > :first-child > [data-slot="card"]::before,
-html[data-layout="ledger"] [data-ledger-panel] > [data-slot="card"]:first-child::before { display: none; }
-html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) [data-slot="card"] [data-slot="card"]:not(.group):not(button)::before { display: none; }
+
 /* clickable cards (news themes and the like): ruled entries, a rule on top and no frame; hover washes the entry */
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]):not([data-ledger-panel="health"]) .group[data-slot="card"],
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) button[data-slot="card"] {
@@ -79,24 +69,53 @@ html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]):not([data-ledger-panel="health"]) .group[data-slot="card"]:hover,
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) button[data-slot="card"]:hover { background: var(--hover); box-shadow: none; }
 html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .grid:has(> .group[data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
-html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .bg-surface-2:not([data-slot="badge"]) { background-color: transparent; }
+/* Intelligence news: two ruled columns (the cards sit in <li>s, so the rule above misses them), the Summary's type
+   sizes (15px title and body, 13px meta), and a hover wash that bleeds past the column like .ledger-row. */
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] ul.grid:has(> li > button[data-slot="card"]) { column-gap: 3rem; row-gap: 0; }
+html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] button[data-slot="card"],
+html[data-layout="ledger"] [data-ledger] [data-ledger-panel="intelligence"] button[data-slot="card"]:hover {
+  position: relative; isolation: isolate; padding-block: 1.125rem 1.25rem; background: transparent !important;
+}
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"]::before {
+  content: ""; position: absolute; inset: 1px -0.75rem; border-radius: 6px; z-index: -1; pointer-events: none; transition: background-color 150ms;
+}
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"]:hover::before { background: var(--hover); }
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"] > span:first-child > span:first-child { font-size: 15px; }
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"] .text-sm { font-size: 15px; }
+html[data-layout="ledger"] [data-ledger-panel="intelligence"] button[data-slot="card"] .text-xs { font-size: 13px; }
+html[data-layout="ledger"] [data-ledger-panel]:not([data-ledger-panel="overview"]) .bg-surface-2:not([data-slot="badge"]):not(.rounded-full) { background-color: transparent; }
 
-/* Health: the six area cards become ruled ledger rows (name | score and change | trend | weakest input). */
+/* Health: the six area cards become ruled ledger rows: icon and name | score and change | trend | weakest input | inputs.
+   The card's last line (weakest | count) is unwrapped so both pieces take their own column. Hover washes past the
+   column like the Summary rows, so text stays on the section's left edge. */
 html[data-layout="ledger"] [data-ledger-panel="health"] .grid:has(> .group[data-slot="card"]) {
   display: block; border-top: 1px solid var(--hairline);
 }
 html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] {
-  display: grid; grid-template-columns: minmax(0, 17rem) 9rem minmax(0, 1fr) minmax(0, 21rem);
-  align-items: center; column-gap: 2rem; padding: 0.75rem 0;
-  border-radius: 0; box-shadow: none; background: transparent; border-bottom: 1px solid var(--hairline);
+  display: grid; grid-template-columns: minmax(0, 1.1fr) 8.5rem minmax(0, 1fr) minmax(0, 1.2fr) 5rem;
+  align-items: center; column-gap: 2rem; padding: 0.875rem 0; isolation: isolate;
+  border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; box-shadow: none !important; background: transparent !important;
 }
-html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"]:hover { background: var(--hover); box-shadow: none; }
-html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > p { margin: 0; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"]::before {
+  content: ""; position: absolute; inset: 1px -0.75rem; border-radius: 6px; z-index: -1; pointer-events: none; transition: background-color 150ms;
+}
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"]:hover::before { background: var(--hover); }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > p { display: contents; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > p > span { font-size: 13px; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > p > span:last-child { margin: 0; text-align: right; }
 html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > div:first-child > svg:last-child { display: none; }
 html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] h3 { font-size: 15px; font-weight: 400; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > div:nth-child(2) > span:first-child { font-size: 22px; line-height: 1; }
+html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > div:nth-child(2) > span:last-child { font-size: 13px; }
 html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] button::after { border-radius: 0; }
 @media (max-width: 1180px) {
-  html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] { grid-template-columns: minmax(0, 14rem) 8rem minmax(0, 1fr) minmax(0, 17rem); column-gap: 1.25rem; }
+  html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] {
+    grid-template-columns: minmax(0, 1.25fr) 7rem minmax(0, 0.7fr) minmax(0, 1fr) 4.5rem; column-gap: 1.25rem;
+  }
+}
+@media (max-width: 767px) {
+  html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.5rem; }
+  html[data-layout="ledger"] [data-ledger-panel="health"] .grid > .group[data-slot="card"] > div:nth-child(3) { grid-column: 1 / -1; }
 }
 
 /* Tables (Stakeholders): no grey header bar, plain sentence-case labels over a hairline. */
@@ -105,3 +124,19 @@ html[data-layout="ledger"] [data-ledger-panel] [data-slot="table-header"] { --su
 html[data-layout="ledger"] [data-ledger-panel] [data-slot="table-header"] th {
   text-transform: none; letter-spacing: normal; font-weight: 400; font-size: 12px;
 }
+
+/* Section titles on the other tabs (SectionTitle) take the Summary's serif size, so every tab opens the same way. */
+html[data-layout="ledger"] [data-ledger-panel] h2.font-heading { font-size: 22px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em; }
+
+/* ---------- top ticket themes (Adoption): theme | bar | count ---------- */
+html[data-layout="ledger"] .ledger-themes { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) 3.5rem; }
+@media (max-width: 639px) { html[data-layout="ledger"] .ledger-themes { grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 3rem; } }
+
+/* ---------- lists inside a box (Stakeholders' Needs attention): ruled rows on the Summary's type sizes ---------- */
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="card"] ul.gap-1:has(> li > [data-list-row]) { gap: 0; padding-inline: 1.25rem; }
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="card"] ul.gap-1:has(> li > [data-list-row]) > li + li { border-top: 1px solid var(--hairline); }
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="card"] ul.gap-1 > li > [data-list-row] { margin-inline: -0.5rem; width: calc(100% + 1rem); }
+html[data-layout="ledger"] [data-ledger-panel] [data-list-row] > .min-w-0 > :first-child { font-size: 15px; font-weight: 400; }
+html[data-layout="ledger"] [data-ledger-panel] [data-list-row] > .min-w-0 > :last-child:not(:first-child) { font-size: 13px; }
+html[data-layout="ledger"] [data-ledger-panel] [data-list-row] > :last-child:not(.min-w-0) { font-size: 13px; }
+html[data-layout="ledger"] [data-ledger-panel] [data-slot="card"] ul.gap-1:has(> li > [data-list-row]) > li:not(:has(> [data-list-row])) { padding-inline: 0; padding-block: 0.875rem 1rem; }

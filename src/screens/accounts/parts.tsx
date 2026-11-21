@@ -19,7 +19,7 @@ import {
 } from './model'
 
 
-const DOT: Record<Tone, string> = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good', neutral: 'bg-muted-foreground/60' }
+const DOT: Record<Tone, string> = { bad: 'bg-bad-fill', warn: 'bg-warn-fill', good: 'bg-good-fill', neutral: 'bg-muted-foreground/60' }
 
 /** Why the row is in the list, in full, with the next step underneath. Only the dot carries colour. */
 export function ReasonCell({ row }: { row: Row }) {
@@ -28,8 +28,8 @@ export function ReasonCell({ row }: { row: Row }) {
     // one line: the reason, then the next step muted after it; the step truncates first
     <span className="flex min-w-0 items-center gap-1.5">
       <span className={cn('size-1.5 shrink-0 rounded-full', DOT[r.tone])} aria-hidden="true" />
-      <span className={cn('shrink-0', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
-      {r.next && <span className="min-w-0 truncate text-muted-foreground">→ {r.next}</span>}
+      <span className={cn('max-w-full flex-none truncate', r.tone === 'neutral' && 'text-muted-foreground')}>{r.text}</span>
+      {r.next && <span className="min-w-0 flex-1 truncate text-muted-foreground">→ {r.next}</span>}
     </span>
   )
 }
@@ -185,7 +185,7 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /** Scored accounts split by health band: one thin stacked bar, a tooltip per band. */
-const BAND_FILL = { bad: 'bg-bad', warn: 'bg-warn', good: 'bg-good' } as const
+const BAND_FILL = { bad: 'bg-bad-fill', warn: 'bg-warn-fill', good: 'bg-good-fill' } as const
 const BAND_NAME = { bad: 'At risk', warn: 'Watch', good: 'Healthy' } as const
 export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n: number }[] }) {
   const total = bands.reduce((a, b) => a + b.n, 0) || 1
@@ -203,8 +203,8 @@ export function BandSplit({ bands }: { bands: { band: 'bad' | 'warn' | 'good'; n
 /* ---------- loading skeletons matching each widget's shape ---------- */
 export function TilesSkeleton() {
   return (
-    <div className="grid gap-3 sm:grid-cols-3" aria-hidden="true">
-      {[0, 1, 2].map(i => (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+      {[0, 1, 2, 3].map(i => (
         <div key={i} className="grid gap-2 rounded-xl border border-hairline bg-card p-5">
           <Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-20" /><Skeleton className="h-1.5 w-full" /><Skeleton className="h-3 w-32" />
         </div>

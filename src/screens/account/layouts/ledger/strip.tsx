@@ -48,7 +48,7 @@ export function VerdictStrip({ d }: { d: Verdict }) {
           </Tooltip>
 
           <div className="min-w-0">
-            <h2 id="h-verdict" className="text-[38px] leading-[1.05] font-normal tracking-[-0.035em]">{d.title}</h2>
+            <h2 id="h-verdict" className="font-heading text-[42px] leading-[1.05] font-normal tracking-[-0.02em]">{d.title}</h2>
             <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-pretty text-muted-foreground">
               {drove(d.why)}{' '}
               <button type="button" onClick={() => openSheet('how')}

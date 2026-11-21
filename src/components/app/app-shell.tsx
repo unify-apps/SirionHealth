@@ -86,7 +86,7 @@ function AppSidebar({ route, theme, toggleTheme, onFind, onAsk }: {
         <SidebarGroup className="pb-0">
           <SidebarMenu className="gap-1">
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="border border-sidebar-border bg-white/6 text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-accent-foreground">
+              <SidebarMenuButton tooltip="Search ⌘K" onClick={onFind} className="border border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Search /><span>Search</span>
               </SidebarMenuButton>
               <SidebarMenuBadge><Kbd className="h-5 text-[10px]">⌘K</Kbd></SidebarMenuBadge>
@@ -185,11 +185,16 @@ function useSidebarOpen() {
 export function AppShell({ route, children }: { route: Route; children: React.ReactNode }) {
   const [theme, toggleTheme] = useTheme()
   const [open, setOpen] = useSidebarOpen()
+  // detail pages (an account) open with the sidebar collapsed to its rail, to give the page the width. Expanding it
+  // there is temporary: it is not saved, and the next visit to a detail page starts collapsed again.
+  const detail = route === 'account'
+  const [detailOpen, setDetailOpen] = useState(false)
+  useEffect(() => { if (detail) setDetailOpen(false) }, [detail])
   const [cmd, setCmd] = useState(false)
   const [ask, setAsk] = useState(false)
   useEffect(() => { document.title = route === 'account' ? `${ACCOUNT.name} · Sirion Account Health` : 'Sirion Account Health' }, [route])
   return (
-    <SidebarProvider open={open} onOpenChange={setOpen}>
+    <SidebarProvider open={detail ? detailOpen : open} onOpenChange={detail ? setDetailOpen : setOpen}>
       <AppSidebar route={route} theme={theme} toggleTheme={toggleTheme} onFind={() => setCmd(true)} onAsk={() => setAsk(true)} />
       <SidebarInset className="overflow-x-clip">
         <CommandMenu open={cmd} onOpenChange={setCmd} />

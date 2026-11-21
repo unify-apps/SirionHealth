@@ -23,9 +23,9 @@ function Cell({ label, value, sub }: { label: string; value: React.ReactNode; su
 }
 
 const BAND_PARTS = [
-  { key: 'good', label: 'Healthy', color: 'var(--good)' },
-  { key: 'warn', label: 'Watch', color: 'var(--warn)' },
-  { key: 'bad', label: 'At risk', color: 'var(--bad)' },
+  { key: 'good', label: 'Healthy', color: 'var(--good-fill)' },
+  { key: 'warn', label: 'Watch', color: 'var(--warn-fill)' },
+  { key: 'bad', label: 'At risk', color: 'var(--bad-fill)' },
 ] as const
 
 type Slice = 'risk' | 'renewing' | 'all'

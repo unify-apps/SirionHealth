@@ -1,41 +1,25 @@
 import { FlaskConical } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DEFAULT_LAYOUT, LAYOUTS, setFlag, setLayout, useFlags, type Layout } from '@/lib/dev-flags'
-import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DEFAULT_LAYOUT, LAYOUTS, setLayout, useFlags } from '@/lib/dev-flags'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-/** Prototype switches: detail page layout and the flat option. Not product UI. */
+/** Prototype switch: an icon toggle that flips the whole app between the two design styles; filled while the
+ *  non-default style is on. Not product UI. */
 export function DevToolbar() {
-  const { flat, layout } = useFlags()
-  const on = flat || layout !== DEFAULT_LAYOUT
+  const { layout } = useFlags()
+  const current = LAYOUTS.find(l => l.id === layout)!
+  const next = LAYOUTS.find(l => l.id !== layout)!
+  const on = layout !== DEFAULT_LAYOUT
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Design options"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" onClick={() => setLayout(next.id)} aria-pressed={on} aria-label={`Design style: ${current.label}. Switch to ${next.label}`}
           className={cn('grid size-9 place-items-center rounded-md border shadow-(--shadow-card) outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring print:hidden',
-            on ? 'border-signal bg-signal text-white' : 'border-border bg-popover text-muted-foreground hover:text-foreground')}>
-          <FlaskConical className="size-4" />
+            on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-popover text-muted-foreground hover:text-foreground')}>
+          <FlaskConical className="size-4" aria-hidden="true" />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="left" align="end" className="w-72">
-        <DropdownMenuLabel>Detail page layout</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={layout} onValueChange={v => setLayout(v as Layout)}>
-          {LAYOUTS.map(l => (
-            <DropdownMenuRadioItem key={l.id} value={l.id} className="items-start py-1.5">
-              <span className="grid">
-                <span>{l.label}</span>
-                <span className="text-xs text-muted-foreground">{l.hint}</span>
-              </span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem checked={flat} onCheckedChange={v => setFlag('flat', !!v)} disabled={layout !== 'current' && layout !== 'tabsfirst'}>
-          Flat sections (D and Previous)
-        </DropdownMenuCheckboxItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </TooltipTrigger>
+      <TooltipContent side="left">{current.label} · click for {next.label}</TooltipContent>
+    </Tooltip>
   )
 }

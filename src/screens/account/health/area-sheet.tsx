@@ -50,8 +50,8 @@ function BandTrend({ months, area, name }: { months: Month[]; area: Area['key'];
     <ChartContainer config={config} className="aspect-auto h-48 w-full" role="img"
       aria-label={`${name} score by month: ${text}.${gaps.length ? ' ' + gaps.map(g => g.text).join('. ') : ''}`}>
       <AreaChart data={points} margin={{ top: 16, right: 12, bottom: 0, left: 0 }}>
-        <ReferenceArea y1={0} y2={40} fill="var(--bad)" fillOpacity={0.08} stroke="none" ifOverflow="hidden" />
-        <ReferenceArea y1={40} y2={70} fill="var(--warn)" fillOpacity={0.08} stroke="none" ifOverflow="hidden" />
+        <ReferenceArea y1={0} y2={40} fill="var(--bad-fill)" fillOpacity={0.08} stroke="none" ifOverflow="hidden" />
+        <ReferenceArea y1={40} y2={70} fill="var(--warn-fill)" fillOpacity={0.08} stroke="none" ifOverflow="hidden" />
         <CartesianGrid {...gridProps} />
         <XAxis dataKey="tick" {...xAxisProps} minTickGap={24} />
         <YAxis domain={[0, 100]} ticks={[0, 40, 70, 100]} {...yAxisProps} />

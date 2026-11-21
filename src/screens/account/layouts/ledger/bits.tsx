@@ -15,7 +15,7 @@ export function LedgerSection({ id, title, aside, actions, children, className }
   return (
     <section aria-labelledby={id} className={cn('min-w-0', className)}>
       <div className="flex min-h-8 flex-wrap items-baseline gap-x-3 gap-y-1 pb-2">
-        <h2 id={id} className="text-[17px] leading-tight font-medium tracking-[-0.015em]">{title}</h2>
+        <h2 id={id} className="font-heading text-[22px] leading-tight font-normal tracking-[-0.01em]">{title}</h2>
         {aside && <span className="text-[13px] text-muted-foreground">{aside}</span>}
         {actions && <div className="ml-auto flex items-center gap-3 self-center">{actions}</div>}
       </div>

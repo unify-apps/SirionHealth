@@ -11,6 +11,8 @@ import { TABS } from '../index'
 import { setTab, useTab } from '../tab'
 import { HeaderSheets } from '../overview/how-sheet'
 import { LedgerSummary } from './ledger/summary'
+import { LedgerAdoption } from './ledger/adoption'
+import { LedgerActivity } from './ledger/activity'
 import { CompactStrip, VerdictStrip } from './ledger/strip'
 import './ledger.css'
 
@@ -60,7 +62,7 @@ export function LedgerLayout() {
           <TabsContent key={t.id} value={t.id} data-ledger-panel={t.id}
             className={cn('flex flex-col gap-6 animate-in', t.id === 'overview' ? 'pt-12' : 'pt-7',
               'fade-in-0 duration-200 motion-reduce:animate-none')}>
-            {t.id === 'overview' ? <LedgerSummary /> : <t.C />}
+            {t.id === 'overview' ? <LedgerSummary /> : t.id === 'adoption' ? <LedgerAdoption /> : t.id === 'activity' ? <LedgerActivity /> : <t.C />}
           </TabsContent>
         ))}
       </Tabs>

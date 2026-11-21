@@ -26,7 +26,7 @@ const TONE: Record<string, 'good' | 'bad' | undefined> = {
   'SLA met': F.sla >= 90 ? 'good' : 'bad', 'Reopen rate': F.reopen <= 5 ? 'good' : 'bad',
 }
 /** Counts where none is the good answer (P1s, escalations); a long open backlog is bad. */
-const toneOf = (label: string, value: string) => label in TONE ? TONE[label]
+export const toneOf = (label: string, value: string) => label in TONE ? TONE[label]
   : /P1 incidents|Exec escalations/.test(label) ? (value === '0' ? 'good' : 'bad')
   : label === 'Open enhancement requests' ? (+value > 10 ? 'bad' : undefined) : undefined
 

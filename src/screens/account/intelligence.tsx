@@ -54,7 +54,7 @@ function News({ themes, base }: { themes: Theme[]; base: ReturnType<typeof loadB
                 <span className="flex items-center gap-2">
                   <span className="flex-1 truncate text-sm font-medium">{t.title}</span>
                   <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground" title={`Relevance to the renewal: ${r} of 100`}>
-                    <span className={cn('size-1.5 rounded-full', r >= 70 ? 'bg-bad' : r >= 50 ? 'bg-warn' : 'bg-muted-foreground/50')} aria-hidden="true" />{relLabel(r)} relevance
+                    <span className={cn('size-1.5 rounded-full', r >= 70 ? 'bg-bad-fill' : r >= 50 ? 'bg-warn-fill' : 'bg-muted-foreground/50')} aria-hidden="true" />{relLabel(r)} relevance
                   </span>
                 </span>
                 {t.why && <span className="text-sm leading-relaxed text-pretty">{t.why}</span>}

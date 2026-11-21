@@ -22,10 +22,12 @@ import { Glossed } from '../overview/bits'
 export const CH_ICON: Record<Channel, typeof Mail> = {
   meeting: CalendarDays, email: Mail, ticket: LifeBuoy, record: HeartPulse, file: FileText, ai: Lightbulb, teams: MessagesSquare, call: Phone, note: NotebookText,
 }
-const CAT_DOT: Record<Cat, string> = { risk: 'bg-bad', positive: 'bg-good', general: 'bg-muted-foreground/60' }
+const CAT_DOT: Record<Cat, string> = { risk: 'bg-bad-fill', positive: 'bg-good-fill', general: 'bg-muted-foreground/60' }
 const STEP = 15
 
-export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[] }) {
+/** `ruled` (Ledger): month labels over ruled rows (date | title | channel and people | signal), like the Summary's
+ *  recent activity; otherwise compact icon rows under sticky month headers. */
+export function Timeline({ items, snapshot, ruled = false }: { items: Item[]; snapshot: Touch[]; ruled?: boolean }) {
   const [cat, setCat] = useState<'all' | Cat>('all')
   const [chs, setChs] = useState<Set<Channel>>(new Set())
   const [shown, setShown] = useState(STEP)
@@ -52,6 +54,11 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
   const show = (i: Item) => openSheet('activity', i.id)
   // prev/next walks the list as filtered and sorted: upcoming first, then past, newest first
   const pager = listPager([...up, ...past], open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
+  const R = ruled ? RuledRow : Row
+  const rowsCls = ruled ? 'divide-y divide-hairline border-t border-hairline' : 'grid grid-cols-[minmax(0,1fr)] gap-1'
+  const head = (count: number, children: React.ReactNode) => ruled
+    ? <h3 className="pt-4 pb-2 text-[13px] text-muted-foreground">{children} <span className="num ml-1">{count}</span></h3>
+    : <ListGroupHeader count={count} className="top-[33px]">{children}</ListGroupHeader>
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -108,14 +115,14 @@ export function Timeline({ items, snapshot }: { items: Item[]; snapshot: Touch[]
       </p>
 
       <section aria-label="Upcoming">
-        <ListGroupHeader count={up.length} className="top-[33px]">Upcoming</ListGroupHeader>
-        {up.length ? <div className="grid grid-cols-[minmax(0,1fr)] gap-1">{up.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
+        {head(up.length, 'Upcoming')}
+        {up.length ? <div className={rowsCls}>{up.map(i => <R key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
       </section>
 
       {months.length ? months.map(([ym, rows]) => (
         <section key={ym} aria-label={ymLong(ym)}>
-          <ListGroupHeader count={rows.length} className="top-[33px]">{ymLong(ym)}</ListGroupHeader>
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-1">{rows.map(i => <Row key={i.id} i={i} onOpen={show} />)}</div>
+          {head(rows.length, ymLong(ym))}
+          <div className={rowsCls}>{rows.map(i => <R key={i.id} i={i} onOpen={show} />)}</div>
         </section>
       )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
       {past.length > shown && (
@@ -142,6 +149,24 @@ function Row({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
         <span className={cn('size-1.5 rounded-full', hollow ? 'border border-muted-foreground bg-transparent' : CAT_DOT[i.cat])} aria-hidden="true" />
         <span className="hidden sm:inline">{CAT_LABEL[i.cat]}</span>
       </span>} />
+  )
+}
+
+/** Ledger row: date | title | channel and people | signal, on the Summary's recent-activity columns (ledger.css). */
+function RuledRow({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
+  const people = i.who.filter(w => !i.title.includes(w)).slice(0, 2)
+  const hollow = i.kind === 'goal' || i.kind === 'end'
+  return (
+    <button type="button" onClick={() => onOpen(i)} aria-haspopup="dialog" aria-label={`${i.title}, ${CH_NAME[i.ch]}, ${fmtFull(i.date)}, ${CAT_LABEL[i.cat]}`}
+      className="ledger-row ledger-activity grid w-full items-baseline gap-x-5 rounded-sm py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <DateText date={i.date} className="num text-[13px] text-muted-foreground" />
+      <span className="min-w-0 truncate text-[15px]" title={i.title}>{i.title}</span>
+      <span className="ledger-who min-w-0 truncate text-[13px] text-muted-foreground">{CH_NAME[i.ch]}{people.length ? ` · ${people.join(', ')}` : ''}</span>
+      <span className="inline-flex items-center justify-end gap-1.5 text-[13px] text-muted-foreground">
+        <span className={cn('size-1.5 rounded-full', hollow ? 'border border-muted-foreground bg-transparent' : CAT_DOT[i.cat])} aria-hidden="true" />
+        {CAT_LABEL[i.cat]}
+      </span>
+    </button>
   )
 }
 

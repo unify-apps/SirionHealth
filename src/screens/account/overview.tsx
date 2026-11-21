@@ -1,7 +1,7 @@
 /* Summary tab: account brief, strengths and risks, renewal runway, recent activity, order forms.
    Ported from renderSummary, openRef, renderCLM, renderRunway and the #s-summary markup. */
 import {
-  Activity, CalendarClock, CalendarDays, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
+  Activity, CalendarDays, CircleAlert, CircleCheck, Copy, FileSignature, FileText, FileX, HeartPulse, LifeBuoy, Mail, MessageSquare, Phone, StickyNote,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,6 @@ import {
 import { AREA_ICON, EvidenceRow, Glossed, ListRow, NavLink, SectionHead, showTab, useCollapse, useWidget, WidgetBody } from './overview/bits'
 import { ACT_STATUS, ActivitySheet } from './overview/activity-sheet'
 import { ATTN, BRIEF, CLM, REF_ORDER, SUM_REFS, WELL, type ListItem } from './overview/content'
-import { RunwayChart } from './overview/runway-chart'
 
 // the area sheet lives in the URL and the account header renders it (overview/how-sheet.tsx)
 const setArea = (k: AreaKey) => openSheet('area', k)
@@ -43,17 +42,9 @@ export function OverviewTab() {
         </div>
       )}
 
-      <section id="runway" aria-labelledby="h-runway" className="mt-8 scroll-mt-40">
-        <Card data-block className="gap-0 py-0">
-          <BlockHeader icon={CalendarClock} title={<span id="h-runway">Renewal runway</span>}
-            />
-          <div className="px-4 pt-5 pb-4 sm:px-5"><RunwayChart /></div>
-        </Card>
-      </section>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {/* order forms now sit in the renewal details card at the top (Studio), so activity takes the full width */}
+      <div className="mt-8 grid gap-4">
         <RecentActivity />
-        <OrderForms onArea={setArea} />
       </div>
 
     </div>

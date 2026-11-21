@@ -9,7 +9,7 @@ import { titleCase } from '@/lib/text'
 import { openAccount } from '@/lib/route'
 import { BAND_LABEL, bandBg, bandOf, bandText, isMissing } from '@/components/health'
 import { SearchBox } from '@/components/app/search-box'
-import { Empty, HeaderFacts, Meter, PageHeader, SEGMENTED, SortHead, Stat, stickyCol, TableFooterBar } from '@/components/page'
+import { Empty, Meter, PageHeader, SEGMENTED, SortHead, Stat, stickyCol } from '@/components/page'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -140,13 +140,20 @@ export function AccountsScreen() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <PageHeader title="My accounts" sub={`Updated ${today}`}
-        actions={status === 'ready' && (
-          <HeaderFacts items={[['accounts', data.length], ['total ARR', money(sum.arr)]]} />
-        )} />
+      <PageHeader title="My accounts" sub={`Updated ${today}`} />
 
       {status === 'loading' ? <TilesSkeleton /> : status === 'error' ? null : (
-        <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
+        <div data-kpi-strip className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* the book's size: the first tile, so the page header stays a title */}
+          {(() => {
+            // the book in the accent colour (not a health colour); the bar is the share of its ARR that needs you
+            const needs = VIEWS.find(v => v.id === 'needs')!, needArr = data.filter(needs.test).reduce((a, r) => a + r.carr, 0)
+            return (
+              <Stat label="Your book" value={<span className="text-signal">{money(sum.arr)}</span>} hint={`${data.length} accounts · total ARR`}
+                visual={<Meter value={needArr} max={sum.arr || 1} fill="bg-signal" label="Share of ARR that needs you"
+                  showValue={`${sum.arr ? Math.round((needArr / sum.arr) * 100) : 0}% needs you`} />} />
+            )
+          })()}
           <TileButton active={view === 'renew'} onClick={() => setView(v => (v === 'renew' ? 'needs' : 'renew'))} label="Show accounts renewing in 90 days">
             <Stat icon={CalendarClock} label="Renewing in 90 days" value={money(sum.renew.arr)} tone={sum.renew.overdue ? 'bad' : undefined}
               visual={<ShareMeter part={sum.renew.arr} of={sum.arr} />}
@@ -331,11 +338,9 @@ export function AccountsScreen() {
                 </Table>
               )}
             </div>
+            {/* sort order is announced to screen readers only; the header arrows show it on screen */}
             {status === 'ready' && list.length > 0 && (
-              <TableFooterBar shown={list.length} total={data.length}>
-                {/* sort order is announced to screen readers only; the header arrows show it on screen */}
-                <span aria-live="polite" className="sr-only">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
-              </TableFooterBar>
+              <span aria-live="polite" className="sr-only">{priority ? 'Sorted by what needs you first' : `Sorted by ${SORT_NAME[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`}</span>
             )}
             </Card>
         </div>

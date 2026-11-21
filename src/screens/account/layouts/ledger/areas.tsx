@@ -16,11 +16,11 @@ import { focusRing, signed } from './bits'
 type Verdict = ReturnType<typeof buildVerdict>
 
 const FILL: Record<Band, string> = {
-  good: 'var(--ledger-fill)', none: 'var(--ledger-fill)', warn: 'var(--warn)', bad: 'var(--bad)',
+  good: 'var(--ledger-fill)', none: 'var(--ledger-fill)', warn: 'var(--warn-fill)', bad: 'var(--bad-fill)',
 }
 /** Hatch colour for the gap between now and the baseline: the band's colour where it signals, grey otherwise. */
 const GAP: Record<Band, string> = {
-  good: 'var(--ledger-gap)', none: 'var(--ledger-gap)', warn: 'color-mix(in oklab, var(--warn) 55%, transparent)', bad: 'color-mix(in oklab, var(--bad) 55%, transparent)',
+  good: 'var(--ledger-gap)', none: 'var(--ledger-gap)', warn: 'color-mix(in oklab, var(--warn-fill) 55%, transparent)', bad: 'color-mix(in oklab, var(--bad-fill) 55%, transparent)',
 }
 
 /** Same baseline buildVerdict uses: one month back per month of range, the first month for lifetime. */
@@ -82,7 +82,7 @@ export function AreaLedger({ d, range }: { d: Verdict; range: Range }) {
                   {zero ? (
                     // a zero is a state, not a missing bar: a red end-mark on the zero and what it means
                     <>
-                      <span className="absolute top-1/2 left-0 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-bad" />
+                      <span className="absolute top-1/2 left-0 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-bad-fill" />
                       <span className="absolute top-1/2 left-3 -translate-y-1/2 text-[13px] whitespace-nowrap text-bad">
                         {a.k === 'renewalRisk' && !renewal.signed ? 'Nothing signed' : 'At zero'}
                       </span>

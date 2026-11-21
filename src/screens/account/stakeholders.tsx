@@ -90,10 +90,10 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
   const quiet = orbit.filter(p => p.state === 'quiet').length
   const items: { key: string; name: string; why: string; meta: string; dot: string }[] = []
   const when = (r: StakeRow) => r.last ? `Last named ${fmtD(r.last)}` : 'Never named'
-  if (sponsor) items.push({ key: sponsor.key, name: sponsor.name, why: 'Sponsor quiet', dot: 'bg-warn',
+  if (sponsor) items.push({ key: sponsor.key, name: sponsor.name, why: 'Sponsor quiet', dot: 'bg-warn-fill',
     meta: `Executive Sponsor · ${when(sponsor)} · no exec contact this month` })
-  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn', meta: `Tagged Champion · ${when(r)}` }))
-  gone.forEach(r => items.push({ key: r.key, name: r.name, why: 'Hand over', dot: 'bg-bad', meta: `${r.label} · ${when(r)}` }))
+  quietChamps.forEach(r => items.push({ key: r.key, name: r.name, why: 'Champion quiet', dot: 'bg-warn-fill', meta: `Tagged Champion · ${when(r)}` }))
+  gone.forEach(r => items.push({ key: r.key, name: r.name, why: 'Hand over', dot: 'bg-bad-fill', meta: `${r.label} · ${when(r)}` }))
   const active30 = by(0), active90 = by(1), total = Math.max(1, active30 + active90 + quiet)
   const cov: [string, number, string][] = [['Last 30 days', active30, 'bg-chart-1'], ['30 to 90 days', active90, 'bg-chart-seq-2'], ['Quiet or gone', quiet, 'bg-chart-5']]
 
@@ -162,7 +162,7 @@ function Attention({ rows, orbit, onOpen }: { rows: StakeRow[]; orbit: ReturnTyp
                 <li key={role}>
                   <button type="button" disabled={!first} onClick={() => first && onOpen(first.key, people.map(x => x.key))}
                     className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none enabled:hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring/50">
-                    <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good' : state === 'warn' ? 'bg-warn' : 'bg-bad')} aria-hidden="true" />
+                    <span className={cn('size-1.5 shrink-0 rounded-full', state === 'good' ? 'bg-good-fill' : state === 'warn' ? 'bg-warn-fill' : 'bg-bad-fill')} aria-hidden="true" />
                     <span className="flex-1 truncate">{role}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {!people.length ? 'Nobody' : `${first.name}${people.length > 1 ? ` +${people.length - 1}` : ''}${state === 'warn' ? ' · quiet' : ''}`}
@@ -395,7 +395,6 @@ function InternalTable({ lead, rows }: { lead: React.ReactNode; rows: InternalRo
           )}
         </TableBody>
       </Table>
-      <TableFooterBar shown={list.length} total={rows.length} />
     </>
   )
 }

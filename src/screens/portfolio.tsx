@@ -6,7 +6,7 @@ import { Term } from './account/overview/bits'
 import { Meter, Sparkline } from '@/components/charts'
 import { openSheet } from '@/lib/route'
 import { cn } from '@/lib/utils'
-import { HeaderFacts, PageHeader, Stat } from '@/components/page'
+import { PageHeader, Stat } from '@/components/page'
 import { KpiSkeleton, LoadingLabel, WidgetError, useWidget } from './states/widget-states'
 import { AS_OF, moneyK, plural, regionOf } from './portfolio/data'
 import { ScopeMenu, ScopeProvider, useScope } from './portfolio/scope'
@@ -52,27 +52,29 @@ function Portfolio() {
       <PageHeader
         title="Portfolio"
         sub={`Updated ${AS_OF}`}
-        actions={<>
-          {/* the scope's size beside its picker; a pod shows its region instead of a pod count */}
-          <HeaderFacts items={[scope.kind === 'pod' ? ['region', regionOf(scope.name)] : ['pods', S.pods.length], ['accounts', S.book.accounts]]} />
-          <ScopeMenu />
-        </>}
+        actions={<ScopeMenu />}
       />
 
       <BandSplit status={split.status} onRetry={split.retry} />
 
-      <section aria-label="Book KPIs" className="mt-4 grid gap-3 sm:grid-cols-3">
-        {kpis.status === 'loading' && <><LoadingLabel what="KPIs" />{[0, 1, 2].map(i => <KpiSkeleton key={i} />)}</>}
+      <section data-kpi-strip aria-label="Book KPIs" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.status === 'loading' && <><LoadingLabel what="KPIs" />{[0, 1, 2, 3].map(i => <KpiSkeleton key={i} />)}</>}
         {kpis.status === 'error' && (
           <WidgetError className="col-span-full" title="KPIs didn't load" sub="The portfolio summary timed out. Other sections are up to date." onRetry={kpis.retry} />
         )}
         {kpis.status === 'ready' && (
           <>
             {/* one anatomy: label · value (+ delta or qualifier) · one thin visual · one supporting line */}
+            {/* the scope's size first; a pod shows its region instead of a pod count */}
+            {/* the book in the accent colour (not a health colour); the bar is how much of it has a health score */}
+            <Stat label="Book" value={<><span className="text-signal">{S.book.accounts}</span><span className="ml-2 font-sans text-sm tracking-normal text-muted-foreground">accounts</span></>}
+              visual={<Meter value={KPIS.scored} max={S.book.accounts || 1} fill="bg-signal" label="Accounts with a health score"
+                tip={`${KPIS.scored} of ${S.book.accounts} accounts scored`} />}
+              hint={`${scope.kind === 'pod' ? `${scope.name} · ${regionOf(scope.name)}` : plural(S.pods.length, 'pod')} · ${S.book.accounts ? Math.round((KPIS.scored / S.book.accounts) * 100) : 0}% scored`} />
             <Stat label={<Term tip="Mean health of scored live accounts. Accounts with no score are left out.">Average health</Term>} icon={HeartPulse}
               value={health == null ? 'No data' : <>
                 <span className={bandText[bandOf(health)]}>{health}</span>
-                <span className="ml-2 text-sm tracking-normal text-muted-foreground">{BAND_LABEL[bandOf(health)]}</span>
+                <span className="ml-2 font-sans text-sm tracking-normal text-muted-foreground">{BAND_LABEL[bandOf(health)]}</span>
               </>}
               delta={prev ? { value: health! - prev.value, label: `vs ${prev.month}`, health: true } : undefined}
               visual={trend.length > 1 && <Sparkline values={trend.map(t => t.value)} className="h-5"
@@ -80,7 +82,7 @@ function Portfolio() {
                 tip={trend.map(t => `${t.month} ${t.value}`).join(' · ')} />}
               hint={`${KPIS.scored} of ${plural(S.book.accounts, 'account')} scored`} />
             <Stat label="Renewing in 60 days" icon={CalendarClock}
-              value={<>{moneyK(KPIS.renewingCarr)}<span className="ml-2 text-sm tracking-normal text-muted-foreground">{plural(KPIS.renewing60, 'account')}</span></>}
+              value={<>{moneyK(KPIS.renewingCarr)}<span className="ml-2 font-sans text-sm tracking-normal text-muted-foreground">{plural(KPIS.renewing60, 'account')}</span></>}
               visual={<Meter value={KPIS.renewalAtRisk} max={KPIS.renewingCarr || 1} min={KPIS.renewalAtRisk > 0 ? 2 : 0}
                 tip={KPIS.renewingCarr ? `${pct(KPIS.renewalAtRisk, KPIS.renewingCarr)}% of renewing CARR is at risk or unsigned` : 'Nothing renews in 60 days'} />}
               hint={<Term tip="CARR renewing in 60 days on accounts at risk (health under 40) or without a signed renewal">

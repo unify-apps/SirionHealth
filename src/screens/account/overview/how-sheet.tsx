@@ -142,9 +142,9 @@ function AreaTile({ k, onOpen }: { k: AreaKey; onOpen: () => void }) {
 
 /* ---------- bands: one 0-100 scale with the account's score on it ---------- */
 const ZONES = [
-  { from: 0, to: 40, label: 'At risk', range: 'under 40', fill: 'bg-bad/25' },
-  { from: 40, to: 70, label: 'Watch', range: '40 to 69', fill: 'bg-warn/25' },
-  { from: 70, to: 100, label: 'Healthy', range: '70+', fill: 'bg-good/25' },
+  { from: 0, to: 40, label: 'At risk', range: 'under 40', fill: 'bg-bad-fill/25' },
+  { from: 40, to: 70, label: 'Watch', range: '40 to 69', fill: 'bg-warn-fill/25' },
+  { from: 70, to: 100, label: 'Healthy', range: '70+', fill: 'bg-good-fill/25' },
 ] as const
 
 function BandScale() {
@@ -206,7 +206,7 @@ function RunwayTimeline() {
       <div className="relative mx-1.5 mt-1 mb-9">
         <div className="flex h-2 overflow-hidden rounded-[2px]" role="img" aria-label={r.left < 0 ? `Renewal passed ${-r.left} days ago` : `${r.used} days used, ${r.left} left of ${r.total}`}>
           <span className="h-full bg-foreground/25" style={{ width: `${usedPct}%` }} />
-          <span className="h-full flex-1 bg-bad/35" />
+          <span className="h-full flex-1 bg-bad-fill/35" />
         </div>
         {points.map((p, i) => {
           const x = at(p.d)
@@ -217,7 +217,7 @@ function RunwayTimeline() {
                 <span tabIndex={0} aria-label={`${p.top}, ${fmtDY(p.d)}`}
                   className={cn('absolute -top-[3px] flex flex-col gap-1.5 rounded-sm', align, focusRing)} style={{ left: `${x}%` }}>
                   <span className={cn('size-3.5 rounded-full border-2 border-popover',
-                    p.kind === 'flag' ? 'bg-warn' : p.kind === 'clear' ? 'bg-good' : p.kind === 'today' ? 'bg-foreground' : 'bg-bad')} />
+                    p.kind === 'flag' ? 'bg-warn-fill' : p.kind === 'clear' ? 'bg-good-fill' : p.kind === 'today' ? 'bg-foreground' : 'bg-bad-fill')} />
                   <span className="grid whitespace-nowrap leading-tight" style={{ justifyItems: i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'center' }}>
                     <span className="text-xs">{p.top}</span>
                     <span className="text-[11px] tabular-nums text-muted-foreground">{p.sub}</span>

@@ -61,7 +61,7 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
         })() : lead}
         <div className="min-w-0">
           {eyebrow && !compact && <p className="text-xs text-muted-foreground">{eyebrow}</p>}
-          <h1 className={cn('truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
+          <h1 className={cn('font-heading truncate leading-tight font-normal tracking-[-0.02em]', ease, compact ? 'text-base font-medium' : 'text-2xl')}>{tc(title)}</h1>
           {(compact ? compactSub ?? sub : sub) && <p className={cn('truncate text-muted-foreground', ease, compact ? 'text-xs' : 'mt-0.5 text-sm')}>{compact ? compactSub ?? sub : sub}</p>}
         </div>
       </div>
@@ -73,25 +73,11 @@ export function PageHeader({ eyebrow, title, sub, actions, lead, back, compact =
 
 /** Segmented toggle (ToggleGroup type="single" spacing={0}): a grey track, the selected option a raised thumb. */
 export const SEGMENTED = {
-  group: 'gap-0.5 rounded-lg bg-muted p-0.5',
-  item: 'h-7 gap-1.5 rounded-md! border-0 px-3! text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(40_28_10/0.08),0_0_0_1px_rgb(70_50_20/0.08)]',
+  group: 'gap-0.5 rounded-lg bg-muted p-[3px]',
+  // a trailing count (last span) becomes a small pill; it darkens with the selected option
+  item: 'h-7 gap-1.5 rounded-md! border-0 px-3! text-sm font-medium text-muted-foreground transition-[color,background-color,box-shadow] duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_0.5px_rgb(0_0_0/0.06)] [&>span:last-child:not(:first-child)]:rounded [&>span:last-child:not(:first-child)]:bg-foreground/[0.06] [&>span:last-child:not(:first-child)]:px-1.5 [&>span:last-child:not(:first-child)]:text-xs [&>span:last-child:not(:first-child)]:leading-5 data-[state=on]:[&>span:last-child:not(:first-child)]:bg-foreground/[0.08] data-[state=on]:[&>span:last-child:not(:first-child)]:text-foreground',
   /** icon-only items. Keyed on aria-checked, not data-state: a Tooltip trigger wrapped round the item overwrites data-state */
-  icon: 'size-7 rounded-md! border-0 p-0! text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_2px_rgb(40_28_10/0.08),0_0_0_1px_rgb(70_50_20/0.08)]',
-}
-
-/** A page's size as plain inline facts beside the title: "25 accounts · $8.5M total ARR". Value first, label muted. */
-export function HeaderFacts({ items }: { items: [string, React.ReactNode][] }) {
-  return (
-    <dl className="flex h-8 items-center gap-3 text-sm">
-      {items.map(([k, v], i) => (
-        <div key={k} className="flex items-baseline gap-1.5">
-          {i > 0 && <span aria-hidden="true" className="mr-1.5 text-muted-foreground/60">·</span>}
-          <dd className="order-1 font-medium tabular-nums">{v}</dd>
-          <dt className="order-2 text-muted-foreground">{k}</dt>
-        </div>
-      ))}
-    </dl>
-  )
+  icon: 'size-7 rounded-md! border-0 p-0! text-muted-foreground transition-[color,background-color,box-shadow] duration-150 hover:bg-transparent hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_0.5px_rgb(0_0_0/0.06)]',
 }
 
 /**
@@ -103,10 +89,10 @@ export function BlockHeader({ icon: Icon, title, count, sub, actions, className 
   actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
+    <div data-block-header className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
       <div className="flex min-w-0 items-center gap-2">
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-        <h3 className="truncate text-sm font-medium text-foreground">{tc(title)}</h3>
+        <h3 className="font-heading truncate text-sm font-medium text-foreground">{tc(title)}</h3>
         {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
         {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
       </div>
@@ -120,7 +106,7 @@ export function SectionTitle({ title, sub, actions, className }: {
 }) {
   return (
     <div className={cn('mb-3 mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
-      <h2 className="text-base font-medium">{tc(title)}</h2>
+      <h2 className="font-heading text-base font-medium">{tc(title)}</h2>
       {sub && <span className="text-sm text-muted-foreground">{sub}</span>}
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </div>
@@ -185,7 +171,7 @@ export function Stat({ label, value, hint, tone, delta, aside, visual, onOpen, o
   className?: string
 }) {
   return (
-    <Card onClick={onOpen} className={cn('h-full gap-2 p-4', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
+    <Card onClick={onOpen} className={cn('h-full gap-2 p-5', onOpen && 'cursor-pointer transition-colors hover:bg-hover', className)}>
       {/* ponytail: `icon` is accepted but not drawn (cleaner label); drop the prop once callers stop passing it */}
       <div className="flex h-4 min-w-0 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
         <span className="truncate">{tc(label)}</span>
@@ -236,7 +222,7 @@ export function Meter({ value, max = 100, tone, fill, label, showValue, tip: tip
     <span role="meter" aria-label={label} tabIndex={tip && !showValue ? 0 : undefined} aria-valuemin={0} aria-valuemax={max} aria-valuenow={has ? value : undefined}
       aria-valuetext={has ? undefined : 'No data'}
       className={cn('relative block h-1 w-full overflow-hidden rounded-[1px] bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring/50', !showValue && className)}>
-      {has && <span className={cn('block h-full', fill ?? (tone === 'good' ? 'bg-good' : tone === 'warn' ? 'bg-warn' : tone === 'bad' ? 'bg-bad' : 'bg-chart-1'))}
+      {has && <span className={cn('block h-full', fill ?? (tone === 'good' ? 'bg-good-fill' : tone === 'warn' ? 'bg-warn-fill' : tone === 'bad' ? 'bg-bad-fill' : 'bg-chart-1'))}
         style={{ width: `${pct}%` }} />}
       {over && <span aria-hidden="true" className="absolute inset-y-0 w-px bg-card" style={{ left: `${(max / scale) * 100}%` }} />}
     </span>
@@ -278,9 +264,9 @@ export function ListRow({ icon, title, meta, right, onClick, size = 'lg', classN
     </>
   )
   const cls = cn('flex w-full items-center gap-3 rounded-lg px-2 text-left', size === 'lg' ? 'min-h-13 py-2' : 'min-h-11 py-1.5', className)
-  if (!onClick) return <div className={cls}>{body}</div>
+  if (!onClick) return <div data-list-row className={cls}>{body}</div>
   return (
-    <button type="button" onClick={onClick} {...aria}
+    <button type="button" data-list-row onClick={onClick} {...aria}
       className={cn(cls, 'cursor-pointer outline-none transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring')}>
       {body}
     </button>

@@ -65,7 +65,7 @@ export function useCountUp(to: number, ms = 800) {
   return n
 }
 
-const BAND_STROKE: Record<Band, string> = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)', none: 'var(--muted-foreground)' }
+const BAND_STROKE: Record<Band, string> = { good: 'var(--good-fill)', warn: 'var(--warn-fill)', bad: 'var(--bad-fill)', none: 'var(--muted-foreground)' }
 
 /** The score ring: the stroke draws from 0 to the score and the number counts up with it (band colour fixed to the final score). */
 export function ScoreRing({ value, size = 88, stroke = 6 }: { value: number; size?: number; stroke?: number }) {
