@@ -70,7 +70,7 @@ export function HealthRibbon({ months, renewal }: { months: JourneyMonth[]; rene
 /** Legend for the ribbon, small enough to sit in its block header. */
 export function RibbonLegend() {
   return (
-    <span className="flex items-center gap-3 text-xs text-muted-foreground">
+    <span className="flex items-center gap-3 text-xs text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">
       <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-bad-fill" aria-hidden="true" />Risk event</span>
       <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-good-fill" aria-hidden="true" />Positive event</span>
     </span>

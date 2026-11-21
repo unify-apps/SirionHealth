@@ -84,15 +84,15 @@ function AreaCard({ icon: I, title, area, months, stats, side }: {
   const score = last?.areas[area], delta = prev ? score - prev.areas[area] : 0
   return (
     <Card data-block className="gap-0 py-0">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5 pb-1">
+      <div className="flex min-h-12 flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-4 pb-1">
         <I className="size-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-base font-medium">{tc(title)}</h2>
-        {score != null && <>
-          <span className={cn('text-xl font-medium tabular-nums', bandText[bandOf(score)])}>{score}</span>
+        <h2 className="font-heading text-base font-medium">{tc(title)}</h2>
+        {score != null && (
           <span className="text-xs text-muted-foreground">
-            {delta ? <><span className={cn('tabular-nums', delta < 0 && 'text-bad')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</span> since {prev.label.split(' ')[0]}</> : 'flat on last month'}
+            <span className={cn('font-medium tabular-nums', bandText[bandOf(score)])}>{score}</span>
+            <span className="ml-2">{delta ? <><span className={cn('tabular-nums', delta < 0 && 'text-bad')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</span> since {prev.label.split(' ')[0]}</> : 'flat on last month'}</span>
           </span>
-        </>}
+        )}
       </div>
       {/* figures: one strip, equal cells divided by hairlines */}
       {/* figures: one row of equal cells on wide screens (hairlines between), 2 or 3 per row below without inner rules */}

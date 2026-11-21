@@ -350,7 +350,7 @@ html.dark[data-layout="ledger"], html[data-layout="ledger"] .dark {
 /* type: serif only where a component opts in with font-heading (page titles, section and card titles, the verdict);
    labels, body and figures stay sans / mono. Block headers drop their icon and take one section-title size. */
 html[data-layout="ledger"] main [data-block-header] > div > svg:first-child { display: none; }
-html[data-layout="ledger"] main [data-block-header] h3 { font-size: 1.125rem; font-weight: 450; letter-spacing: -0.01em; }
+html[data-layout="ledger"] main [data-block-header] h3 { font-size: 22px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em; }
 html[data-layout="ledger"] main [data-block-header] { padding-top: 1.25rem; }
 
 /* containers: a widget (a data-block card: chart, table, timeline) is an unfilled, rounded box with one hairline outline

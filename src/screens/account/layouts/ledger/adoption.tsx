@@ -96,7 +96,7 @@ function Area({ id, title, area, months, stats }: { id: string; title: string; a
   return (
     <LedgerSection id={id} title={title} aside={score == null ? 'No data' : (
       <>
-        <span className={cn('num text-[15px]', bandText[bandOf(score)])}>{score}</span>
+        <span className={cn('num font-medium', bandText[bandOf(score)])}>{score}</span>
         <span className="ml-2">{delta ? <><span className={cn('num', delta < 0 && 'text-bad')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</span> since {prev.label.split(' ')[0]}</> : 'flat on last month'}</span>
       </>
     )}>

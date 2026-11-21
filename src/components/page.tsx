@@ -89,14 +89,14 @@ export function BlockHeader({ icon: Icon, title, count, sub, actions, className 
   actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div data-block-header className={cn('flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
-      <div className="flex min-w-0 items-center gap-2">
-        {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-        <h3 className="font-heading truncate text-sm font-medium text-foreground">{tc(title)}</h3>
-        {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">{count}</span>}
-        {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{sub}</span>}
+    <div data-block-header className={cn('flex min-h-12 flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-4 pb-1', className)}>
+      <div className="flex min-w-0 items-baseline gap-2">
+        {Icon && <Icon className="size-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />}
+        <h3 className="font-heading truncate text-base font-medium text-foreground">{tc(title)}</h3>
+        {count != null && <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">{count}</span>}
+        {sub && <span className="hidden truncate text-xs text-muted-foreground sm:inline [[data-layout=ledger]_&]:text-[13px]">{sub}</span>}
       </div>
-      {actions && <div className="ml-auto flex items-center gap-1.5">{actions}</div>}
+      {actions && <div className="ml-auto flex items-center gap-1.5 self-center text-xs [[data-layout=ledger]_&]:text-[13px]">{actions}</div>}
     </div>
   )
 }
@@ -105,10 +105,10 @@ export function SectionTitle({ title, sub, actions, className }: {
   title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode; className?: string
 }) {
   return (
-    <div className={cn('mb-3 mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
+    <div data-section-title className={cn('mb-3 mt-8 flex min-h-8 flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0', className)}>
       <h2 className="font-heading text-base font-medium">{tc(title)}</h2>
-      {sub && <span className="text-sm text-muted-foreground">{sub}</span>}
-      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+      {sub && <span className="text-xs text-muted-foreground [[data-layout=ledger]_&]:text-[13px]">{sub}</span>}
+      {actions && <div className="ml-auto flex items-center gap-2 self-center">{actions}</div>}
     </div>
   )
 }

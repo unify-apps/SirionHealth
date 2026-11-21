@@ -56,9 +56,9 @@ export function Timeline({ items, ruled = false }: { items: Item[]; ruled?: bool
   const pager = listPager([...up, ...past], open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
   const R = ruled ? RuledRow : Row
   const rowsCls = ruled ? '' : 'grid grid-cols-[minmax(0,1fr)] gap-1'
-  const head = (count: number, children: React.ReactNode) => ruled
-    ? <h3 className="pt-4 pb-2 text-[13px] text-muted-foreground">{children} <span className="num ml-1">{count}</span></h3>
-    : <ListGroupHeader count={count} className="top-[33px]">{children}</ListGroupHeader>
+  const head = (count: number, children: React.ReactNode, first = false) => ruled
+    ? <h3 className={cn('pb-1 text-[13px] font-medium text-muted-foreground', first ? 'pt-2.5' : 'pt-3.5')}>{children} <span className="num ml-1 font-normal">{count}</span></h3>
+    : <ListGroupHeader count={count} className={cn('top-[33px]', first && 'pt-2')}>{children}</ListGroupHeader>
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -101,25 +101,26 @@ export function Timeline({ items, ruled = false }: { items: Item[]; ruled?: bool
         </div>
       </div>
 
+      <div className="grid grid-cols-[minmax(0,1fr)]">
+        {/* Ledger: the rows read as a table, so they open on one labelled header line */}
+        {ruled && (
+          <div className="ledger-activity grid items-baseline gap-x-5 border-b border-hairline pb-2 text-[12px] text-muted-foreground" aria-hidden="true">
+            <span>Date</span><span>Activity</span><span className="ledger-who">Channel</span><span className="text-right">Signal</span>
+          </div>
+        )}
 
-      {/* Ledger: the rows read as a table, so they open on one labelled header line */}
-      {ruled && (
-        <div className="ledger-activity grid items-baseline gap-x-5 border-b border-hairline pb-2 text-[12px] text-muted-foreground" aria-hidden="true">
-          <span>Date</span><span>Activity</span><span className="ledger-who">Channel</span><span className="text-right">Signal</span>
-        </div>
-      )}
-
-      <section aria-label="Upcoming">
-        {head(up.length, 'Upcoming')}
-        {up.length ? <div className={rowsCls}>{up.map(i => <R key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-3 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
-      </section>
-
-      {months.length ? months.map(([ym, rows]) => (
-        <section key={ym} aria-label={ymLong(ym)}>
-          {head(rows.length, ymLong(ym))}
-          <div className={rowsCls}>{rows.map(i => <R key={i.id} i={i} onOpen={show} />)}</div>
+        <section aria-label="Upcoming">
+          {head(up.length, 'Upcoming', true)}
+          {up.length ? <div className={rowsCls}>{up.map(i => <R key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-2.5 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
         </section>
-      )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
+
+        {months.length ? months.map(([ym, rows]) => (
+          <section key={ym} aria-label={ymLong(ym)}>
+            {head(rows.length, ymLong(ym))}
+            <div className={rowsCls}>{rows.map(i => <R key={i.id} i={i} onOpen={show} />)}</div>
+          </section>
+        )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
+      </div>
       {past.length > shown && (
         <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
           Show {Math.min(STEP, past.length - shown)} more
@@ -153,7 +154,7 @@ function RuledRow({ i, onOpen }: { i: Item; onOpen: (i: Item) => void }) {
   const hollow = i.kind === 'goal' || i.kind === 'end'
   return (
     <button type="button" onClick={() => onOpen(i)} aria-haspopup="dialog" aria-label={`${i.title}, ${CH_NAME[i.ch]}, ${fmtFull(i.date)}, ${CAT_LABEL[i.cat]}`}
-      className="ledger-row ledger-activity grid w-full items-baseline gap-x-5 rounded-sm py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      className="ledger-row ledger-activity grid w-full items-baseline gap-x-5 rounded-sm py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <DateText date={i.date} className="num text-[13px] text-muted-foreground" />
       <span className="min-w-0 truncate text-[15px]" title={i.title}>{i.title}</span>
       <span className="ledger-who min-w-0 truncate text-[13px] text-muted-foreground">{CH_NAME[i.ch]}{people.length ? ` · ${people.join(', ')}` : ''}</span>
