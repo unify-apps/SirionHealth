@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CalendarDays, FileText, Filter, RotateCcw, HeartPulse, LifeBuoy, Lightbulb, Mail, MessagesSquare, NotebookText, Phone } from 'lucide-react'
-import { Empty, Fact, Tip, ListGroupHeader, ListRow, SEGMENTED, SheetBody } from '@/components/page'
+import { Empty, Fact, Tip, ListRow, SEGMENTED, SheetBody } from '@/components/page'
 import { SearchBox } from '@/components/app/search-box'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils'
 import { DateText } from '@/components/app/date-text'
 import { fmtFull } from '@/lib/dates'
 import { CAT_LABEL, CH_NAME, type Cat, type Channel, type Item } from './model'
-import { dayISO, ymLong } from './shared'
 import { PersonLink } from '../stakeholders/person-sheet'
 import { Glossed } from '../overview/bits'
 
@@ -45,20 +44,14 @@ export function Timeline({ items, ruled = false }: { items: Item[]; ruled?: bool
   const list = byCh.filter(i => cat === 'all' || i.cat === cat)
   const up = list.filter(i => i.date > TODAY).sort((a, b) => +a.date - +b.date)
   const past = list.filter(i => i.date <= TODAY).sort((a, b) => +b.date - +a.date)
-  const months = useMemo(() => {
-    const g: [string, Item[]][] = []
-    past.slice(0, shown).forEach(i => { const ym = dayISO(i.date).slice(0, 7), last = g[g.length - 1]; if (last && last[0] === ym) last[1].push(i); else g.push([ym, [i]]) })
-    return g
-  }, [past, shown])
+  const ordered = useMemo(() => [...up, ...past], [up, past])
+  const visible = useMemo(() => [...up, ...past.slice(0, shown)], [up, past, shown])
   const toggleCh = (c: Channel) => { const n = new Set(chs); if (n.has(c)) n.delete(c); else n.add(c); setChs(n); setShown(STEP) }
   const show = (i: Item) => openSheet('activity', i.id)
   // prev/next walks the list as filtered and sorted: upcoming first, then past, newest first
-  const pager = listPager([...up, ...past], open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
+  const pager = listPager(ordered, open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
   const R = ruled ? RuledRow : Row
   const rowsCls = ruled ? '' : 'grid grid-cols-[minmax(0,1fr)] gap-1'
-  const head = (count: number, children: React.ReactNode, first = false) => ruled
-    ? <h3 className={cn('pb-1 text-[13px] font-medium text-muted-foreground', first ? 'pt-2.5' : 'pt-3.5')}>{children} <span className="num ml-1 font-normal">{count}</span></h3>
-    : <ListGroupHeader count={count} className={cn('top-[33px]', first && 'pt-2')}>{children}</ListGroupHeader>
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -109,17 +102,13 @@ export function Timeline({ items, ruled = false }: { items: Item[]; ruled?: bool
           </div>
         )}
 
-        <section aria-label="Upcoming">
-          {head(up.length, 'Upcoming', true)}
-          {up.length ? <div className={rowsCls}>{up.map(i => <R key={i.id} i={i} onOpen={show} />)}</div> : <p className="px-2 py-2.5 text-sm text-muted-foreground">Nothing scheduled in this filter.</p>}
-        </section>
-
-        {months.length ? months.map(([ym, rows]) => (
-          <section key={ym} aria-label={ymLong(ym)}>
-            {head(rows.length, ymLong(ym))}
-            <div className={rowsCls}>{rows.map(i => <R key={i.id} i={i} onOpen={show} />)}</div>
-          </section>
-        )) : <Empty title="No past activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />}
+        {visible.length ? (
+          <div className={rowsCls}>
+            {visible.map(i => <R key={i.id} i={i} onOpen={show} />)}
+          </div>
+        ) : (
+          <Empty title="No activity" sub={needle ? `Nothing matches “${q.trim()}”.` : 'Nothing in this filter.'} className="py-6" />
+        )}
       </div>
       {past.length > shown && (
         <Button variant="outline" size="sm" className="mx-auto" onClick={() => setShown(s => s + STEP)}>
