@@ -375,3 +375,15 @@ html[data-layout="ledger"] main [data-slot="table-header"] th, html[data-layout=
   text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 12px;
 }
 
+/* ---------- tables: open on the page column, never in a box ---------- */
+html[data-layout="ledger"] main [data-slot="card"][data-block][data-block]:has([data-slot="table"]):not([data-slot="card"] [data-slot="card"]) { box-shadow: none !important; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="table"] :is(th, td):first-child { padding-left: 0; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="table"] th:first-child > button { padding-left: 0; }
+/* one line under the header labels; rows carry no rule of their own */
+html[data-layout="ledger"] main [data-slot="table"] tbody :is(td, th) { border-bottom: 0 !important; }
+html[data-layout="ledger"] main [data-slot="table-header"] th { border-bottom: 1px solid var(--hairline) !important; }
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) > * { padding-inline: 0 !important; }
+/* the toolbar's first control carries its own pill padding: pull it so its label starts on the column line */
+html[data-layout="ledger"] main [data-slot="card"][data-block]:has([data-slot="table"]) [data-slot="toggle-group"]:first-child { margin-left: -15px; }
+
+

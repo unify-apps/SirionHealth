@@ -17,7 +17,7 @@ const fmt = (n: number) => n.toLocaleString('en-US')
 export function LedgerAdoption() {
   const load = useLoad(loadAdoption, undefined, 'adoption and support')
   if (load.status === 'loading') return (
-    <div className="grid gap-16 border-t border-foreground/70 pt-5" aria-busy="true" aria-label="Loading adoption and support">
+    <div className="grid gap-16" aria-busy="true" aria-label="Loading adoption and support">
       {[0, 1].map(i => (
         <div key={i} className="grid gap-4">
           <Skeleton className="h-6 w-48" />
@@ -38,15 +38,13 @@ export function LedgerAdoption() {
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="border-t border-foreground/70 pt-5">
         <Area id="h-adoption" title="Product adoption" area="adoption" months={d.months} stats={adopt} />
-      </div>
       <Cluster className="mt-16">
         <Area id="h-support" title="Support" area="support" months={d.months} stats={support} />
         <LedgerSection id="h-themes" title="Top ticket themes" className="mt-12"
           aside={<><span className="num">{d.themes.length}</span> of <span className="num">{d.themeCount}</span> themes, by tickets</>}>
           {d.themes.length ? (
-            <ul className="divide-y divide-hairline border-t border-hairline" aria-label="Tickets by theme">
+            <ul aria-label="Tickets by theme">
               {d.themes.map(t => (
                 <li key={t.name} className="ledger-themes grid items-center gap-x-6 py-3">
                   <span className="min-w-0 truncate text-[15px]">{t.name}</span>
@@ -76,7 +74,7 @@ function Area({ id, title, area, months, stats }: { id: string; title: string; a
       </>
     )}>
       <div className="grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <dl className="divide-y divide-hairline border-t border-hairline self-start">
+        <dl className=" self-start">
           {stats.map(s => {
             const tone = toneOf(s.label, s.value)
             return (
@@ -91,7 +89,7 @@ function Area({ id, title, area, months, stats }: { id: string; title: string; a
           })}
         </dl>
         <figure className="min-w-0 self-start">
-          <figcaption className="border-t border-hairline pt-3 text-[13px] text-muted-foreground"><span className="text-foreground">Score by month</span>, against Watch 70 and At risk 40</figcaption>
+          <figcaption className="text-[13px] text-muted-foreground"><span className="text-foreground">Score by month</span>, against Watch 70 and At risk 40</figcaption>
           <div className="mt-3 rounded-xl border border-hairline px-3 pt-2 pb-3">
             {months.length ? <TrendChart months={months} area={area} name={title} className="h-72" /> : <Empty title="No scored months" />}
           </div>

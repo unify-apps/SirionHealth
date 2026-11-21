@@ -104,7 +104,7 @@ export function KeyFigures() {
     { label: 'Open expansion', value: renewal.expansionLabel, hint: renewal.expansionLabel === '$0' ? 'No opportunity open' : 'Unsigned, on top of the renewal', tip: 'Open expansion opportunity on this account' },
   ]
   return (
-    <dl className="grid grid-cols-2 gap-x-10 gap-y-6 border-t border-hairline pt-4">
+    <dl className="grid grid-cols-2 gap-x-10 gap-y-6">
       {rows.map(r => (
         <div key={r.label} className="min-w-0">
           <dt className="text-[13px] text-muted-foreground"><Term tip={r.tip}>{r.label}</Term></dt>
@@ -118,29 +118,34 @@ export function KeyFigures() {
   )
 }
 
-/** Every tab but Summary: the hero folded to one line, so the tab opens on its own content. */
+/** Every tab but Summary: the hero folded to one line — score, verdict, renewal, next step — all on one baseline,
+ *  split by hairline dividers, closing on the rule the tab's own content opens under. */
 export function CompactStrip({ d }: { d: Verdict }) {
   const b = bandOf(score.final)
   const late = renewal.daysLeft < 0
   const next = splitNext(d.next)
+  const Sep = () => <span aria-hidden="true" className="h-3.5 w-px shrink-0 bg-hairline" />
   return (
-    <section aria-label="Account standing" className="flex min-w-0 flex-wrap items-baseline gap-x-8 gap-y-1 pt-6 text-sm">
+    <section aria-label="Account standing" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-hairline pt-5 pb-3.5 text-[13px] text-muted-foreground">
       <button type="button" onClick={() => openSheet('how')} aria-label={`Health ${score.final} of 100, ${BAND_LABEL[b]}. See how the score works`}
-        className={cn('flex items-baseline gap-2 rounded-sm', focusRing)}>
-        <span className="num text-[26px] leading-none font-light">{score.final}</span>
-        <span className="flex items-center gap-1.5 self-center">
-          <span className={cn('size-2 rounded-full', bandBg[b])} aria-hidden="true" />
-          <span className={bandText[b]}>{BAND_LABEL[b]}</span>
+        className={cn('flex items-center gap-2 rounded-sm', focusRing)}>
+        <span className="num text-[20px] leading-none font-normal text-foreground">{score.final}</span>
+        <span className={cn('flex items-center gap-1.5', bandText[b])}>
+          <span className={cn('size-1.5 rounded-full', bandBg[b])} aria-hidden="true" />
+          {BAND_LABEL[b]}
         </span>
       </button>
-      <span className="text-[15px] font-medium">{d.title}</span>
-      <button type="button" onClick={() => showTab('overview', 'runway')} className={cn('rounded-sm text-muted-foreground hover:text-foreground', focusRing)}>
-        <span className={cn('num', (late || renewal.daysLeft <= 90) && 'text-bad')}>{Math.abs(renewal.daysLeft)}</span> {late ? 'days overdue' : 'days to renewal'}, {renewal.carrLabel}
+      <Sep />
+      <span className="font-medium text-foreground">{d.title}</span>
+      <Sep />
+      <button type="button" onClick={() => showTab('overview', 'runway')} className={cn('rounded-sm hover:text-foreground', focusRing)}>
+        <span className={cn('num', (late || renewal.daysLeft <= 90) && 'text-bad')}>{Math.abs(renewal.daysLeft)}</span> {late ? 'days overdue' : 'days to renewal'}, <span className="num">{renewal.carrLabel}</span>
       </button>
       {next.action && (
-        <span className="min-w-0 text-muted-foreground">
-          Next: <span className="text-foreground">{next.action}</span>{next.due && <>, due {next.due}</>}
-        </span>
+        <>
+          <Sep />
+          <span className="min-w-0 truncate">Next <span className="text-foreground">{next.action}</span>{next.due && <>, due {next.due}</>}</span>
+        </>
       )}
     </section>
   )

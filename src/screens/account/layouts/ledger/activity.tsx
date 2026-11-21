@@ -26,21 +26,19 @@ export function LedgerActivity() {
 
   if (load.status === 'error') return <ErrorState what="activity" onRetry={load.retry} />
   if (!ready) return (
-    <div className="grid gap-4 border-t border-foreground/70 pt-5" aria-busy="true" aria-label="Loading activity">
+    <div className="grid gap-4" aria-busy="true" aria-label="Loading activity">
       <Skeleton className="h-6 w-48" /><Skeleton className="h-16 w-full rounded-xl" />
-      <div className="mt-12 divide-y divide-hairline">{Array.from({ length: 7 }, (_, i) => <div key={i} className="flex h-12 items-center gap-5"><Skeleton className="h-3 w-16" /><Skeleton className="h-4 flex-1" /><Skeleton className="h-3 w-14" /></div>)}</div>
+      <div className="mt-12">{Array.from({ length: 7 }, (_, i) => <div key={i} className="flex h-12 items-center gap-5"><Skeleton className="h-3 w-16" /><Skeleton className="h-4 flex-1" /><Skeleton className="h-3 w-14" /></div>)}</div>
     </div>
   )
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="border-t border-foreground/70 pt-5">
         <LedgerSection id="h-ribbon" title="Health to renewal" aside="Month by month, coloured by health band" actions={<RibbonLegend />}>
           <div className="mt-1 rounded-xl border border-hairline px-4 pt-3 pb-2.5">
             <HealthRibbon months={ready.journey} renewal={{ label: `Renewal ${renewal.carrLabel}`, date: renewal.date }} />
           </div>
         </LedgerSection>
-      </div>
 
       <Cluster className="mt-16">
         <LedgerSection id="h-timeline" title={view === 'timeline' ? 'Timeline' : 'Monthly sentiment'}
@@ -55,10 +53,10 @@ export function LedgerActivity() {
           }>
           {view === 'timeline' ? (
             <div className="pt-2">
-              {items.length ? <Timeline items={items} snapshot={ready.data.snapshot} ruled /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
+              {items.length ? <Timeline items={items} ruled /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
             </div>
           ) : sentiment.length ? (
-            <div className="border-t border-hairline pt-4 text-[15px] [&_h4]:text-[15px] [&_h4]:font-normal [&_h5]:text-[13px]">
+            <div className="text-[15px] [&_h4]:text-[15px] [&_h4]:font-normal [&_h5]:text-[13px]">
               <SentimentMonths months={sentiment} />
             </div>
           ) : <Empty title="No monthly summaries" sub="Sentiment drivers appear once Sirion writes a monthly summary." />}

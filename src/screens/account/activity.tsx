@@ -49,7 +49,7 @@ function Ready({ view, data, months }: { view: View; data: ActivityData; months:
           <>
             <BlockHeader icon={ActivityIcon} title="Timeline" count={counts.total} sub={`${counts.past} to date · ${counts.upcoming} upcoming`} />
             <div className="px-3 py-4 sm:px-4">
-              {items.length ? <Timeline items={items} snapshot={data.snapshot} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
+              {items.length ? <Timeline items={items} /> : <Empty title="No activity" sub="No dated statements or key events for this account." />}
             </div>
           </>
         ) : (

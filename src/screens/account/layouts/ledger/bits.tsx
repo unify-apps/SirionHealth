@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils'
 
 export const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
-/** A cluster of related sections: one strong rule on top, generous space above it. Sections inside sit closer. */
+/** A cluster of related sections: separated by space alone, no rule. Sections inside sit closer. */
 export function Cluster({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn('mt-24 border-t border-foreground/70 pt-5', className)}>{children}</div>
+  return <div className={cn('mt-20', className)}>{children}</div>
 }
 
 /** A section: title (and an optional quiet aside); actions sit right on the title line. */
@@ -14,7 +14,7 @@ export function LedgerSection({ id, title, aside, actions, children, className }
 }) {
   return (
     <section aria-labelledby={id} className={cn('min-w-0', className)}>
-      <div className="flex min-h-8 flex-wrap items-baseline gap-x-3 gap-y-1 pb-2">
+      <div className="mb-3 flex min-h-8 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-hairline pb-2.5">
         <h2 id={id} className="font-heading text-[22px] leading-tight font-normal tracking-[-0.01em]">{title}</h2>
         {aside && <span className="text-[13px] text-muted-foreground">{aside}</span>}
         {actions && <div className="ml-auto flex items-center gap-3 self-center">{actions}</div>}

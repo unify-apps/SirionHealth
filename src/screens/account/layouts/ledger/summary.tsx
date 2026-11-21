@@ -34,7 +34,6 @@ export function LedgerSummary() {
   return (
     <div className="flex min-w-0 flex-col">
       {/* 3. why: what makes up the score (the six areas, then the cap), then its history */}
-      <div className="border-t border-foreground/70 pt-5">
         <LedgerSection id="h-areas" title={`Why ${score.final}`} actions={<AreaScaleKey since={d.since} />}>
           <AreaLedger d={d} range={range} />
           <div id="runway" data-ledger-runway className="mt-12 scroll-mt-40">
@@ -45,7 +44,6 @@ export function LedgerSummary() {
             <div className="pt-4"><RunwayChart /></div>
           </div>
         </LedgerSection>
-      </div>
 
       {/* 4. context, in three clusters: the account in words, the contract and its figures, what happened lately */}
       <Cluster>
@@ -94,7 +92,7 @@ function BriefSection() {
       <WidgetBody w={w} what="the account brief" isEmpty={x => x.length === 0} empty={{ sub: 'No summary has been written for this account yet.' }}
         skeleton={<div className="space-y-3 py-4"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>}>
         {x => (
-          <dl className="divide-y divide-hairline border-t border-hairline">
+          <dl>
             {/* the next step leads the strip, so the brief keeps the context around it */}
             {x.filter(([h]) => h !== 'Next').map(([h, t]) => (
               <div key={h} className="grid gap-1 py-4 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-6">
@@ -110,7 +108,7 @@ function BriefSection() {
 }
 
 const rowsSkeleton = (n: number) => (
-  <div className="divide-y divide-hairline">{Array.from({ length: n }, (_, i) => (
+  <div>{Array.from({ length: n }, (_, i) => (
     <div key={i} className="flex h-14 items-center gap-4"><Skeleton className="h-4 flex-1" /><Skeleton className="h-4 w-16" /></div>
   ))}</div>
 )
@@ -124,7 +122,7 @@ function Findings({ id, title, items }: { id: string; title: string; items: List
       <WidgetBody w={w} what={title.toLowerCase()} isEmpty={x => x.length === 0}
         empty={{ title: bad ? 'Nothing needs attention' : 'Nothing stands out yet' }} skeleton={rowsSkeleton(3)}>
         {x => (
-          <ul className="divide-y divide-hairline border-t border-hairline">
+          <ul>
             {x.map(([h, , m, area]) => (
               <li key={h}>
                 <button type="button" onClick={() => openArea(area)} aria-label={`${h}. ${m}. Open ${AREA_NAME[area]} inputs`}
@@ -163,7 +161,7 @@ function OrderForms() {
     <LedgerSection id="h-paper" title="Order forms" aside={<>{renewal.carrLabel} contract, renews {fmtDY(renewal.date)}</>}>
       <WidgetBody w={w} what="order forms" isEmpty={x => x.length === 0} empty={{ title: 'No order forms' }} skeleton={rowsSkeleton(4)}>
         {x => (
-          <ul className="border-t border-hairline">
+          <ul >
             {x.map(([l, v, detail, area]) => {
               const body = (
                 <>
@@ -176,7 +174,7 @@ function OrderForms() {
               )
               const cls = 'grid w-full grid-cols-[minmax(7rem,12rem)_minmax(0,1fr)] items-baseline gap-x-5 py-3.5 text-left'
               return (
-                <li key={l} className="border-b border-hairline">
+                <li key={l}>
                   {area
                     ? <button type="button" onClick={() => openArea(area)} aria-label={`${l}: ${v}. Open ${AREA_NAME[area]} inputs`} className={cn(cls, 'ledger-row group/row', focusRing)}>{body}</button>
                     : <div className={cls}>{body}</div>}
@@ -210,7 +208,11 @@ function RecentActivity() {
         empty={range.days == null ? { title: 'No activity yet' } : { title: `No activity in the ${range.label.toLowerCase()}`, sub: 'Pick a longer date range to see older activity.' }}
         skeleton={rowsSkeleton(5)}>
         {x => (
-          <ul className="divide-y divide-hairline border-t border-hairline">
+          <ul>
+            {/* the rows read as a table, so they open on one labelled header line */}
+            <li className="ledger-activity grid items-baseline gap-x-5 border-b border-hairline pb-2 text-[12px] text-muted-foreground" aria-hidden="true">
+              <span>Date</span><span>Activity</span><span className="ledger-who">Who</span><span className="text-right">Signal</span>
+            </li>
             {x.top.map(i => {
               const st = ACT_STATUS[i.kind]
               return (

@@ -13,8 +13,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TODAY } from '@/data/legacy'
 import { cn } from '@/lib/utils'
 import { DateText } from '@/components/app/date-text'
-import { fmtFull, fmtWhen } from '@/lib/dates'
-import { CAT_LABEL, CH_NAME, type Touch, type Cat, type Channel, type Item } from './model'
+import { fmtFull } from '@/lib/dates'
+import { CAT_LABEL, CH_NAME, type Cat, type Channel, type Item } from './model'
 import { dayISO, ymLong } from './shared'
 import { PersonLink } from '../stakeholders/person-sheet'
 import { Glossed } from '../overview/bits'
@@ -27,7 +27,7 @@ const STEP = 15
 
 /** `ruled` (Ledger): month labels over ruled rows (date | title | channel and people | signal), like the Summary's
  *  recent activity; otherwise compact icon rows under sticky month headers. */
-export function Timeline({ items, snapshot, ruled = false }: { items: Item[]; snapshot: Touch[]; ruled?: boolean }) {
+export function Timeline({ items, ruled = false }: { items: Item[]; ruled?: boolean }) {
   const [cat, setCat] = useState<'all' | Cat>('all')
   const [chs, setChs] = useState<Set<Channel>>(new Set())
   const [shown, setShown] = useState(STEP)
@@ -55,7 +55,7 @@ export function Timeline({ items, snapshot, ruled = false }: { items: Item[]; sn
   // prev/next walks the list as filtered and sorted: upcoming first, then past, newest first
   const pager = listPager([...up, ...past], open, i => i.id, i => openSheet('activity', i.id, { replace: true }), 'activity')
   const R = ruled ? RuledRow : Row
-  const rowsCls = ruled ? 'divide-y divide-hairline border-t border-hairline' : 'grid grid-cols-[minmax(0,1fr)] gap-1'
+  const rowsCls = ruled ? '' : 'grid grid-cols-[minmax(0,1fr)] gap-1'
   const head = (count: number, children: React.ReactNode) => ruled
     ? <h3 className="pt-4 pb-2 text-[13px] text-muted-foreground">{children} <span className="num ml-1">{count}</span></h3>
     : <ListGroupHeader count={count} className="top-[33px]">{children}</ListGroupHeader>
@@ -101,18 +101,13 @@ export function Timeline({ items, snapshot, ruled = false }: { items: Item[]; sn
         </div>
       </div>
 
-      {/* facts, not filters: a plain stats line */}
-      <p className="-mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground" aria-label="Activity facts">
-        <span className="tabular-nums" aria-live="polite">{dirty ? `${list.length} of ${items.length} items` : `${items.length} items`}</span>
-        {snapshot.map(t => (
-          <span key={t.kind} className="inline-flex items-center gap-2">
-            <span aria-hidden="true">·</span>
-            <Tip tip={`Last ${t.kind} with the customer: ${fmtFull(t.date)}`}>
-              <span>Last {t.kind} <span className="tabular-nums text-foreground">{fmtWhen(t.date)}</span></span>
-            </Tip>
-          </span>
-        ))}
-      </p>
+
+      {/* Ledger: the rows read as a table, so they open on one labelled header line */}
+      {ruled && (
+        <div className="ledger-activity grid items-baseline gap-x-5 border-b border-hairline pb-2 text-[12px] text-muted-foreground" aria-hidden="true">
+          <span>Date</span><span>Activity</span><span className="ledger-who">Channel</span><span className="text-right">Signal</span>
+        </div>
+      )}
 
       <section aria-label="Upcoming">
         {head(up.length, 'Upcoming')}
