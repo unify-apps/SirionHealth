@@ -93,7 +93,7 @@ function Headline({ d }: { d: Verdict }) {
         <h2 id="h-verdict" className="font-heading text-2xl leading-tight font-medium tracking-[-0.02em]">{d.title}</h2>
         <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{drove(d.why)}</p>
       </div>
-      <Trend />
+      <Trend band={b} />
       </div>
       <NextStep next={d.next} band={b} />
     </section>
@@ -102,11 +102,12 @@ function Headline({ d }: { d: Verdict }) {
 
 /** The renewal runway, in the card: monthly health up to the renewal with its events, flagged months and the cap, with
  *  hover tooltips and event sheets. It replaces the separate runway section that used to sit below the brief. */
-function Trend() {
+function Trend({ band }: { band: Band }) {
   return (
     <div id="runway" className="grid scroll-mt-40 gap-2 self-end md:col-span-2">
       <span className={LABEL}>Renewal runway</span>
-      <RunwayChart compact />
+      {/* the line and fill take the health band's colour, so the chart reads as part of this block */}
+      <RunwayChart compact tint={band === 'none' ? undefined : `var(--${band}-fill)`} />
     </div>
   )
 }

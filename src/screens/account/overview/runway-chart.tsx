@@ -87,8 +87,9 @@ const EV_STYLE: Record<KeyEvent['kind'], { fill: string; stroke: string; r: numb
   end: { fill: 'var(--chart-axis)', stroke: 'var(--card)', r: 3 },
 }
 
-/** `compact`: a shorter plot for the Summary's health card; same data, events, tooltips and sheets. */
-export function RunwayChart({ compact = false }: { compact?: boolean }) {
+/** `compact`: a shorter plot for the Summary's health card; same data, events, tooltips and sheets.
+ *  `tint`: colour for the health line and its fill (the card passes the health band's colour). */
+export function RunwayChart({ compact = false, tint }: { compact?: boolean; tint?: string }) {
   // the open event lives in the URL (?sheet=event:<iso date>); prev/next walks the events in date order
   const sheet = useSheet()
   const open = sheet?.type === 'event' ? events.find(e => e.iso === sheet.id) ?? null : null
@@ -101,7 +102,7 @@ export function RunwayChart({ compact = false }: { compact?: boolean }) {
       <WidgetBody w={w} what="the renewal runway" isEmpty={d => d.length === 0}
         empty={{ title: 'No data', sub: 'No monthly health has been scored for this account yet.' }}
         skeleton={<Skeleton className={cn('w-full rounded-lg', compact ? 'h-[190px]' : 'h-[260px]')} />}>
-        {rows => <div className="relative"><Plot rows={rows} t0={t0} onEvent={openEvent} compact={compact} /><Legend menu={compact} /></div>}
+        {rows => <div className="relative"><Plot rows={rows} t0={t0} onEvent={openEvent} compact={compact} tint={tint} /><Legend menu={compact} tint={tint} /></div>}
       </WidgetBody>
       <EventSheet event={open} onOpenChange={sheetOpenChange} pager={pager} />
     </>
@@ -112,7 +113,8 @@ export function RunwayChart({ compact = false }: { compact?: boolean }) {
 const openEvent = (e: KeyEvent) => openSheet('event', e.iso)
 
 /* memo: the Scatter `shape` is an inline component, so a re-render (the sheet opening) would remount the dots and drop keyboard focus. */
-const Plot = memo(function Plot({ rows: all, t0, onEvent, compact }: { rows: Row[]; t0: number; onEvent: (e: KeyEvent) => void; compact: boolean }) {
+const Plot = memo(function Plot({ rows: all, t0, onEvent, compact, tint }: { rows: Row[]; t0: number; onEvent: (e: KeyEvent) => void; compact: boolean; tint?: string }) {
+  const config = useMemo(() => (tint ? { ...cfg, health: { ...cfg.health, color: tint } } : cfg), [tint])
   // the line keeps the point just before the window so it enters from the left edge instead of starting mid-chart
   const firstIn = all.findIndex(r => r.t >= t0)
   const rows = all.slice(Math.max(0, firstIn - 1)).filter(r => r.t >= t0 || r.health != null)
@@ -121,7 +123,7 @@ const Plot = memo(function Plot({ rows: all, t0, onEvent, compact }: { rows: Row
     + (runway ? ` First flagged ${fmtDY(runway.firstFlag)}.` : '')
   return (
     <div className="-mx-1 overflow-x-auto px-1" role="figure" aria-label={label}>
-      <ChartContainer config={cfg} className={cn('aspect-auto w-full', compact ? 'h-[190px] min-w-[520px]' : 'h-[260px] min-w-[640px]')}>
+      <ChartContainer config={config} className={cn('aspect-auto w-full', compact ? 'h-[190px] min-w-[520px]' : 'h-[260px] min-w-[640px]')}>
         <ComposedChart data={rows} margin={{ top: 18, right: 16, bottom: 0, left: 0 }} accessibilityLayer>
           <CartesianGrid {...gridProps} />
           <XAxis dataKey="t" type="number" scale="time" domain={[t0, T1]} allowDataOverflow ticks={ticksFrom(t0)} tickFormatter={fmtTick} {...xAxisProps} />
@@ -186,9 +188,9 @@ export function RunwayTip({ active, payload }: { active?: boolean; payload?: { p
   )
 }
 
-function Legend({ menu = false }: { menu?: boolean }) {
+function Legend({ menu = false, tint }: { menu?: boolean; tint?: string }) {
   const items: [React.ReactNode, string][] = [
-    [<span className="inline-block h-0.5 w-4 rounded bg-chart-1" />, 'Monthly health'],
+    [<span className="inline-block h-0.5 w-4 rounded bg-chart-1" style={tint ? { background: tint } : undefined} />, 'Monthly health'],
     [<span className="inline-block h-2.5 w-3 rounded-sm bg-chart-axis/15" />, 'Months the model flagged'],
     [<span className="inline-block w-4 border-t-2 border-dotted border-chart-axis" />, 'Held by the renewal cap until signed'],
     [<span className="inline-block size-2 rounded-full bg-bad-fill" />, 'Risk event'],
